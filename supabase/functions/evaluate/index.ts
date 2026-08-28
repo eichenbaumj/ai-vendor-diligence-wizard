@@ -33,7 +33,6 @@ import {
 } from "../_shared/anthropic-client.ts";
 import {
   type AdvFinding,
-  type Citation,
   EvalEvent,
   PitchExtract,
   type RegistryCheck,
@@ -44,7 +43,7 @@ import {
 import { computeTier } from "../_shared/tier.ts";
 import { assemble } from "../_shared/assemble.ts";
 import { lintObject, lintText } from "../_shared/lint.ts";
-import { classifyDomain } from "../_shared/domain-classes.ts";
+import { harvestCitations } from "../_shared/harvest.ts";
 import { PACKS, PACK_RELEASE } from "../_shared/packs.gen.ts";
 import { STATE_ITEMS } from "../_shared/state-items.ts";
 import type { S5UserInput } from "../_shared/prompts/s5-structure.ts";
@@ -206,7 +205,7 @@ Deno.serve(async (req) => {
   if (runtime?.waitUntil) runtime.waitUntil(pipeline);
   /* Without waitUntil (local dev without per_worker) the promise still runs. */
 
-  return json({ evaluation_id: evaluationId, cached: false }, 202, );
+  return json({ evaluation_id: evaluationId, cached: false }, 202);
 });
 
 function vendorKeyFromName(name: string): string {
@@ -479,34 +478,11 @@ async function runPipeline(
   );
   usage = addUsage(usage, research.usage);
   stageUsage.s3 = research.usage;
-  /* Sources come from two channels: API citation objects on text blocks, and
-     the inline URLs the research prompt instructs the model to write. Harvest
-     both, dedupe, classify in code. */
-  const seenUrls = new Set<string>();
-  const citations: Citation[] = [];
-  for (const c of research.citations) {
-    if (seenUrls.has(c.url)) continue;
-    seenUrls.add(c.url);
-    citations.push({
-      url: c.url,
-      title: c.title,
-      cited_text: c.cited_text,
-      retrieved_at: new Date().toISOString(),
-      domain_class: classifyDomain(c.url, extract.domains),
-    });
-  }
-  for (const m of research.narrative.matchAll(/https?:\/\/[^\s)\]"'<>]+/g)) {
-    const url = m[0].replace(/[.,;:]+$/, "").slice(0, 600);
-    if (seenUrls.has(url) || citations.length >= 40) continue;
-    seenUrls.add(url);
-    citations.push({
-      url,
-      title: null,
-      cited_text: null,
-      retrieved_at: new Date().toISOString(),
-      domain_class: classifyDomain(url, extract.domains),
-    });
-  }
+  const citations = harvestCitations(
+    research,
+    extract.domains,
+    new Date().toISOString(),
+  );
   await emit({
     stage: "research",
     kind: "micro_finding",

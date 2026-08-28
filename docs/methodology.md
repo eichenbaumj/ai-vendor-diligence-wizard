@@ -551,6 +551,8 @@ Every external source the tool consults, with its refresh cadence. This table is
 | TinEye / Google Lens | Reverse image search | Links on manual cards only | Manual card | Manual |
 | State business registries without open data | Entity records in the other 45 jurisdictions | See the [state coverage map](./coverage-map.md) | Manual cards with deep links | Manual |
 
+**How web research sources are collected.** Sources from the research step arrive on two channels. When the research tool retrieves a page, the tool's platform records the link along with the page title and the exact passage it drew on. The research step also writes links inline in its notes; those links are collected as URL-only references, with nothing retrieved from the page. Both channels are combined, duplicate links are removed, the list is capped at 40 sources per report, and every link's authority class is assigned by code from the public class lists in this repository. The report's source list shows both kinds.
+
 ---
 
 ## 6. Fairness to small vendors

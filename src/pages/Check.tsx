@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { PillButton, Section } from "@/components/brand";
 import { StateSelect } from "@/components/input/StateSelect";
-import { TurnstilePlaceholder } from "@/components/input/TurnstilePlaceholder";
+import { TurnstileWidget } from "@/components/input/TurnstileWidget";
 import { ApiError, evaluate } from "@/lib/api";
 import { IS_MOCK } from "@/lib/config";
 import {
@@ -237,7 +237,7 @@ export default function Check() {
               )}
             </div>
 
-          <TurnstilePlaceholder onToken={setTurnstileToken} />
+          <TurnstileWidget onToken={setTurnstileToken} />
         </div>
       </Section>
     </div>

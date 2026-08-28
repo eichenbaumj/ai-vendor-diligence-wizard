@@ -14,3 +14,17 @@ port = 54323
 # dev; per_worker keeps the worker alive after the response is sent.
 [edge_runtime]
 policy = "per_worker"
+
+# Bare "zod" / "@supabase/supabase-js" imports in _shared/ resolve through the
+# import map in both Deno (here) and Vite (package.json).
+[functions.evaluate]
+import_map = "./functions/import_map.json"
+
+[functions.get-evaluation]
+import_map = "./functions/import_map.json"
+
+[functions.chat]
+import_map = "./functions/import_map.json"
+
+[functions.dispute]
+import_map = "./functions/import_map.json"

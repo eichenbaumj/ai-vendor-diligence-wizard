@@ -75,7 +75,11 @@ export async function evaluate(params: {
   turnstile_token: string | null;
   sampleId?: SampleId;
 }): Promise<EvaluateResponse> {
-  if (IS_MOCK) {
+  /* Sample pitches are fictional demos of the report format: they ALWAYS
+     replay the pinned fixture, never the live engine (which would spend real
+     research on a vendor that does not exist). Mock mode routes everything
+     through the fixtures. */
+  if (IS_MOCK || params.sampleId) {
     const evaluation_id = startMockEvaluation({
       sampleId: params.sampleId,
       content: params.content,

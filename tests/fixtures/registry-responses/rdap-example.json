@@ -1,0 +1,11 @@
+{
+  "objectClassName": "domain",
+  "ldhName": "civicsignal.ai",
+  "handle": "D123456789-EXAMPLE",
+  "status": ["active"],
+  "events": [
+    { "eventAction": "registration", "eventDate": "2025-06-02T14:00:00Z" },
+    { "eventAction": "expiration", "eventDate": "2027-06-02T14:00:00Z" },
+    { "eventAction": "last changed", "eventDate": "2026-01-15T09:30:00Z" }
+  ]
+}

@@ -1,0 +1,589 @@
+# Sector pack: eligibility-case-mgmt (v1). ELEVATED SCRUTINY.
+# This pack also functions as the overlay applied by other packs'
+# elevated_scrutiny_rules. Authoring rules: packs/pack-spec.md.
+pack_id: eligibility-case-mgmt
+pack_name: Eligibility, Benefits Processing & Case Management
+
+definition: >-
+  AI that touches who gets benefits or what happens to their case:
+  eligibility screening and determination, renewals, verification, fraud
+  detection and identity-proofing, case-management copilots, benefit-notice
+  generation, and work-requirement compliance tooling. This is the only pack
+  where a software error is, by legal definition, a deprivation of a
+  constitutionally protected property interest (Goldberg v. Kelly, 397 U.S.
+  254). Not this pack alone: pure document extraction (see
+  document-processing, unless the output feeds determinations) and
+  applicant-side benefit screeners that only widen access, which sit in a
+  different risk class.
+
+inclusion_test:
+  - >-
+    Does the pitch mention eligibility, determinations, enrollment, renewals
+    or recertification, benefits processing, or case management for Medicaid,
+    SNAP, TANF, unemployment insurance, child care, or child welfare?
+  - >-
+    Does it mention fraud detection, program integrity, identity
+    verification, or "payment accuracy" for a benefits program?
+  - >-
+    Does it mention work-requirement or community-engagement verification or
+    exemption screening (the 2026 OBBBA build-out wave)?
+  - >-
+    Does it offer caseworker copilots, case summarization, or benefit-notice
+    drafting?
+  - >-
+    Does any other pack's pitch describe outputs that could deny, reduce,
+    terminate, or flag a person's benefits? (This is the overlay trigger.)
+
+scrutiny_tier: elevated
+
+incumbent_landscape: >-
+  Integrators and COTS: Deloitte dominates integrated eligibility (25+
+  states, $5B+ in contracts, roughly 53 million Medicaid enrollees on its
+  systems, per KFF Health News:
+  https://kffhealthnews.org/news/article/medicaid-deloitte-run-eligibility-systems-plagued-by-errors/).
+  Accenture, Gainwell, Conduent, and Optum populate the Medicaid systems
+  ecosystem; Maximus is the dominant eligibility-support BPO now marketing
+  AI; Merative Curam (formerly IBM) is the social-program COTS; Salesforce
+  and ServiceNow push case-management-on-platform; RedMane, Diona, and
+  Northwoods sell human-services-specific tooling. Critical context: the
+  incumbents' deterministic systems, before any generative AI, produced wrong
+  notices, impossible deadlines, 25,000 erroneous Kentucky terminations, and
+  2026 Michigan disability miscoverage
+  (https://www.npr.org/2026/07/20/nx-s1-5896359/medicaid-disabled-patients-denied-deloitte-michigan).
+  Deloitte's defense ("they're not Deloitte systems") shows accountability
+  allocation is contested even among the biggest incumbents, so a listing in
+  this pack is emphatically not a safety signal. The legitimate near-term AI
+  layer is document and intake automation (Hyperscience in Colorado and
+  Missouri; Pennsylvania legibility scanning; New Jersey document validation;
+  North Carolina summarization, per Code for America:
+  https://codeforamerica.org/explore/government-ai-landscape-assessment/).
+  The 2025–26 copilot wave: Nava PBC (the most methodologically transparent,
+  with an open-source Caseworker Empowerment Toolkit and published
+  guardrails), the Maryland and Anthropic navigation agent, Augintel, and
+  frontier-lab GSA OneGov seats putting near-free LLMs inside agencies. AI
+  increasingly arrives through staff tooling, not procurement. The
+  highest-risk adjacent lane is fraud and identity vendors (SAS and FAST
+  Enterprises in the MiDAS era; Pondera, now Thomson Reuters; LexisNexis;
+  ID.me). Treat any "AI fraud detection" pitch as an adverse-action system,
+  full stop.
+
+established_vendors:
+  - name: Deloitte
+    tier: integrator
+    one_liner: >-
+      Dominant integrated-eligibility integrator (25+ states). Its systems'
+      documented error record is rendered beside any match; a listing here is
+      not a safety signal.
+    gov_evidence_url: https://kffhealthnews.org/news/article/medicaid-deloitte-run-eligibility-systems-plagued-by-errors/
+  - name: Accenture
+    tier: integrator
+    one_liner: Major eligibility and Medicaid systems integrator.
+    gov_evidence_url: null
+  - name: Gainwell
+    tier: integrator
+    one_liner: Medicaid Management Information Systems ecosystem vendor.
+    gov_evidence_url: null
+  - name: Conduent
+    tier: integrator
+    one_liner: Medicaid systems and payments integrator.
+    gov_evidence_url: null
+  - name: Optum
+    tier: integrator
+    one_liner: Health and human services systems and analytics vendor.
+    gov_evidence_url: null
+  - name: Maximus
+    tier: integrator
+    one_liner: >-
+      Dominant eligibility-support BPO, now marketing AI capabilities.
+    gov_evidence_url: null
+  - name: Merative Curam
+    tier: platform
+    one_liner: Social-program COTS platform (formerly IBM Curam).
+    gov_evidence_url: null
+  - name: Salesforce
+    tier: platform
+    one_liner: Case-management-on-platform offering for human services.
+    gov_evidence_url: null
+  - name: ServiceNow
+    tier: platform
+    one_liner: Case-management-on-platform offering for human services.
+    gov_evidence_url: null
+  - name: RedMane
+    tier: specialist
+    one_liner: Human-services-specific case management tooling.
+    gov_evidence_url: null
+  - name: Northwoods
+    tier: specialist
+    one_liner: Human-services-specific document and case tooling.
+    gov_evidence_url: null
+  - name: Hyperscience
+    tier: platform
+    one_liner: >-
+      Benefits document and intake automation (Colorado HCPF, Missouri DSS);
+      see the document-processing pack for the full record.
+    gov_evidence_url: https://www.hyperscience.ai/resource/state-department-of-healthcare-policy-financing-automates-snap-and-magi-documents/
+  - name: Nava PBC
+    tier: specialist
+    one_liner: >-
+      Caseworker-assist pilots with published guardrails and an open-source
+      toolkit; the methodological transparency benchmark.
+    gov_evidence_url: https://www.navapbc.com/insights
+
+failure_modes:
+  - title: Automated fraud adjudication without human review (Michigan MiDAS)
+    description: >-
+      Michigan's MiDAS system auto-adjudicated unemployment-insurance fraud
+      with no human review. A state audit found its determinations were wrong
+      more than 90% of the time. Roughly 40,000 people were accused, with
+      wage garnishments and bankruptcies that followed. The state paid a $20
+      million settlement, and vendor-liability claims proceeded against SAS
+      and FAST Enterprises in Cahoo
+      (https://www.btah.org/case-study/michigan-unemployment-insurance-false-fraud-determinations.html).
+    named_incident: >-
+      Michigan MiDAS false fraud determinations; $20M civil-rights settlement
+      (2022)
+    source_url: https://www.michigan.gov/ag/news/press-releases/2022/10/20/som-settlement-of-civil-rights-class-action-alleging-false-accusations-of-unemployment-fraud
+  - title: Automated debt raising at national scale (Robodebt)
+    description: >-
+      Australia's Robodebt scheme unlawfully raised A$1.76 billion in debts
+      against roughly 433,000 people through automated income averaging. It
+      ended in a Royal Commission.
+    named_incident: Australia Robodebt Royal Commission (2023)
+    source_url: https://clcs.org.au/robodebt-royal-commission-report-unravels-systemic-injustice-and-recommends-urgent-reform/
+  - title: An algorithm replacing professional discretion (Arkansas ARChoices)
+    description: >-
+      Arkansas replaced nurse judgment with an algorithm that cut home-care
+      hours and failed to account for cerebral palsy in its logic. A court
+      permanently enjoined its use.
+    named_incident: >-
+      Arkansas ARChoices care-hour algorithm permanently enjoined (2018)
+    source_url: https://arktimes.com/news/arkansas-reporter/2018/05/31/archoices-rule-blocked
+  - title: Trade-secret formulas struck down (Idaho, K.W. v. Armstrong)
+    description: >-
+      Idaho's "trade secret" budget formula for disability services was
+      struck down as effectively arbitrary, and in 2025 the court found the
+      state in contempt over delays. Due process outranks trade secrets.
+    named_incident: K.W. v. Armstrong (Idaho); 2025 contempt finding
+    source_url: https://www.acluidaho.org/en/cases/kw-v-armstrong
+  - title: Modernization that cut children off coverage (Tennessee TEDS)
+    description: >-
+      Tennessee's Deloitte-built $400 million eligibility system contributed
+      to roughly 250,000 children losing coverage. A federal court found
+      Medicaid Act, due process, and ADA violations in A.M.C. v. Smith.
+    named_incident: A.M.C. v. Smith (Tennessee TEDS), federal court ruling
+    source_url: https://healthlaw.org/resource/case-explainer-amc-v-smith/
+  - title: Confident hallucination on an official channel (NYC MyCity)
+    description: >-
+      NYC's MyCity chatbot confidently invented program rules on an official
+      government channel, gave contradictory answers to identical questions,
+      and stayed running for years afterward.
+    named_incident: NYC MyCity chatbot (The Markup, Mar 29, 2024)
+    source_url: https://themarkup.org/artificial-intelligence/2024/03/29/nycs-ai-chatbot-tells-businesses-to-break-the-law
+  - title: LLM-specific failure patterns in benefits work
+    description: >-
+      Documented and near-term patterns specific to language models: a
+      post-hoc rationalization is not an appeal-safe explanation (a generated
+      "reason" cannot honestly populate a 42 CFR 431.210 notice unless the
+      decision logic is deterministic and cited); automation bias turns a
+      nominal "human in the loop" into rubber-stamping at MiDAS and Robodebt
+      scale; extraction errors propagate silently into denials; models can be
+      sycophantic toward a caseworker's fraud hypothesis; performance gaps
+      hit multilingual users and people with disabilities; and rules-to-code
+      translation is promising but error-prone in practice.
+    named_incident: >-
+      Beeck Center rules-as-code experiments with public-benefits policy
+      found translation errors
+    source_url: https://digitalgovernmenthub.org/library/ai-powered-rules-as-code-experiments-with-public-benefits-policy/
+
+skepticism_triggers:
+  - claim_pattern: >-
+      "Fully automated eligibility determination" or "touchless processing"
+    threshold: Any such claim applied to adverse actions
+    why: >-
+      Presumptively disqualifying. This is the MiDAS and Robodebt pattern,
+      and it maps to the tool's strongest caution band regardless of vendor
+      pedigree.
+    source_url: https://www.btah.org/case-study/michigan-unemployment-insurance-false-fraud-determinations.html
+  - claim_pattern: '"Reduces fraud by X%"'
+    threshold: Any fraud-reduction percentage
+    why: >-
+      Demand the false-positive rate and what happens to flagged people while
+      "under review." MiDAS was wrong more than 90% of the time.
+    source_url: https://www.michigan.gov/ag/news/press-releases/2022/10/20/som-settlement-of-civil-rights-class-action-alleging-false-accusations-of-unemployment-fraud
+  - claim_pattern: '"99%+ accuracy"'
+    threshold: >-
+      Any accuracy claim without state-specific evaluation, a denominator,
+      and breakouts by field, case type, language, and disability
+    why: >-
+      Blended accuracy hides exactly the errors that become wrongful denials.
+    source_url: null
+  - claim_pattern: '"Unbiased AI" or "bias-free AI"'
+    threshold: Any such claim
+    why: >-
+      Unfalsifiable. The honest form is "here is our disparate-performance
+      testing and here are the results."
+    source_url: null
+  - claim_pattern: '"Explainable AI" meaning a chatbot paragraph'
+    threshold: An explanation that is not a legally sufficient notice
+    why: >-
+      A generated paragraph is not a 42 CFR 431.210 notice. Ask to see actual
+      notice text.
+    source_url: null
+  - claim_pattern: '"Proprietary; we cannot share how it works"'
+    threshold: Any trade-secret posture over decision logic
+    why: >-
+      K.W. v. Armstrong establishes that due process outranks trade secrets.
+    source_url: https://www.acluidaho.org/en/cases/kw-v-armstrong
+  - claim_pattern: '"Deploy in weeks" for anything touching the eligibility system'
+    threshold: A deployment promise under 90 days
+    why: >-
+      It ignores APD and CMS/FNS approval gates (45 CFR 95.611). Kentucky's
+      single defect took 10 months and $522K to fix.
+    source_url: null
+  - claim_pattern: '"Human in the loop" without numbers'
+    threshold: No items-per-reviewer-per-day or override-rate data
+    why: >-
+      Near-zero overrides means the human is a rubber stamp.
+    source_url: null
+  - claim_pattern: >-
+      "FedRAMP compliant" or "StateRAMP compliant"; a SOC 2 Type I passed off
+      as Type II
+    threshold: The word "compliant" instead of "authorized"
+    why: >-
+      Verify authorization status on the marketplaces directly. "In process"
+      is not "authorized."
+    source_url: https://marketplace.fedramp.gov/
+  - claim_pattern: '"Trusted by [state]"'
+    threshold: >-
+      A reference that turns out to be an unpaid pilot or a
+      constituent-services chatbot rebranded as eligibility tech
+    why: >-
+      Call the named agency and ask what is actually in production.
+    source_url: null
+  - claim_pattern: '"AI will clear your backlog"'
+    threshold: >-
+      Backlog-clearing claims during unwinding or work-requirement crunches
+    why: >-
+      Speed pressure on adverse actions is precisely how Tennessee and
+      Michigan happened.
+    source_url: https://healthlaw.org/resource/case-explainer-amc-v-smith/
+  - claim_pattern: '"We handle appeals too"'
+    threshold: The vendor adjudicating appeals of its own system's decisions
+    why: A due-process conflict of interest.
+    source_url: null
+  - claim_pattern: Free pilots contingent on broad data access
+    threshold: Any free pilot conditioned on access to applicant data
+    why: >-
+      A data-acquisition play. OMB M-25-21 tells federal agencies to bar
+      vendor training on government data.
+    source_url: https://www.whitehouse.gov/wp-content/uploads/2025/02/M-25-21-Accelerating-Federal-Use-of-AI-through-Innovation-Governance-and-Public-Trust.pdf
+
+diligence_questions:
+  - id: eligibility-case-mgmt-q01
+    question: >-
+      Does your system ever deny, reduce, terminate, or flag-for-fraud on its
+      own, or does a named human make every adverse decision?
+    good_answer: >-
+      An unambiguous "a named human makes every adverse decision," with UI
+      evidence showing how.
+    red_flag: >-
+      "Configurable," "auto-adjudication," or any hedging. This question has
+      no acceptable middle answer.
+    source_url: null
+  - id: eligibility-case-mgmt-q02
+    question: >-
+      Show the exact notice a person receives after an AI-influenced denial.
+      Does it state the specific factual reasons and the regulation relied
+      on?
+    good_answer: >-
+      Actual notice text that satisfies 42 CFR 431.210 (Medicaid) or 7 CFR
+      273.13 (SNAP): specific reasons, specific regulation.
+    red_flag: >-
+      A generic template, or a generated paragraph offered as the
+      "explanation."
+    source_url: null
+  - id: eligibility-case-mgmt-q03
+    question: >-
+      On appeal, can you produce the complete record (inputs, extractions,
+      model version, what the human saw and did), and will you commit in
+      contract that nothing is withheld as a trade secret?
+    good_answer: >-
+      Yes to both, in writing. Idaho's K.W. v. Armstrong establishes that due
+      process outranks trade secrets.
+    red_flag: Any trade-secret carve-out over decision logic.
+    source_url: https://www.acluidaho.org/en/cases/kw-v-armstrong
+  - id: eligibility-case-mgmt-q04
+    question: >-
+      What is your measured accuracy on OUR state's rules, evaluated against
+      our policy manual and historically adjudicated cases, and what is the
+      denominator?
+    good_answer: >-
+      State-specific evaluation results with a defined denominator, or an
+      honest "we have not measured that yet."
+    red_flag: >-
+      A generic accuracy number from another state or from a demo corpus.
+    source_url: null
+  - id: eligibility-case-mgmt-q05
+    question: >-
+      Break error rates out by language, disability status, age, and, where
+      lawful, race and ethnicity. What disparate-performance testing exists,
+      and will you support our own pre-deployment and annual testing?
+    good_answer: >-
+      Published or shareable breakouts, plus support for independent testing.
+    red_flag: '"Our AI is unbiased" with no data behind it.'
+    source_url: null
+  - id: eligibility-case-mgmt-q06
+    question: What happens when the model is wrong but confident?
+    good_answer: >-
+      A confidence-threshold design, the share of items routed to humans, and
+      sampling audits of high-confidence outputs.
+    red_flag: >-
+      No sampling of high-confidence outputs; those are exactly the errors
+      that reach residents.
+    source_url: null
+  - id: eligibility-case-mgmt-q07
+    question: >-
+      Who updates the system when our state plan, waivers, or verification
+      rules change, how fast, and how is the change tested?
+    good_answer: >-
+      A named process with a turnaround commitment and regression testing.
+    red_flag: >-
+      No update pipeline. NYC's chatbot stayed wrong for roughly two years.
+    source_url: https://themarkup.org/artificial-intelligence/2024/03/29/nycs-ai-chatbot-tells-businesses-to-break-the-law
+  - id: eligibility-case-mgmt-q08
+    question: >-
+      Where does our data go? Is applicant data used to train models or
+      shared with third parties? Which of these do you hold: GovRAMP or
+      FedRAMP authorization, SOC 2 Type II, IRS Pub 1075 and HIPAA
+      compliance?
+    good_answer: >-
+      Written no-training terms and authorizations you can verify at
+      https://marketplace.fedramp.gov/ and https://govramp.org/. "In process"
+      is not "authorized."
+    red_flag: Verbal assurances, or "compliant" phrasing.
+    source_url: https://marketplace.fedramp.gov/
+  - id: eligibility-case-mgmt-q09
+    question: >-
+      Does this require an APD amendment or CMS/FNS sign-off, and have you
+      been through that process in other states?
+    good_answer: >-
+      A knowledgeable answer about 45 CFR 95.611 and named states where the
+      vendor navigated it.
+    red_flag: >-
+      A vendor who has never heard of an APD has never really deployed in
+      this space.
+    source_url: null
+  - id: eligibility-case-mgmt-q10
+    question: >-
+      Name three comparable agencies in production, not pilots, that we can
+      call. What independent evaluations of your product exist?
+    good_answer: >-
+      Named production references plus any independent evaluation.
+      Cross-check the CCF AI Knowledge Hub and Code for America's landscape
+      assessment.
+    red_flag: >-
+      Pilots presented as production, or logos with no callable contact.
+    source_url: https://codeforamerica.org/explore/government-ai-landscape-assessment/
+  - id: eligibility-case-mgmt-q11
+    question: >-
+      What is the caseworker's realistic review burden: items per worker per
+      day, and your own override-rate data?
+    good_answer: >-
+      Real numbers: a plausible per-item review time and a nonzero override
+      rate.
+    red_flag: >-
+      No override data, or volumes that make real review impossible.
+      Near-zero overrides means rubber-stamping.
+    source_url: null
+  - id: eligibility-case-mgmt-q12
+    question: >-
+      What is your rollback plan? If we find a systematic error, how fast can
+      we identify every affected case, notify people, and reinstate
+      benefits?
+    good_answer: >-
+      A concrete plan: affected-case query capability, notification
+      templates, a reinstatement workflow, and timelines.
+    red_flag: No answer here means no deployment.
+    source_url: null
+  - id: eligibility-case-mgmt-q13
+    question: >-
+      Who bears liability for wrongful denials caused by system error, and
+      will you accept indemnification and audit-rights clauses?
+    good_answer: >-
+      Contractual acceptance of indemnification and audit rights.
+    red_flag: >-
+      Liability pushed entirely onto the agency. Deloitte's "not our systems"
+      posture shows why this must be contractual.
+    source_url: https://kffhealthnews.org/news/article/medicaid-deloitte-run-eligibility-systems-plagued-by-errors/
+
+elevated_scrutiny_rules:
+  - condition: Any match on this pack
+    action: >-
+      The output floor is the "enhanced review" band. The "established
+      vendor, proceed to demo" band is unavailable until the
+      human-decides-adverse-actions question (q01) is answered.
+  - condition: A claim of automated adverse action
+    action: Strongest caution band, always.
+  - condition: A fraud-detection or identity-verification pitch
+    action: >-
+      Classify as an adverse-action system regardless of framing.
+  - condition: >-
+      A work-requirement or exemption-screening pitch (the 2026 build-out
+      wave)
+    action: >-
+      Highest caution band, plus OBBBA implementation-overload context
+      (https://www.tpr.org/news/2026-07-21/deloitte-run-systems-denied-medicaid-to-disabled-people-new-laws-could-make-it-worse).
+  - condition: >-
+      A copilot or summarization-only pitch with named-human decision-making
+    action: >-
+      May be evaluated on standard merits, with this pack's questions q01,
+      q02, q03, and q11 still included.
+  - condition: This pack is triggered as an overlay from another pack
+    action: >-
+      Prepend the "Why this category is different" block (the top of this
+      pack's legal_context) and add questions q01, q02, q03, and q12 to that
+      pack's question list.
+
+reference_deployments:
+  - agency: Multiple state agencies (Nava PBC pilots)
+    vendor_stack: Nava PBC
+    what: >-
+      Caseworker-assist pilots with published guardrails (transparency,
+      oversight prompts, intervention controls, plain-language explanations)
+    metric: >-
+      Open-source Caseworker Empowerment Toolkit published Apr 2026
+    metric_source_type: vendor-reported
+    source_url: https://www.navapbc.com/insights
+  - agency: Pennsylvania
+    vendor_stack: Document legibility scanning at intake
+    what: Legibility scanning at intake, scaled
+    metric: >-
+      Cited as a scaled, lower-risk intake use in Code for America's second
+      annual landscape assessment
+    metric_source_type: independent-press
+    source_url: https://codeforamerica.org/news/code-for-america-unveils-second-annual-government-ai-landscape-assessment/
+  - agency: Maryland, New Jersey, and Utah
+    vendor_stack: >-
+      Applicant navigation and assistant pilots (Maryland with Anthropic)
+    what: Benefits navigation and applicant-assistant pilots
+    metric: Documented as pilots, not production determinations
+    metric_source_type: independent-press
+    source_url: https://codeforamerica.org/explore/government-ai-landscape-assessment/
+  - agency: Colorado HCPF and Missouri DSS
+    vendor_stack: Hyperscience
+    what: Intake automation with confidence-threshold human routing
+    metric: >-
+      Colorado absorbed 700–1,000% image-volume growth during the renewal
+      surge
+    metric_source_type: vendor-reported
+    source_url: https://www.hyperscience.ai/resource/state-department-of-healthcare-policy-financing-automates-snap-and-magi-documents/
+  - agency: CCF Public Benefit Innovation Fund awardees (multi-state)
+    vendor_stack: >-
+      APHSA/Nava multi-state SNAP-Medicaid work verification; Maryland DOL;
+      New Jersey cross-program eligibility; Mississippi SNAP; New Mexico and
+      Oregon benefit notices; a Vals AI SNAP GenAI benchmark
+    what: >-
+      Funded, evaluated safety-net AI projects, the alternative to cold-pitch
+      adoption
+    metric: $8.5M committed in Dec 2025
+    metric_source_type: independent-press
+    source_url: https://www.centerforcivicfutures.org/resources/center-for-civic-futures-and-partners-commit-8-5m-for-ai-solutions-that-improve-safety-net-program-delivery
+
+registries_to_check:
+  - name: FedRAMP Marketplace
+    url: https://marketplace.fedramp.gov/
+    what_it_proves: >-
+      Whether this specific product holds a federal cloud authorization, and
+      at what level. "In process" is not "authorized."
+  - name: GovRAMP Authorized Product List
+    url: https://govramp.org/
+    what_it_proves: >-
+      State-oriented cloud security verification. Formerly StateRAMP; the
+      name changed in February 2025.
+  - name: Benefits Tech Advocacy Hub case library
+    url: https://www.btah.org/case-studies.html
+    what_it_proves: >-
+      A negative registry: documented cases where benefits technology harmed
+      people. Check whether the vendor or the category appears.
+  - name: AI Incident Database
+    url: https://incidentdatabase.ai/
+    what_it_proves: >-
+      A public log of AI system failures. Search the vendor and product name.
+  - name: Center for Civic Futures AI Knowledge Hub
+    url: https://www.centerforcivicfutures.org/
+    what_it_proves: >-
+      Partner-maintained record of government AI projects and evaluations,
+      including funded safety-net work.
+
+legal_context: |-
+  ## Why this category is different
+
+  When AI touches who gets Medicaid, SNAP, unemployment, or child care
+  assistance, errors are not inconveniences. They are unlawful deprivations.
+  Courts have already ruled against automated benefits systems in Michigan
+  (a $20M settlement over false fraud accusations; auto-adjudicated fraud
+  findings wrong more than 90% of the time), Tennessee (due process and ADA
+  violations), and Arkansas and Idaho (invalidated care-cutting algorithms),
+  and Australia's Robodebt collapsed into a royal commission. Federal policy
+  (OMB M-25-21) presumes AI used in benefits adjudication and fraud
+  detection is "high-impact," requiring testing, human oversight, and
+  appeals, and several states now require meaningful human review by law.
+  This tool therefore applies its strictest evidence bar here: any vendor
+  claiming to automate or accelerate adverse decisions (denials, reductions,
+  terminations, fraud flags) is flagged for enhanced review regardless of
+  company size or references. AI that helps staff read documents, summarize
+  cases, and draft communications, with a named human making every decision,
+  appeal-ready explanations, and audit trails, can be evaluated on its
+  merits. AI that decides is not a product category this tool will ever mark
+  low-risk.
+
+  ## Controlling law and policy
+
+  - Goldberg v. Kelly, 397 U.S. 254 (1970) and Mathews v. Eldridge (1976):
+    the constitutional floor for process before benefits are taken away
+    (https://www.law.cornell.edu/supremecourt/text/397/254).
+  - 42 CFR 431.210 (Medicaid) and 7 CFR 273.13 (SNAP): what a legally
+    sufficient adverse-action notice must contain.
+  - K.W. v. Armstrong (D. Idaho): no trade-secret shield over decision
+    logic; 2025 contempt finding
+    (https://www.acluidaho.org/en/cases/kw-v-armstrong).
+  - A.M.C. v. Smith (M.D. Tenn.): ADA liability attaches to
+    eligibility-system failures
+    (https://healthlaw.org/resource/case-explainer-amc-v-smith/).
+  - OMB M-25-21 (2025): benefits adjudication, continued-eligibility
+    determination, and fraud detection are presumptively high-impact, with
+    mandatory pre-deployment testing, impact assessment, monitoring, trained
+    human oversight with a fail-safe, and remedies and appeals
+    (https://www.whitehouse.gov/wp-content/uploads/2025/02/M-25-21-Accelerating-Federal-Use-of-AI-through-Innovation-Governance-and-Public-Trust.pdf).
+  - New York LOADinG Act: requires "continued, operational and meaningful
+    human review." New York NYS-P24-001: "Automated final decision systems
+    are not permitted."
+  - Texas TRAIGA (effective Jan 1, 2026). Verify current status before
+    citing.
+  - Colorado AI Act (delayed to Jun 30, 2026). Verify current status before
+    citing.
+  - 45 CFR 95.611: APD approval gates for changes to federally funded
+    eligibility systems.
+  - California SIMM 150: rates "service eligibility assessments for housing
+    or income assistance" at least Moderate risk.
+
+realistic_pricing: |-
+  No published price anchors exist for determination-adjacent AI in public
+  benefits. The honest guidance: any pricing conversation is premature until
+  diligence questions q01 through q03 pass. For the document-automation
+  slice, use the document-processing pack's anchors.
+
+last_updated: "2026-08-28"
+refresh_cadence: monthly
+
+known_gaps: |-
+  - The final disposition of Cahoo (vendor-liability claims from MiDAS) was
+    not re-verified this cycle.
+  - The 2023 Medicaid unwinding ex parte error event (roughly 30 states ran
+    renewals at the household level; CMS forced reinstatement of about
+    500,000 people, mostly children) is excluded from failure modes until
+    the primary CMS document is re-fetched.
+  - Current product claims by fraud and identity vendors (Pondera,
+    LexisNexis, ID.me) were not re-verified this cycle.
+  - Colorado AI Act 2026 amendment status is uncertain; verify before
+    citing.

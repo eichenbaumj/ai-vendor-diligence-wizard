@@ -1,0 +1,558 @@
+# Sector pack: document-processing (v1)
+# Authoring rules: packs/pack-spec.md. Validated by scripts/validate-packs.ts.
+pack_id: document-processing
+pack_name: Document Processing & Intake (IDP)
+
+definition: >-
+  AI that classifies, extracts data from, redacts, or routes documents:
+  mailroom automation, form and handwriting extraction,
+  verification-document processing, and records redaction. This pack does not
+  cover systems that make eligibility decisions from extracted data (that adds
+  the eligibility-case-mgmt overlay) or general document drafting for staff
+  (see the staff-productivity pack).
+
+inclusion_test:
+  - >-
+    Does the pitch mention OCR, document extraction or classification, IDP,
+    "digital mailroom," forms processing, or handwriting recognition?
+  - >-
+    Does it target document backlogs, verification documents, scanned mail or
+    faxes, or records digitization?
+  - >-
+    Does it offer redaction of PII from records (court, land, personnel)?
+  - >-
+    Does it claim an "automation rate" or "straight-through processing," or
+    use per-page or per-document pricing?
+
+scrutiny_tier: standard
+
+incumbent_landscape: >-
+  A mature category being disrupted by LLM-native extraction. Gartner's first
+  IDP Magic Quadrant (Sep 3, 2025) covers a market of 100+ vendors with five
+  Leaders: ABBYY, Hyperscience, Infrrd, Tungsten Automation, and UiPath
+  (https://www.gartner.com/en/documents/6912666). Five tiers: (1) hyperscaler
+  APIs (AWS Textract, Azure AI Document Intelligence, Google Document AI),
+  usually arriving inside an integrator's pitch; (2) enterprise IDP platforms
+  (the Leaders above, plus WorkFusion, IBM Datacap, OpenText Captiva,
+  Grooper); (3) government redaction specialists (Extract Systems, CSI
+  Intellidact); (4) ECM incumbents with AI add-ons (Laserfiche, Hyland
+  OnBase, Tyler). Check whether your existing ECM contract already includes
+  capture or IDP before engaging a new vendor; many cold pitches duplicate
+  capability you already own. (5) LLM-native startups (Extend, Reducto,
+  Sensible, Instabase, LandingAI, Nanonets, Docsumo). Most inbound cold email
+  comes from this tier, and few of these hold FedRAMP or GovRAMP
+  authorizations or named U.S. state references. The core triage insight:
+  many pitches are thin wrappers over the same three hyperscaler APIs. Ask
+  what engine is actually under the hood.
+
+established_vendors:
+  - name: Hyperscience
+    tier: platform
+    one_liner: >-
+      Gartner MQ Leader; FedRAMP High and IL5 claimed; SSA ($81M award), VA,
+      Colorado HCPF, Missouri DSS; sells "Hypercell for SNAP." Also this
+      pack's exhibit for sole-source-coaching red flags (see failure modes).
+    gov_evidence_url: https://www.hyperscience.ai/blog/united-states-social-security-administration-adopts-hyperscience/
+  - name: ABBYY
+    tier: platform
+    one_liner: >-
+      Seven-time Everest Leader; California DMV digital mailroom at 65–70%
+      automation.
+    gov_evidence_url: https://statetechmagazine.com/article/2025/04/state-and-local-agencies-deploy-artificial-intelligence-document-processing
+  - name: Tungsten Automation (formerly Kofax)
+    tier: platform
+    one_liner: >-
+      FedRAMP High and GovRAMP Authorized (TotalAgility Cloud); claims 350+
+      U.S. agency customers (vendor-reported count).
+    gov_evidence_url: https://www.carahsoft.com/tungsten-automation
+  - name: UiPath / Infrrd / WorkFusion / HCLTech
+    tier: platform
+    one_liner: >-
+      Analyst-ranked leaders (Gartner Magic Quadrant and Everest PEAK 2025).
+    gov_evidence_url: https://www.gartner.com/en/documents/6912666
+  - name: AWS Textract
+    tier: platform
+    one_liner: >-
+      Hyperscaler extraction API, available in GovCloud. Caveat: by default,
+      AWS may use content for service improvement unless the organization
+      opts out at the org level.
+    gov_evidence_url: https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_ai-opt-out.html
+  - name: Microsoft Azure AI Document Intelligence
+    tier: platform
+    one_liner: >-
+      Hyperscaler extraction API; deletes input data within 24 hours and does
+      not train on inputs.
+    gov_evidence_url: https://learn.microsoft.com/en-us/azure/foundry/responsible-ai/document-intelligence/data-privacy-security
+  - name: Google Document AI
+    tier: platform
+    one_liner: >-
+      Hyperscaler extraction API; FedRAMP High, HIPAA support, no training on
+      customer content; Covered California, Hawaii Safe Travels.
+    gov_evidence_url: https://docs.cloud.google.com/document-ai/docs/data-usage
+  - name: Extract Systems (ID Shield)
+    tier: specialist
+    one_liner: >-
+      County recorder and court redaction; Pierce County WA (36M+ images),
+      Hamilton County OH (vendor-reported).
+    gov_evidence_url: https://www.extractsystems.com/gov-resources
+  - name: CSI Intellidact
+    tier: specialist
+    one_liner: >-
+      Statewide Arkansas Judiciary redaction contract (government contract
+      page).
+    gov_evidence_url: https://arcourts.gov/administration/acap/redactioncontract
+
+failure_modes:
+  - title: Benchmark-to-production accuracy gap
+    description: >-
+      Buyers report a 15–25 point drop from vendor benchmark to production on
+      their own document mix, and character accuracy is often presented as
+      field accuracy: 99% character accuracy can equal roughly 80% field
+      accuracy
+      (https://airparser.com/blog/ai-document-extraction-accuracy-benchmarks/).
+      The compounding math matters too: 97% per-field accuracy on a 20-field
+      document means only about 55% of documents come through error-free.
+    named_incident: >-
+      VA OIG found 27% of reviewed automation-assisted claims had inaccurate
+      determinations (oversight finding)
+    source_url: https://www.vaoig.gov/reports/review/improvements-needed-vbas-claims-automation-project
+  - title: Automation-rate and straight-through-processing inflation
+    description: >-
+      Vendors blur automation rate, straight-through-processing (STP) rate,
+      and accuracy. Independently reported government results run 65–84%
+      (California DMV, Covered California), and those are good outcomes.
+    named_incident: >-
+      California DMV (65–70% automation) and Covered California (84%) set the
+      documented ceiling for clean deployments
+    source_url: https://statetechmagazine.com/article/2025/04/state-and-local-agencies-deploy-artificial-intelligence-document-processing
+  - title: Per-page pricing surprises
+    description: >-
+      Feature stacking changes the price by more than an order of magnitude:
+      Textract with Forms, Tables, and Queries costs $0.070 per page, roughly
+      47x plain OCR (https://aws.amazon.com/textract/pricing/), and Google's
+      Form Parser and Custom Extractor run about 20x plain OCR
+      (https://cloud.google.com/document-ai/pricing). Watch for page-per-side
+      counting, reprocessing billed again, and undisclosed minimums.
+    named_incident: >-
+      Published hyperscaler price sheets show 20–47x spreads between plain OCR
+      and full extraction
+    source_url: https://aws.amazon.com/textract/pricing/
+  - title: Hidden human-review costs
+    description: >-
+      At an honest 80% STP rate on 1 million pages per year, the 200,000
+      exception pages equal roughly three or more FTEs of review labor, plus
+      per-review tooling fees (AWS A2I lists $0.03 per reviewed page,
+      https://aws.amazon.com/augmented-ai/pricing/). Mature agencies budget
+      review permanently.
+    named_incident: >-
+      King County, WA runs a "no production without a human reviewer" policy
+      on its redaction pipeline (StateTech, Apr 2025)
+    source_url: https://statetechmagazine.com/article/2025/04/state-and-local-agencies-deploy-artificial-intelligence-document-processing
+  - title: PII handling and retention divergence
+    description: >-
+      Provider defaults differ sharply. AWS allows service-improvement use of
+      content unless the organization opts out
+      (https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_ai-opt-out.html),
+      Azure deletes inputs within 24 hours
+      (https://learn.microsoft.com/en-us/azure/foundry/responsible-ai/document-intelligence/data-privacy-security),
+      and Google does not train on customer content
+      (https://docs.cloud.google.com/document-ai/docs/data-usage). A startup
+      wrapper calling a commercial LLM adds an unvetted second processor.
+      Benefits documents implicate IRS Pub 1075, HIPAA, and SNAP
+      confidentiality rules.
+    named_incident: >-
+      Divergent published data-use defaults across AWS, Azure, and Google
+      (documented on each provider's own pages)
+    source_url: https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_ai-opt-out.html
+  - title: Redaction's asymmetric risk
+    description: >-
+      A missed SSN in a published record is a disclosure incident. Recall (the
+      miss rate) must be reported separately from precision; a single "success
+      rate" number hides the misses. King County's 96% still implies human QA
+      on the residual.
+    named_incident: >-
+      King County, WA redaction: 96% success, 30 minutes down to under 5
+      seconds per document, with mandatory human review
+    source_url: https://statetechmagazine.com/article/2025/04/state-and-local-agencies-deploy-artificial-intelligence-document-processing
+  - title: Procurement-pressure red flags
+    description: >-
+      Hyperscience's SNAP four-pager coaches agencies on sole-source
+      justification ("unique, non-substitutable") in a field with 100+
+      vendors and five analyst-ranked Leaders
+      (https://aphsa.org/wp-content/uploads/2026/04/251029-Hyperscience-SNAP_4-Pager.pdf).
+      Oversight has flagged the same pattern federally.
+    named_incident: >-
+      TIGTA flagged non-competitive IRS "Zero Paper" awards (oversight
+      finding, Feb 2026)
+    source_url: https://www.tigta.gov/sites/default/files/reports/2026-02/2026408003fr.pdf
+
+skepticism_triggers:
+  - claim_pattern: >-
+      Accuracy of 98% or higher without a field-level definition and a
+      document mix
+    threshold: Accuracy claims at or above 98% with no denominator
+    why: >-
+      The benchmark-to-production gap runs 15–25 points, and character
+      accuracy is routinely conflated with field accuracy.
+    source_url: https://airparser.com/blog/ai-document-extraction-accuracy-benchmarks/
+  - claim_pattern: >-
+      A straight-through-processing promise above 90% before a pilot on your
+      documents
+    threshold: STP above 90% pre-pilot
+    why: >-
+      Real government results run 65–84%; 70–90% is the ceiling for clean
+      documents.
+    source_url: https://statetechmagazine.com/article/2025/04/state-and-local-agencies-deploy-artificial-intelligence-document-processing
+  - claim_pattern: '"No human review required" or "fully autonomous"'
+    threshold: Any such claim, at any accuracy level
+    why: >-
+      Mature agencies mandate review. VA OIG found 27% of reviewed
+      automation-assisted claims had inaccurate determinations.
+    source_url: https://www.vaoig.gov/reports/review/improvements-needed-vbas-claims-automation-project
+  - claim_pattern: >-
+      A handwriting accuracy claim of 97% or higher without a stated
+      character-error rate
+    threshold: Handwriting claims at or above 97%
+    why: >-
+      A 3–5% character error rate is a good result for handwriting.
+    source_url: https://www.llamaindex.ai/blog/ocr-accuracy
+  - claim_pattern: '"Only solution on the market" or sole-source coaching'
+    threshold: Any uniqueness claim or bid-waiver coaching
+    why: >-
+      100+ vendors and five Gartner Leaders exist in this category; even
+      market leaders make this claim in writing.
+    source_url: https://aphsa.org/wp-content/uploads/2026/04/251029-Hyperscience-SNAP_4-Pager.pdf
+  - claim_pattern: >-
+      A simple per-page rate with no feature, review, or minimum breakdown
+    threshold: A single blended per-page rate
+    why: >-
+      Full extraction is 20–47x plain OCR once features stack, and review adds
+      fees plus staff time.
+    source_url: https://aws.amazon.com/textract/pricing/
+  - claim_pattern: >-
+      ROI multiples (615%, 167%) without your volumes and baseline labor cost
+    threshold: Any ROI multiple presented without your inputs
+    why: >-
+      These figures trace to vendor-commissioned studies (IDC for
+      Hyperscience), not to your operation.
+    source_url: null
+  - claim_pattern: >-
+      "Deployed in 45 days" for work that touches an eligibility system
+    threshold: Any promise under 90 days for eligibility-system integration
+    why: >-
+      The vendor's own FAQ concedes timelines vary, and the IRS missed a
+      multi-year digitization goal (oversight finding).
+    source_url: https://www.tigta.gov/sites/default/files/reports/2026-02/2026408003fr.pdf
+  - claim_pattern: A redaction "success rate" quoted as one number
+    threshold: A single blended redaction metric
+    why: >-
+      Demand recall (the miss rate) reported separately. A missed SSN is a
+      disclosure incident.
+    source_url: https://statetechmagazine.com/article/2025/04/state-and-local-agencies-deploy-artificial-intelligence-document-processing
+  - claim_pattern: No written data-retention or no-training commitment
+    threshold: Absence of written terms
+    why: >-
+      Provider defaults differ sharply; verify GovRAMP and FedRAMP listings
+      independently rather than taking the pitch's word.
+    source_url: https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_ai-opt-out.html
+  - claim_pattern: All-federal or logos-only references
+    threshold: Zero named state or local references
+    why: >-
+      Named state and local references exist across this category; their
+      absence is diagnostic.
+    source_url: null
+
+diligence_questions:
+  - id: document-processing-q01
+    question: >-
+      What field-level accuracy do you achieve on documents like ours, and
+      will you demonstrate it in a pilot on 250–1,000 of our real documents,
+      including faxes, phone photos, and handwriting?
+    good_answer: >-
+      A field-level number with methodology, and an unhesitating yes to a
+      pilot on your real document mix.
+    red_flag: >-
+      One blended "99%" figure, or benchmark scores from public datasets
+      instead of your documents.
+    source_url: https://airparser.com/blog/ai-document-extraction-accuracy-benchmarks/
+  - id: document-processing-q02
+    question: >-
+      Is that character, field, or document accuracy? Define the denominator.
+    good_answer: >-
+      A precise definition. 99% character accuracy can mean roughly 80% field
+      accuracy and far lower document-level accuracy.
+    red_flag: The vendor cannot or will not say what the denominator is.
+    source_url: https://airparser.com/blog/ai-document-extraction-accuracy-benchmarks/
+  - id: document-processing-q03
+    question: >-
+      What straight-through-processing rate do your government customers
+      achieve in production, and how do you define STP?
+    good_answer: >-
+      Production numbers in the 65–84% range with a clear definition. Covered
+      California reports 84%; California DMV reports 65–70%.
+    red_flag: Claims above 90% before any pilot on your documents.
+    source_url: https://statetechmagazine.com/article/2025/04/state-and-local-agencies-deploy-artificial-intelligence-document-processing
+  - id: document-processing-q04
+    question: >-
+      Show the human review workflow: how do confidence scores route
+      low-confidence fields, who staffs the queue, and what does that labor
+      cost at our volume?
+    good_answer: >-
+      A concrete routing design, a staffing model, and a cost estimate at your
+      volume.
+    red_flag: >-
+      "No human review needed." Mature agencies mandate review at any accuracy
+      level.
+    source_url: null
+  - id: document-processing-q05
+    question: >-
+      If we sample 100 fields you marked at 90% confidence or higher, how many
+      will be wrong?
+    good_answer: >-
+      A direct number backed by calibration data. Ten or fewer is consistent
+      with the stated confidence.
+    red_flag: >-
+      More than 10 wrong signals miscalibrated confidence scores; no answer
+      signals it has never been measured.
+    source_url: null
+  - id: document-processing-q06
+    question: >-
+      What is the all-in price per 1,000 pages at our real volume: API or
+      license fees, feature add-ons, review tooling, integration, and
+      reprocessing? And what counts as a "page"?
+    good_answer: >-
+      A line-item price at your volume with a written definition of a page.
+    red_flag: >-
+      A single per-page teaser rate. Full extraction runs 20–47x plain OCR
+      once features stack.
+    source_url: https://aws.amazon.com/textract/pricing/
+  - id: document-processing-q07
+    question: >-
+      Where is our data processed and stored, is it used to train your models
+      or any third party's, and what is the deletion timeline? We need this in
+      writing.
+    good_answer: >-
+      Written terms. Anchors: Azure deletes in 24 hours and does not train;
+      Google does not train; AWS requires an explicit organization-level
+      opt-out.
+    red_flag: >-
+      Verbal assurances, or terms that defer to an upstream provider's
+      defaults.
+    source_url: https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_ai-opt-out.html
+  - id: document-processing-q08
+    question: >-
+      Which underlying OCR or extraction engine or foundation model do you
+      use, and which subprocessors touch our documents?
+    good_answer: >-
+      Named engines and a subprocessor list. This separates platforms from
+      wrappers.
+    red_flag: >-
+      "Proprietary" used as a reason not to name the engines the pitch depends
+      on.
+    source_url: null
+  - id: document-processing-q09
+    question: >-
+      Which authorizations do you hold: FedRAMP (at what level), GovRAMP, SOC
+      2 Type II? Can you support IRS Pub 1075, HIPAA, or SNAP confidentiality
+      requirements as applicable?
+    good_answer: >-
+      Product-level authorizations you can verify yourself on the FedRAMP
+      Marketplace and the GovRAMP list.
+    red_flag: >-
+      "Compliant" language, a SOC 2 Type I passed off as Type II, or
+      authorizations that exist only company-wide.
+    source_url: https://marketplace.fedramp.gov/
+  - id: document-processing-q10
+    question: >-
+      For redaction: give us precision and recall separately. What percentage
+      of PII do you miss, and what QA catches misses before records go public?
+    good_answer: >-
+      Both numbers reported separately, plus a described QA step on the
+      residual.
+    red_flag: One blended "success rate." A missed SSN is a disclosure incident.
+    source_url: https://statetechmagazine.com/article/2025/04/state-and-local-agencies-deploy-artificial-intelligence-document-processing
+  - id: document-processing-q11
+    question: >-
+      Name three government references at agencies our size, in production 12
+      or more months, including one where the rollout was hard.
+    good_answer: >-
+      Named references. SSA, VA, Colorado HCPF, Missouri DSS, California DMV,
+      Covered California, King County, and the Arkansas courts all exist in
+      this category.
+    red_flag: '"References are confidential."'
+    source_url: null
+  - id: document-processing-q12
+    question: >-
+      What per-document audit trail exists (model version, confidence score,
+      every human touch), exportable for QC and inspector-general staff? What
+      happens when document formats drift?
+    good_answer: >-
+      A complete exportable audit trail and a drift-monitoring process.
+    red_flag: >-
+      No per-document trail. GAO names opacity as the accountability risk in
+      this category (GAO-26-109137).
+    source_url: https://www.gao.gov/products/gao-26-109137
+  - id: document-processing-q13
+    question: >-
+      What are the exit terms: can we export our trained models, templates,
+      and labeled data at contract end, and at what cost?
+    good_answer: A written export commitment with format and cost.
+    red_flag: >-
+      Export treated as a change order, or trained artifacts owned by the
+      vendor.
+    source_url: null
+  - id: document-processing-q14
+    question: >-
+      Which languages do you support, as a named list matched to our
+      limited-English-proficiency population, not an adjective?
+    good_answer: A named language list with measured quality per language.
+    red_flag: '"Multilingual" with no list and no measurements.'
+    source_url: null
+
+elevated_scrutiny_rules:
+  - condition: >-
+      Extracted data feeds an eligibility or benefit determination, or a fraud
+      flag
+    action: Apply the eligibility-case-mgmt overlay.
+  - condition: The pitch involves redaction of records for public release
+    action: >-
+      Require the recall-reporting question (q10) in the output; raise caution
+      if the vendor gives a single "success rate."
+  - condition: The pitch coaches sole-source or bid-waiver justification
+    action: Flag prominently regardless of vendor size.
+  - condition: >-
+      The documents contain federal tax information, HIPAA data, or
+      immigration data
+    action: >-
+      Make the data-handling questions (q07, q09) mandatory-answer items.
+
+reference_deployments:
+  - agency: Social Security Administration
+    vendor_stack: Hyperscience with Accenture Federal
+    what: Document processing at national scale
+    metric: >-
+      $81M award, roughly 250 million documents per year (the contract award
+      is public record; the metric appears on the vendor's page)
+    metric_source_type: vendor-reported
+    source_url: https://www.hyperscience.ai/blog/united-states-social-security-administration-adopts-hyperscience/
+  - agency: VA Veterans Benefits Administration
+    vendor_stack: Hyperscience
+    what: Claims document sorting
+    metric: >-
+      Sorting time cut from about 10 days to about half a day
+      (GAO-corroborated). The same program's hypertension-claims automation
+      had a 27% error rate per VA OIG; cite both halves together.
+    metric_source_type: oversight
+    source_url: https://www.gao.gov/products/gao-26-109137
+  - agency: Colorado HCPF
+    vendor_stack: Hyperscience
+    what: SNAP and MAGI renewal-surge document automation
+    metric: >-
+      Absorbed 700–1,000% image-volume growth; 99.2%/99.4% accuracy figures
+      are vendor-reported; an ACT-IAC award provides third-party corroboration
+    metric_source_type: vendor-reported
+    source_url: https://www.hyperscience.ai/resource/state-department-of-healthcare-policy-financing-automates-snap-and-magi-documents/
+  - agency: Missouri DSS
+    vendor_stack: Hyperscience
+    what: SNAP and MAGI document processing
+    metric: Named deployment; metrics are vendor-reported
+    metric_source_type: vendor-reported
+    source_url: https://aphsa.org/wp-content/uploads/2026/04/251029-Hyperscience-SNAP_4-Pager.pdf
+  - agency: California DMV
+    vendor_stack: ABBYY
+    what: Digital mailroom
+    metric: 65–70% automation
+    metric_source_type: independent-press
+    source_url: https://statetechmagazine.com/article/2025/04/state-and-local-agencies-deploy-artificial-intelligence-document-processing
+  - agency: Covered California
+    vendor_stack: Google Document AI
+    what: Verification-document processing
+    metric: >-
+      84% verification rate; roughly 10,000 people-hours freed in year one
+    metric_source_type: independent-press
+    source_url: https://statetechmagazine.com/article/2025/04/state-and-local-agencies-deploy-artificial-intelligence-document-processing
+  - agency: King County, WA
+    vendor_stack: AWS Textract
+    what: Records redaction with mandatory human review
+    metric: >-
+      96% redaction success; 30 minutes down to under 5 seconds per document;
+      explicit no-production-without-reviewer policy
+    metric_source_type: independent-press
+    source_url: https://statetechmagazine.com/article/2025/04/state-and-local-agencies-deploy-artificial-intelligence-document-processing
+  - agency: State of Hawaii
+    vendor_stack: Google Document AI
+    what: Safe Travels document processing
+    metric: >-
+      25,000+ documents per day (vendor blog with a named state official)
+    metric_source_type: vendor-reported
+    source_url: https://cloud.google.com/blog/topics/public-sector/document-ai-government-makes-it-easier-process-documents-and-deliver-better-constituent-services
+  - agency: Arkansas Judiciary
+    vendor_stack: CSI Intellidact
+    what: Statewide court records redaction
+    metric: Statewide contract (government contract page)
+    metric_source_type: government-page
+    source_url: https://arcourts.gov/administration/acap/redactioncontract
+  - agency: IRS Paperless Processing (cautionary)
+    vendor_stack: Multiple, including an in-house system that was stopped
+    what: Paper digitization initiative
+    metric: >-
+      Missed its 2025 goal; non-competitive award concerns flagged by TIGTA
+    metric_source_type: oversight
+    source_url: https://www.tigta.gov/sites/default/files/reports/2026-02/2026408003fr.pdf
+
+registries_to_check:
+  - name: FedRAMP Marketplace
+    url: https://marketplace.fedramp.gov/
+    what_it_proves: >-
+      Whether this specific product holds a federal cloud authorization, and
+      at what level.
+  - name: GovRAMP Authorized Product List
+    url: https://govramp.org/
+    what_it_proves: >-
+      State-oriented cloud security verification. Formerly StateRAMP; the name
+      changed in February 2025.
+  - name: Pavilion Contract Hub
+    url: https://www.withpavilion.com/
+    what_it_proves: >-
+      Existing public contracts you may be able to piggyback on; confirms
+      other governments have bought the product.
+  - name: SAM.gov
+    url: https://sam.gov/
+    what_it_proves: The company exists as a registered federal contractor.
+
+legal_context: |-
+  - IRS Publication 1075 (federal tax information safeguards) applies when
+    processed documents contain FTI. Standing requirement as of Aug 28, 2026.
+  - HIPAA applies to health documents; a business associate agreement is
+    required.
+  - SNAP confidentiality rules (7 CFR 272.1) restrict use and disclosure of
+    applicant information.
+  - State breach-notification laws apply to processing failures that expose
+    PII.
+  - Title VI language-access obligations extend to how documents from
+    limited-English-proficiency residents are handled.
+
+realistic_pricing: |-
+  Plain OCR runs about $1.50 per 1,000 pages at every hyperscaler. Full
+  extraction (forms, tables, queries) runs $30–70 per 1,000 pages
+  (https://aws.amazon.com/textract/pricing/,
+  https://cloud.google.com/document-ai/pricing). Human review adds about $30
+  per 1,000 reviewed pages in tooling fees (AWS A2I,
+  https://aws.amazon.com/augmented-ai/pricing/) plus the review labor itself.
+  A 1-million-page-per-year program at full-feature Textract rates is roughly
+  $70K per year in API fees before any integrator markup. Azure list prices
+  conflicted across sources this cycle; check the live pricing page rather
+  than a quoted number.
+
+last_updated: "2026-08-28"
+refresh_cadence: quarterly
+
+known_gaps: |-
+  - Government-reference claims by Instabase, Reducto, and Extend could not be
+    verified in public sources this cycle.
+  - Azure Document Intelligence exact list prices conflicted across sources;
+    confirm on the live pricing page.
+  - Extract Systems image counts and Tungsten's agency-customer count are
+    vendor-reported.
+  - GovAI Coalition Trellis registry URL was not confirmed this cycle, so it
+    is cited by name only.

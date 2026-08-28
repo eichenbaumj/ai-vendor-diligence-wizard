@@ -1,0 +1,13 @@
+[
+  {
+    "business_id": "3210987",
+    "name": "Polimorphic, Inc.",
+    "status": "Active - annual report past due",
+    "business_type": "Stock Corporation",
+    "citizenship": "Foreign",
+    "state_of_formation": "DE",
+    "date_registration": "2024-11-14T00:00:00.000",
+    "billing_city": "New York",
+    "billing_state": "NY"
+  }
+]

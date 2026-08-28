@@ -1,0 +1,21 @@
+{
+  "took": 4,
+  "timed_out": false,
+  "hits": {
+    "total": { "value": 1, "relation": "eq" },
+    "hits": [
+      {
+        "_index": "edgar_file",
+        "_id": "0001777777-24-000009:primary_doc.xml",
+        "_source": {
+          "ciks": ["0001777777"],
+          "display_names": ["CivicSignal Series Fund I LLC  (CIK 0001777777)"],
+          "file_type": "D",
+          "root_forms": ["D"],
+          "file_date": "2024-09-12",
+          "inc_states": ["DE"]
+        }
+      }
+    ]
+  }
+}

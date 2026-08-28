@@ -1,0 +1,25 @@
+[
+  {
+    "taxpayer_number": "32092109902",
+    "taxpayer_name": "ANTHROPIC, PBC",
+    "taxpayer_city": "SAN FRANCISCO",
+    "taxpayer_state": "CA",
+    "sos_charter_date": "2024-03-19",
+    "sos_file_number": "0805470362",
+    "right_to_transact_business": "ACTIVE"
+  },
+  {
+    "taxpayer_number": "32099900011",
+    "taxpayer_name": "AUGMENT COLLECTIVE, LLC SERIES ANTHROPIC PBC N",
+    "taxpayer_city": "AUSTIN",
+    "taxpayer_state": "TX",
+    "right_to_transact_business": "ACTIVE"
+  },
+  {
+    "taxpayer_number": "32099900012",
+    "taxpayer_name": "AUGMENT COLLECTIVE, LLC SERIES ANTHROPIC PBC N II",
+    "taxpayer_city": "AUSTIN",
+    "taxpayer_state": "TX",
+    "right_to_transact_business": "ACTIVE"
+  }
+]

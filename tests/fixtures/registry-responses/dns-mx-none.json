@@ -1,0 +1,9 @@
+{
+  "Status": 3,
+  "TC": false,
+  "RD": true,
+  "RA": true,
+  "AD": false,
+  "CD": false,
+  "Question": [{ "name": "no-mail.example", "type": 15 }]
+}

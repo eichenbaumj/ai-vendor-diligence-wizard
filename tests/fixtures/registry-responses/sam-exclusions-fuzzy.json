@@ -1,0 +1,11 @@
+{
+  "totalRecords": 1,
+  "excludedEntity": [
+    {
+      "classificationType": "Firm",
+      "exclusionType": "Prohibition/Restriction",
+      "exclusionName": "GOVASSIST AI SOLUTIONS LLC",
+      "activationDate": "2024-06-19"
+    }
+  ]
+}

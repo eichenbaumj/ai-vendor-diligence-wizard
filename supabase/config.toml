@@ -1,0 +1,16 @@
+# Supabase local development configuration.
+project_id = "ai-vendor-diligence-wizard"
+
+[api]
+port = 54321
+
+[db]
+port = 54322
+
+[studio]
+port = 54323
+
+# Background tasks (EdgeRuntime.waitUntil) must run to completion in local
+# dev; per_worker keeps the worker alive after the response is sent.
+[edge_runtime]
+policy = "per_worker"

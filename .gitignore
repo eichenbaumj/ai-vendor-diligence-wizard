@@ -1,0 +1,23 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+*.tsbuildinfo
+
+# Local env / secrets — NEVER commit credentials (public repo)
+.env
+.env.*
+!.env.example
+supabase/.env.local
+supabase/.temp/
+.dev.vars
+
+# Editor / OS
+.DS_Store
+.vscode/
+.idea/
+
+# Test artifacts
+coverage/
+tests/redteam/results/

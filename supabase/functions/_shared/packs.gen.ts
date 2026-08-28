@@ -1,0 +1,2198 @@
+/*
+  GENERATED FILE — do not edit.
+  Source of truth: packs/*.yaml, compiled by scripts/build-packs.ts.
+  Regenerate with: npx tsx scripts/build-packs.ts
+*/
+import type { SectorPack } from "./packs-types.ts";
+
+export const PACK_RELEASE = "2026-08-28";
+
+export const PACKS: Record<string, SectorPack> = {
+  "call-center": {
+    "definition": "AI that answers, routes, or assists resident phone and chat contact: virtual agents and IVR bots, voice AI, agent-assist and after-call summarization, and the cloud contact-center (CCaaS) platforms they run on. This pack does not cover website-only chatbots with no contact-center function (see the public-comms pack) or anything that determines eligibility or flags fraud from a call (that adds the eligibility-case-mgmt overlay).",
+    "diligence_questions": [
+      {
+        "good_answer": "A written formula with numerator and denominator, exclusions named, and the same metric reported for named government clients at both time points.",
+        "id": "call-center-q01",
+        "question": "Show the exact formula for the containment or resolution rate you quoted. Do abandons, IVR completions, transfers, or 7-day callbacks count? Give the same metric for your three most comparable government clients at 90 days and 12 months.",
+        "red_flag": "A single marketing number with no formula, or a definition that counts abandons and menu completions as contained.",
+        "source_url": null
+      },
+      {
+        "good_answer": "Three named agencies with contact information, and metrics that match the deck's claims.",
+        "id": "call-center-q02",
+        "question": "Name three government agencies of comparable volume and program type in production today, with contacts who will confirm your deck's metrics.",
+        "red_flag": "Refusal is disqualifying. Every credible vendor in this category has named references; \"our customer list is confidential\" is not an acceptable answer here.",
+        "source_url": null
+      },
+      {
+        "good_answer": "Immediate escalation on request, automatic escalation after failures, a clear after-hours path, and warm transfer with full context.",
+        "id": "call-center-q03",
+        "question": "Walk us through every path to a human: what happens when a caller says \"agent\" on turn one? After two failed answers? At 2 a.m.? Is the transfer warm, meaning the agent sees the transcript and the collected data?",
+        "red_flag": "Escalation requires fighting through the bot, has no after-hours path, or drops the caller's context at transfer.",
+        "source_url": null
+      },
+      {
+        "good_answer": "Corpus-restricted generation with per-answer citations, explicit refusal or escalation when the answer is absent, a measured wrong-answer rate with methodology, and yes to a pre-award test.",
+        "id": "call-center-q04",
+        "question": "Is the system restricted to content we approve, with the source cited for each answer? What does it do when the answer is not there: guess, refuse, or escalate? What is the measured wrong-answer rate on a benefits test set, and can we run our own test before award?",
+        "red_flag": "Open-ended generation, no citations, no measured wrong-answer rate, or resistance to pre-award testing.",
+        "source_url": null
+      },
+      {
+        "good_answer": "Specific contract language on correction timelines and indemnification for bot-caused harm.",
+        "id": "call-center-q05",
+        "question": "If the bot gives a claimant wrong information, what does the contract say? What are the correction SLAs and the indemnification terms?",
+        "red_flag": "\"That has never happened\" or a disclaimer-only answer. A tribunal held Air Canada liable for its bot's invented policy; the agency owns what its bot says.",
+        "source_url": "https://www.cbsnews.com/news/aircanada-chatbot-discount-customer/"
+      },
+      {
+        "good_answer": "A named language list matched to caller demographics, native-speaker QA, and a working interpreter handoff.",
+        "id": "call-center-q06",
+        "question": "Which languages do you support, on which channels, with what human review? Is spoken Spanish actual Spanish reviewed by native speakers? Show us the interpreter-handoff flow.",
+        "red_flag": "A large language count with no QA process. Washington state removed an AI voice in February 2026 after Spanish callers got Spanish-accented English.",
+        "source_url": "https://statetechmagazine.com/article/2024/03/state-governments-deploy-contact-center-ai-bolster-customer-service"
+      },
+      {
+        "good_answer": "A named client on the same stack, fixed-price integration, and a precise read/write scope.",
+        "id": "call-center-q07",
+        "question": "Have you integrated with our exact stack (our IVR plus our CRM or eligibility system)? Name the client. Is the integration fixed-price? What does the bot read, and what does it write?",
+        "red_flag": "\"Our API can integrate with anything\" with no named client on your stack, or open-ended integration billing.",
+        "source_url": null
+      },
+      {
+        "good_answer": "A product-level authorization you can verify on the marketplace, a named storage location and retention period, and a written no-training commitment.",
+        "id": "call-center-q08",
+        "question": "Which FedRAMP or GovRAMP authorization does this specific product hold? Where are recordings and transcripts stored, how long are they retained, and is any of our data used to train models, yours or a subprocessor's?",
+        "red_flag": "\"Compliant\" instead of \"authorized,\" company-level claims for a product-level question, or vague data-use terms.",
+        "source_url": "https://marketplace.fedramp.gov/"
+      },
+      {
+        "good_answer": "Named model providers and hosting, plus a described regression-test process tied to model updates.",
+        "id": "call-center-q09",
+        "question": "Which LLM and speech-recognition vendors are under the hood, and where are they hosted? When the underlying model updates, how do you regression-test our flows before residents see the change?",
+        "red_flag": "Refusal to name subprocessors, or no regression-testing process at all.",
+        "source_url": null
+      },
+      {
+        "good_answer": "Disclosure on by default, prior-express-consent handling for outbound calls, and specific answers on state laws.",
+        "id": "call-center-q10",
+        "question": "Does the system disclose that it is automated at the start of each interaction? For outbound calls: how do you comply with FCC ruling 24-17, which treats AI voices as artificial voices under the TCPA? How do you handle state bot-disclosure laws and the Colorado AI Act (effective Jun 30, 2026)?",
+        "red_flag": "Disclosure treated as optional or configurable off, or unfamiliarity with FCC 24-17.",
+        "source_url": "https://docs.fcc.gov/public/attachments/FCC-24-17A1.pdf"
+      },
+      {
+        "good_answer": "A line-item decomposition with surge modeling and stated minimums.",
+        "id": "call-center-q11",
+        "question": "Break the price into platform, per-minute or per-message usage, telecom passthrough, AI metering, integration, and support. What happens to our bill in a 10x claims surge? What are the minimums and the overage rates?",
+        "red_flag": "One bundled number, no surge answer, or minimums that only appear in the contract draft.",
+        "source_url": "https://aws.amazon.com/connect/pricing/"
+      },
+      {
+        "good_answer": "Full transcript access, per-intent reporting, staff review rights, and a no-cost or low-cost export commitment in a usable format.",
+        "id": "call-center-q12",
+        "question": "Do we get raw transcripts plus a dashboard covering containment, escalation, abandonment, wait time, and per-intent accuracy? Can our staff review any interaction? What is exported at contract end, in what format, and at what cost?",
+        "red_flag": "Vendor-controlled reporting only, sampled transcripts, or export treated as a paid professional service.",
+        "source_url": null
+      },
+      {
+        "good_answer": "Automatic failover to the human queue, a specific uptime SLA, and real postmortems shared.",
+        "id": "call-center-q13",
+        "question": "When your AI is down, what does a caller hear: a queue or a dead line? What is your uptime SLA, and can we see your last two incident postmortems?",
+        "red_flag": "No failover story, or refusal to share incident history.",
+        "source_url": null
+      },
+      {
+        "good_answer": "Yes, agent-assist can be bought alone (the lowest-risk entry point), with a described human review step for summaries that become records.",
+        "id": "call-center-q14",
+        "question": "Can we buy after-call summarization alone, without a resident-facing bot? What accuracy review exists for auto-summaries written into our CRM?",
+        "red_flag": "Bundling that forces a resident-facing bot, or summaries written to the CRM with no review.",
+        "source_url": null
+      },
+      {
+        "good_answer": "A named client, with before-and-after quality metrics alongside the staffing change.",
+        "id": "call-center-q15",
+        "question": "If you project staffing savings, name the client where that happened and tell us what happened to their quality metrics afterward.",
+        "red_flag": "Projected savings with no named client. Klarna reversed its agent-replacement strategy after quality suffered.",
+        "source_url": null
+      }
+    ],
+    "elevated_scrutiny_rules": [
+      {
+        "action": "Apply the eligibility-case-mgmt overlay.",
+        "condition": "The pitch claims the phone AI determines eligibility, changes claims, or flags fraud"
+      },
+      {
+        "action": "Add the mandatory TCPA / FCC 24-17 legal block to the output.",
+        "condition": "The pitch proposes outbound AI-voice calling"
+      },
+      {
+        "action": "Raise the caution band floor one level.",
+        "condition": "The pitch proposes a synthetic human-like voice without disclosure"
+      },
+      {
+        "action": "Use \"we could not verify a named government customer in public sources\" language in the output.",
+        "condition": "The sender is a commercial AI-agent startup claiming government traction with no verifiable state or local reference"
+      }
+    ],
+    "established_vendors": [
+      {
+        "gov_evidence_url": "https://aws.amazon.com/products/connect/customer/slg/",
+        "name": "AWS Amazon Connect",
+        "one_liner": "Consumption-priced CCaaS with the deepest state and local roster (Kentucky Transportation, South Carolina DSS, New Mexico HSD, Atlanta 311, Tamarac FL, Arizona MVD, Workforce West Virginia).",
+        "tier": "platform"
+      },
+      {
+        "gov_evidence_url": "https://cloud.google.com/customers/state-of-illinois",
+        "name": "Google Cloud Customer Engagement Suite",
+        "one_liner": "Gemini-based virtual agents; Illinois IDES, Minnesota DVS, Colorado CDLE.",
+        "tier": "platform"
+      },
+      {
+        "gov_evidence_url": "https://www.genesys.com/company/newsroom/announcements/122908",
+        "name": "Genesys Cloud CX",
+        "one_liner": "FedRAMP Moderate; large legacy government base; public list pricing is useful for quote benchmarking (https://www.genesys.com/pricing).",
+        "tier": "platform"
+      },
+      {
+        "gov_evidence_url": "https://www.nice.com/industries/government",
+        "name": "NICE CXone",
+        "one_liner": "San Diego County access center; NYC DSS via C1 Gov (metrics are vendor-reported).",
+        "tier": "platform"
+      },
+      {
+        "gov_evidence_url": "https://www.five9.com/resources/case-study-nj-2-1-1",
+        "name": "Five9",
+        "one_liner": "NJ 211 statewide network; 50-seat minimum.",
+        "tier": "platform"
+      },
+      {
+        "gov_evidence_url": "https://www.talkdesk.com/news-and-press/press-releases/fedramp-authorization/",
+        "name": "Talkdesk",
+        "one_liner": "Full FedRAMP authorization; fewer named state and local references.",
+        "tier": "platform"
+      },
+      {
+        "gov_evidence_url": "https://statetechmagazine.com/article/2025/08/kyle-texas-uses-ai-expedite-citizen-service-delivery",
+        "name": "Salesforce Agentforce",
+        "one_liner": "City of Kyle, TX: resolution time cut from 4.37 to 2.41 days across 12,000+ requests.",
+        "tier": "platform"
+      },
+      {
+        "gov_evidence_url": null,
+        "name": "ServiceNow",
+        "one_liner": "Missouri DSS (Route Fifty, May 21, 2026); ID.me/Servos benefits-modernization partnership (PR Newswire, Jun 23, 2026).",
+        "tier": "platform"
+      },
+      {
+        "gov_evidence_url": null,
+        "name": "Deloitte / Accenture / Maximus / C1 Gov / Smartronix / Quantiphi",
+        "one_liner": "The delivery layer for most state contact-center deployments; named projects appear in the landscape summary above.",
+        "tier": "integrator"
+      },
+      {
+        "gov_evidence_url": "https://www.govtech.com/biz/polimorphic-raises-18-6m-as-it-beefs-up-public-sector-ai",
+        "name": "Polimorphic",
+        "one_liner": "Local-government AI chat and phone agents; $18.6M Series A; Pacifica CA, Tooele County UT, Polk County NC, Palm Beach FL.",
+        "tier": "startup-verified"
+      },
+      {
+        "gov_evidence_url": null,
+        "name": "Verint / SoundHound (Amelia)",
+        "one_liner": "Coral Springs FL; USCIS \"Emma\" lineage (Federal Times, Nov 16, 2015).",
+        "tier": "specialist"
+      }
+    ],
+    "failure_modes": [
+      {
+        "description": "A bot on an official government line invents policy and residents rely on it. The organization owns everything its bot says: a Canadian tribunal held Air Canada liable for its chatbot's invented refund policy (https://www.cbsnews.com/news/aircanada-chatbot-discount-customer/), and even Cursor, an AI company, saw its own support bot invent a policy that did not exist (Ars Technica, Apr 17, 2025).",
+        "named_incident": "NYC's MyCity chatbot told businesses to break the law (The Markup, Mar 29, 2024)",
+        "source_url": "https://themarkup.org/artificial-intelligence/2024/03/29/nycs-ai-chatbot-tells-businesses-to-break-the-law",
+        "title": "Hallucinated benefit or legal guidance on an official line"
+      },
+      {
+        "description": "Klarna publicly reversed its \"AI replaced 700 agents\" posture and rehired humans (Forbes, May 18, 2025; direct article URL pending re-capture, see known gaps). For callers in crisis, callers with limited English, and callers with low digital literacy, a bot with no exit to a person is a due-process problem. The IRS voice-bot rollout is the design benchmark: taxpayers can always reach an English- or Spanish-speaking representative.",
+        "named_incident": "Klarna reversed its AI-only support strategy and rehired human agents (Forbes, May 18, 2025)",
+        "source_url": "https://www.irs.gov/newsroom/irs-expands-voice-bot-options-for-faster-service-less-wait-time",
+        "title": "Missing or buried human escalation"
+      },
+      {
+        "description": "Vendors count abandons, IVR menu completions, and \"caller did not reply\" as \"contained.\" Gartner's own bullish forecast is 80% of common issues resolved without a human by 2029 (https://www.gartner.com/en/newsroom/press-releases/2025-03-05-gartner-predicts-agentic-ai-will-autonomously-resolve-80-percent-of-common-customer-service-issues-without-human-intervention-by-2029), so a higher present-tense claim deserves the metric-definition question below.",
+        "named_incident": "Documented government reality: Tamarac, FL reached 20% full self-service, and West Virginia's roughly 90% came from a narrow scripted FAQ surge line",
+        "source_url": "https://aws.amazon.com/blogs/publicsector/how-the-city-of-tamarac-transformed-resident-experience-with-amazon-connect/",
+        "title": "Containment inflation through definition games"
+      },
+      {
+        "description": "Intercom's $0.99 \"outcome\" pricing includes a customer who simply goes silent. Gartner predicts generative-AI cost-per-resolution will exceed offshore human cost by 2030 (Gartner press release, Jan 26, 2026), and pricing-model churn (Salesforce, Jun 2026; HubSpot, Apr 2026) makes a multi-year per-resolution commitment unsafe without a contractual resolution definition and an audit right.",
+        "named_incident": "Intercom's published per-resolution pricing counts a customer who goes silent as a resolved outcome",
+        "source_url": "https://www.intercom.com/pricing",
+        "title": "Per-resolution pricing games"
+      },
+      {
+        "description": "Washington state removed an AI voice after Spanish-speaking callers got Spanish-accented English instead of Spanish (StateScoop, Feb 27, 2026; direct article URL pending re-capture, see known gaps). The contrast benchmark is Minnesota's community-informed four-language model, with languages chosen from caller demographics.",
+        "named_incident": "Washington state removed an AI voice over failed Spanish support (StateScoop, Feb 27, 2026)",
+        "source_url": "https://statetechmagazine.com/article/2024/03/state-governments-deploy-contact-center-ai-bolster-customer-service",
+        "title": "Language-access failures shipped without native-speaker QA"
+      },
+      {
+        "description": "FCC ruling 24-17 classifies AI-generated voices as \"artificial\" under the TCPA, so outbound use requires prior express consent. The FBI has warned about cloning of official voices (NPR, Jul 9, 2025). A synthetic voice marketed as indistinguishable from a human is a liability, not a feature.",
+        "named_incident": "FCC declaratory ruling 24-17 on AI voices under the TCPA (Feb 2024)",
+        "source_url": "https://docs.fcc.gov/public/attachments/FCC-24-17A1.pdf",
+        "title": "Voice cloning and disclosure exposure"
+      }
+    ],
+    "inclusion_test": [
+      "Does the pitch mention phone calls, IVR, voice agents, hold times, call deflection or containment, or contact-center agents?",
+      "Does it target 311, benefits hotlines, unemployment lines, DMV lines, or \"resident support\"?",
+      "Does it offer agent-assist, call summarization, or transcription for call-center staff?",
+      "Does it name a CCaaS platform (Amazon Connect, Genesys, NICE, Five9, Talkdesk) as its base?"
+    ],
+    "incumbent_landscape": "Three layers, and the first triage step is establishing which layer the sender occupies. Layer 1, platforms: AWS (Amazon Connect), Google Cloud (Customer Engagement Suite, formerly \"Contact Center AI\"), Genesys, NICE, Five9, Talkdesk, Salesforce Agentforce, ServiceNow, and Verint/SoundHound, all with real, named state and local deployments. Layer 2, the integrators and BPOs who deliver most state deployments: Deloitte (TrueServe on AWS), Accenture (Texas TWC \"Larry\"), Quantiphi/Presidio/Cisco (Illinois IDES), Smartronix (West Virginia), C1 Gov (NYC DSS), and Maximus. When a platform pitches, ask who delivers. When an integrator pitches, ask which platform. The accountability split between the two is where deployments fail. Layer 3, startups: govtech-native companies (Polimorphic, Citibot) with named local-government customers, versus commercial AI-agent startups (Sierra, Decagon, Parloa, PolyAI, Replicant). We could not verify any U.S. state or local government customer for that second group in public sources as of August 2026, so a \"government-proven\" claim from that cohort is unverified until the vendor names an agency you can call.",
+    "known_gaps": "- Google Conversational Agents pricing was not fetched this cycle; confirm\n  at quote time.\n- Citibot's customer list is unverified; the vendor site blocked automated\n  fetch.\n- AWS, NICE, Five9, and Polimorphic metrics are vendor-published and not\n  independently verified.\n- Title VI enforcement posture after EO 14224 is unsettled.\n- Direct article URLs for the Klarna reversal (Forbes, May 18, 2025), the\n  Washington AI-voice removal (StateScoop, Feb 27, 2026), and the EDDNext\n  caution (KQED, Dec 4, 2024) were not captured this cycle; those items are\n  retained with citations by outlet and date.\n- Amarillo TX \"Emma,\" Atlanta 311, and Coral Springs FL (Amelia) are named\n  deployments in the research record but lacked direct source URLs this\n  cycle, so they are omitted from reference deployments.\n- TX-RAMP program page and GovAI Coalition Trellis registry URLs were not\n  confirmed this cycle, so those registries are cited by name only.",
+    "last_updated": "2026-08-28",
+    "legal_context": "- FCC declaratory ruling 24-17 (Feb 2024): AI-generated voices are\n  \"artificial voices\" under the TCPA; outbound use requires prior express\n  consent (https://docs.fcc.gov/public/attachments/FCC-24-17A1.pdf).\n- California B.O.T. Act (SB 1001, effective 2019): bots that try to\n  influence a purchase or a vote must disclose that they are bots.\n- Utah AI Policy Act (2024): disclosure requirements for generative AI in\n  consumer interactions.\n- Colorado AI Act (effective Jun 30, 2026): AI affecting access to\n  government services is treated as high-risk. Verify current status before\n  citing; the effective date has shifted once already.\n- Executive Order 14224 (2025) does not erase Title VI language-access\n  obligations. A vendor citing it as a reason to cut language QA is a red\n  flag. Enforcement posture after the EO is unsettled; treat as uncertain.",
+    "pack_id": "call-center",
+    "pack_name": "Call Center & Phone AI",
+    "realistic_pricing": "Per-seat CCaaS list prices: Genesys $75–240 per user per month\n(https://www.genesys.com/pricing), Five9 from $119–159 with a 50-seat\nminimum, Talkdesk $85–225. Consumption pricing: Amazon Connect $0.038 per\nvoice minute and $0.010 per chat message\n(https://aws.amazon.com/connect/pricing/). Rule of thumb: at roughly\n$0.04–0.10 per minute all-in, a 500,000-call-per-year line at 5 minutes per\ncall runs about $100K–250K per year in platform consumption before\nintegration and telecom. A quote at 10x that level means asking which layer\nthe money is in. Per-resolution pricing is workable for digital FAQ traffic\nonly, and only with a contractual definition of \"resolution.\" Govtech\nstartups typically sell annual jurisdiction-tier subscriptions, commonly low\nfive figures for small jurisdictions; that figure is uncertain, so negotiate\nper jurisdiction.",
+    "reference_deployments": [
+      {
+        "agency": "Illinois IDES",
+        "metric": "140,000+ inquiries per day at peak; the widely quoted \"$100M savings\" is an initial, unaudited estimate",
+        "metric_source_type": "vendor-reported",
+        "source_url": "https://cloud.google.com/customers/state-of-illinois",
+        "vendor_stack": "Google Contact Center AI via Quantiphi/Presidio on Cisco",
+        "what": "Unemployment virtual agent stood up during the pandemic surge"
+      },
+      {
+        "agency": "Colorado CDLE",
+        "metric": "The design benchmark for scope restraint rather than a volume claim",
+        "metric_source_type": "government-page",
+        "source_url": "https://cdle.colorado.gov/virtual-assistant-tips",
+        "vendor_stack": "Google virtual agent, phased rollout",
+        "what": "FAQs first, then authenticated claim status; the assistant explicitly \"cannot change your claim\""
+      },
+      {
+        "agency": "Texas Workforce Commission (\"Larry\")",
+        "metric": "21 million+ questions handled",
+        "metric_source_type": "independent-press",
+        "source_url": "https://www.dallasnews.com/business/jobs/2020/04/01/texas-launches-chatbot-named-larry-to-help-with-surge-in-unemployment-claims/",
+        "vendor_stack": "Accenture + AWS",
+        "what": "Surge FAQ bot stood up in 5 days during the 2020 unemployment spike"
+      },
+      {
+        "agency": "Workforce West Virginia",
+        "metric": "Roughly 90% resolution, on a narrow scripted FAQ surge line",
+        "metric_source_type": "vendor-reported",
+        "source_url": "https://aws.amazon.com/blogs/publicsector/accelerating-response-west-virginia-workforces-needs-cloud",
+        "vendor_stack": "Amazon Connect via Smartronix",
+        "what": "Surge line stood up in 72 hours in 2020"
+      },
+      {
+        "agency": "South Carolina DSS",
+        "metric": "Named statewide modernization; metrics are vendor-reported",
+        "metric_source_type": "vendor-reported",
+        "source_url": "https://aws.amazon.com/blogs/publicsector/how-south-carolina-dss-modernized-19-contact-centers-to-improve-benefits-delivery-with-amazon-connect/",
+        "vendor_stack": "Amazon Connect",
+        "what": "19 contact centers modernized for benefits delivery"
+      },
+      {
+        "agency": "NJ 211",
+        "metric": "110 multilingual agents; metrics are vendor-reported",
+        "metric_source_type": "vendor-reported",
+        "source_url": "https://www.five9.com/resources/case-study-nj-2-1-1",
+        "vendor_stack": "Five9",
+        "what": "Statewide 211 network"
+      },
+      {
+        "agency": "City of Tamarac, FL",
+        "metric": "20% of residents fully self-serve, the honest self-service anchor, from the vendor's own case study",
+        "metric_source_type": "vendor-reported",
+        "source_url": "https://aws.amazon.com/blogs/publicsector/how-the-city-of-tamarac-transformed-resident-experience-with-amazon-connect/",
+        "vendor_stack": "Amazon Connect",
+        "what": "Resident service line with self-service options"
+      },
+      {
+        "agency": "Minnesota DVS",
+        "metric": "87,813 conversations in 2023",
+        "metric_source_type": "independent-press",
+        "source_url": "https://statetechmagazine.com/article/2024/03/state-governments-deploy-contact-center-ai-bolster-customer-service",
+        "vendor_stack": "Google Dialogflow chatbot",
+        "what": "Chatbot in English, Spanish, Hmong, and Somali, with languages chosen from caller demographics"
+      },
+      {
+        "agency": "Kentucky Transportation Cabinet",
+        "metric": "900,000+ chatbot interactions per month",
+        "metric_source_type": "vendor-reported",
+        "source_url": "https://aws.amazon.com/solutions/case-studies/kentucky-transportation-case-study/",
+        "vendor_stack": "Amazon Connect",
+        "what": "Transportation services chatbot"
+      },
+      {
+        "agency": "City of Kyle, TX",
+        "metric": "Resolution time cut from 4.37 to 2.41 days across 12,000+ requests",
+        "metric_source_type": "independent-press",
+        "source_url": "https://statetechmagazine.com/article/2025/08/kyle-texas-uses-ai-expedite-citizen-service-delivery",
+        "vendor_stack": "Salesforce Agentforce",
+        "what": "Resident service request handling"
+      },
+      {
+        "agency": "IRS",
+        "metric": "Callers can always reach an English- or Spanish-speaking representative if needed",
+        "metric_source_type": "government-page",
+        "source_url": "https://www.irs.gov/newsroom/irs-expands-voice-bot-options-for-faster-service-less-wait-time",
+        "vendor_stack": "Voice bots on the main service lines",
+        "what": "Federal design benchmark for escalation"
+      },
+      {
+        "agency": "NYC DSS",
+        "metric": "Named deployment; metrics are vendor-reported",
+        "metric_source_type": "vendor-reported",
+        "source_url": "https://www.nice.com/industries/government",
+        "vendor_stack": "NICE CXone via C1 Gov",
+        "what": "Benefits contact center"
+      }
+    ],
+    "refresh_cadence": "quarterly",
+    "registries_to_check": [
+      {
+        "name": "FedRAMP Marketplace",
+        "url": "https://marketplace.fedramp.gov/",
+        "what_it_proves": "Whether this specific product holds a federal cloud authorization, and at what level. Verify the product, not the company."
+      },
+      {
+        "name": "GovRAMP Authorized Product List",
+        "url": "https://govramp.org/",
+        "what_it_proves": "State-oriented cloud security verification. Formerly StateRAMP; the name changed in February 2025."
+      },
+      {
+        "name": "SAM.gov",
+        "url": "https://sam.gov/",
+        "what_it_proves": "The company exists as a registered federal contractor."
+      },
+      {
+        "name": "NASPO ValuePoint",
+        "url": "https://www.naspovaluepoint.org/",
+        "what_it_proves": "Whether the vendor sells through established cooperative state purchasing agreements."
+      },
+      {
+        "name": "Carahsoft",
+        "url": "https://www.carahsoft.com/",
+        "what_it_proves": "Whether the vendor is distributed through the main government IT reseller channel."
+      },
+      {
+        "name": "Pavilion Contract Hub",
+        "url": "https://www.withpavilion.com/",
+        "what_it_proves": "Existing public contracts you may be able to piggyback on; confirms other governments have bought the product."
+      },
+      {
+        "name": "Procurated",
+        "url": "https://www.procurated.com/",
+        "what_it_proves": "Peer reviews of suppliers from other government buyers."
+      }
+    ],
+    "scrutiny_tier": "standard",
+    "skepticism_triggers": [
+      {
+        "claim_pattern": "A containment or deflection rate of 80% or more (for voice, 40% or more)",
+        "source_url": "https://aws.amazon.com/blogs/publicsector/how-the-city-of-tamarac-transformed-resident-experience-with-amazon-connect/",
+        "threshold": "Text containment at or above 80%; voice containment at or above 40–50%",
+        "why": "Gartner's optimistic forecast is 80% of common issues by 2029. Documented government reality: Tamarac reached 20% full self-service, and West Virginia's roughly 90% came from a narrow scripted FAQ surge line."
+      },
+      {
+        "claim_pattern": "\"99%+ accuracy\" or \"never hallucinates\"",
+        "source_url": "https://themarkup.org/artificial-intelligence/2024/03/29/nycs-ai-chatbot-tells-businesses-to-break-the-law",
+        "threshold": "Any accuracy claim without a test-set methodology",
+        "why": "NYC and Cursor show that well-resourced deployers still ship wrong-answer bots. An accuracy number with no test set, denominator, or judge is a marketing number."
+      },
+      {
+        "claim_pattern": "\"Replaces N agents\" or a named dollar-savings figure",
+        "source_url": "https://cloud.google.com/customers/state-of-illinois",
+        "threshold": "Any named FTE or dollar savings without an audited source",
+        "why": "Illinois's \"$100M per year savings\" was an initial vendor-story estimate, not an audited figure, and Klarna reversed its agent-replacement strategy."
+      },
+      {
+        "claim_pattern": "\"Deploy in days\" combined with \"integrated\"",
+        "source_url": "https://www.dallasnews.com/business/jobs/2020/04/01/texas-launches-chatbot-named-larry-to-help-with-surge-in-unemployment-claims/",
+        "threshold": "A deployment promise under 30 days alongside claims of system integration",
+        "why": "The two claims contradict each other. Days is true only for scripted FAQ bots (Texas TWC's \"Larry\": 5 days; West Virginia: 72 hours, both 2020 surge lines). Claim-status or eligibility integration takes months."
+      },
+      {
+        "claim_pattern": "Per-resolution price under $1, or an undefined \"resolution\"",
+        "source_url": "https://www.intercom.com/pricing",
+        "threshold": "Under $1 per resolution, or no contractual definition",
+        "why": "Intercom's $0.99 outcome pricing counts a customer who goes silent. Demand a contractual resolution definition plus an audit right."
+      },
+      {
+        "claim_pattern": "\"FedRAMP compliant\" or \"StateRAMP compliant\"",
+        "source_url": "https://marketplace.fedramp.gov/",
+        "threshold": "The word \"compliant\" instead of \"authorized\"",
+        "why": "\"Compliant\" is not \"authorized.\" Verify the specific product at the FedRAMP Marketplace and on the GovRAMP authorized product list. A vendor still saying \"StateRAMP\" does not know the program became GovRAMP in February 2025."
+      },
+      {
+        "claim_pattern": "\"Supports 75+ languages\"",
+        "source_url": "https://statetechmagazine.com/article/2024/03/state-governments-deploy-contact-center-ai-bolster-customer-service",
+        "threshold": "A language count above the number of languages with native-speaker QA",
+        "why": "Machine-translation coverage is not language access. Ask which languages have native-speaker QA. Minnesota's four-language community-informed model is the honest benchmark."
+      },
+      {
+        "claim_pattern": "\"No integration required\"",
+        "source_url": null,
+        "threshold": "Any claim that useful answers need no system integration",
+        "why": "It means FAQ-only. The bot cannot answer \"where is my payment,\" which is most benefits-line volume."
+      },
+      {
+        "claim_pattern": "\"Indistinguishable from a human voice\"",
+        "source_url": "https://docs.fcc.gov/public/attachments/FCC-24-17A1.pdf",
+        "threshold": "Any pitch marketing voice realism without disclosure",
+        "why": "FCC 24-17 treats AI voices as artificial under the TCPA, several states require bot disclosure, and the Colorado AI Act takes effect Jun 30, 2026. Realism without disclosure is a liability."
+      },
+      {
+        "claim_pattern": "\"Government-proven\" with no named agency",
+        "source_url": null,
+        "threshold": "Zero named, callable government customers",
+        "why": "This applies with force to commercial AI-agent startups (the Sierra, Decagon, Parloa, PolyAI, Replicant cohort). We could not verify any U.S. state or local government customer for that cohort in public sources as of August 2026."
+      },
+      {
+        "claim_pattern": "A new platform pitched as the fix for a struggling program",
+        "source_url": null,
+        "threshold": "Replatforming presented as the remedy for backlogs, improper payments, or debt problems",
+        "why": "California's billion-dollar EDDNext replatforming had not resolved the underlying fraud and debt problems (KQED, Dec 4, 2024; direct article URL pending re-capture, see known gaps). Process problems follow the program onto the new platform."
+      }
+    ]
+  },
+  "data-analytics": {
+    "definition": "AI and analytics that inform government decisions: dashboards and BI with AI layers, \"ask your data\" LLM interfaces, predictive analytics, risk scoring, fraud and program-integrity analytics, and assessment algorithms. The first question in this pack is the fork: decoration or decision? A dashboard that describes gets standard scrutiny. A score or flag that can trigger action against a person is an adverse-action system and adds the eligibility-case-mgmt overlay.",
+    "diligence_questions": [
+      {
+        "good_answer": "A clear scope statement. If adverse actions are possible, the vendor accepts the high-impact review track without argument.",
+        "id": "data-analytics-q01",
+        "question": "What decisions will these outputs feed, and can a score or flag by itself trigger an adverse action against a person (a benefit cut, a fraud hold, an investigation)? If yes, we will treat this as a high-impact system that needs a different review track.",
+        "red_flag": "\"That depends on how you configure it,\" without engaging the consequences.",
+        "source_url": null
+      },
+      {
+        "good_answer": "Real notice text with specific reasons a caseworker can explain.",
+        "id": "data-analytics-q02",
+        "question": "Show the exact notice text an affected resident would receive. Can a caseworker explain in plain language why this specific person was flagged?",
+        "red_flag": "No notice exists because \"the score is advisory.\"",
+        "source_url": null
+      },
+      {
+        "good_answer": "Yes, in contract. Idaho's K.W. v. Armstrong shows trade-secret postures fail in court.",
+        "id": "data-analytics-q03",
+        "question": "Will you contractually commit to disclosing model logic, features, and weights to us, our auditors, and a court if litigated?",
+        "red_flag": "Trade-secret carve-outs over decision logic.",
+        "source_url": "https://www.acluidaho.org/en/cases/kw-v-armstrong"
+      },
+      {
+        "good_answer": "Threshold-level precision and recall plus a staffing model. The IRS benchmark shows 81% false positives is what \"working\" can look like at low base rates.",
+        "id": "data-analytics-q04",
+        "question": "Not \"accuracy\": what are precision and recall at your recommended threshold, validated on data like ours? At our prevalence, how many flags per 100 are false positives, and what staffing does the review queue require?",
+        "red_flag": "A single accuracy number.",
+        "source_url": "https://www.taxpayeradvocate.irs.gov/wp-content/uploads/2020/07/ARC18_Volume1_MSP_05_FalsePositiveRates.pdf"
+      },
+      {
+        "good_answer": "Human sign-off enforced in the system design, not just in policy.",
+        "id": "data-analytics-q05",
+        "question": "Where exactly is human review mandatory, as a designed control? Can the system technically execute an adverse action with no human sign-off?",
+        "red_flag": "Auto-execution is possible and \"most customers add review.\"",
+        "source_url": null
+      },
+      {
+        "good_answer": "Shared testing results and a straight answer on regulatory attention.",
+        "id": "data-analytics-q06",
+        "question": "What testing across race, disability, age, and language has been done, on which population, and will you share the results? Has any customer, regulator, or DOJ inquiry examined this product?",
+        "red_flag": "\"Bias-free\" claims, or evasion about known inquiries.",
+        "source_url": "https://www.pbs.org/newshour/nation/ap-report-doj-examining-ai-screening-tool-used-by-pa-child-welfare-agency"
+      },
+      {
+        "good_answer": "Explicit data-quality gates and uncertainty flags.",
+        "id": "data-analytics-q07",
+        "question": "When our input data is wrong, stale, or missing, does the system flag uncertainty or silently score anyway?",
+        "red_flag": "Silent scoring. Idaho scored unreliable data; Missouri's algorithm shipped with syntax errors.",
+        "source_url": "https://www.btah.org/case-studies.html"
+      },
+      {
+        "good_answer": "A monitoring regime with named owners and suspension triggers.",
+        "id": "data-analytics-q08",
+        "question": "What drift monitoring and revalidation exist, who sees the results, and what triggers suspension of the model?",
+        "red_flag": "No revalidation after go-live.",
+        "source_url": null
+      },
+      {
+        "good_answer": "A defect-to-remediation workflow that can enumerate all affected people.",
+        "id": "data-analytics-q09",
+        "question": "When we discover a wrong score, what is the process to correct it, find everyone else affected by the same defect, and make them whole?",
+        "red_flag": "Correction handled case by case with no systematic lookback.",
+        "source_url": null
+      },
+      {
+        "good_answer": "Full provenance: every claim links to the query and rows behind it.",
+        "id": "data-analytics-q10",
+        "question": "For LLM insight layers: how do you prevent hallucinated numbers, and does every generated claim link to the underlying query and rows?",
+        "red_flag": "Generated narratives with no provenance.",
+        "source_url": null
+      },
+      {
+        "good_answer": "A complete list including the hard cases. This tool cross-checks vendor names against the BTAH case library and the AI Incident Database.",
+        "id": "data-analytics-q11",
+        "question": "List the government deployments of this specific model or product, including any that were challenged, audited, or decommissioned.",
+        "red_flag": "Logos-only marketing, or omission of documented challenges.",
+        "source_url": "https://www.btah.org/case-studies.html"
+      },
+      {
+        "good_answer": "Concrete terms sized to the documented downside (Michigan: $20M plus a rebuild; Florida: a $92.4M rebuild).",
+        "id": "data-analytics-q12",
+        "question": "What warranty, indemnification, and insurance terms apply when system errors trigger litigation?",
+        "red_flag": "Liability capped at fees paid.",
+        "source_url": "https://www.btah.org/case-studies.html"
+      }
+    ],
+    "elevated_scrutiny_rules": [
+      {
+        "action": "Apply the eligibility-case-mgmt overlay, and use the strongest caution band for auto-executed adverse actions.",
+        "condition": "A score or flag can trigger action against a person"
+      },
+      {
+        "action": "Render the Allegheny and Loomis context; make the disparate-impact question (q06) mandatory.",
+        "condition": "A child-welfare or justice screening pitch"
+      },
+      {
+        "action": "Standard track, plus an incumbent-duplication check: does an existing Tyler, Power BI, or Tableau contract already cover this?",
+        "condition": "A purely descriptive dashboard or open-data pitch"
+      }
+    ],
+    "established_vendors": [
+      {
+        "gov_evidence_url": "https://www.fedramp.gov/marketplace/products/SOCRATA/",
+        "name": "Tyler Data & Insights",
+        "one_liner": "Formerly Socrata; FedRAMP-listed; open-data and analytics for NYC, Chicago, San Francisco, Los Angeles, and several states.",
+        "tier": "platform"
+      },
+      {
+        "gov_evidence_url": null,
+        "name": "OpenGov",
+        "one_liner": "Budgeting and performance analytics for local government; AI features announced Mar 2024.",
+        "tier": "platform"
+      },
+      {
+        "gov_evidence_url": null,
+        "name": "Polco",
+        "one_liner": "Community-survey and engagement analytics (\"Polly\").",
+        "tier": "specialist"
+      },
+      {
+        "gov_evidence_url": null,
+        "name": "Zencity",
+        "one_liner": "Resident-sentiment and engagement analytics (Zencity 360).",
+        "tier": "specialist"
+      },
+      {
+        "gov_evidence_url": null,
+        "name": "Microsoft (Power BI)",
+        "one_liner": "Ubiquitous general BI stack in government.",
+        "tier": "platform"
+      },
+      {
+        "gov_evidence_url": null,
+        "name": "Salesforce (Tableau)",
+        "one_liner": "Ubiquitous general BI stack in government.",
+        "tier": "platform"
+      },
+      {
+        "gov_evidence_url": null,
+        "name": "Esri (ArcGIS)",
+        "one_liner": "Ubiquitous geospatial analytics stack in government.",
+        "tier": "platform"
+      },
+      {
+        "gov_evidence_url": null,
+        "name": "LexisNexis Risk Solutions",
+        "one_liner": "Integrity analytics for UI and tax refund investigation. This pack renders the integrity-analytics cautionary record beside any match; presence here signals \"known quantity,\" not safety.",
+        "tier": "specialist"
+      },
+      {
+        "gov_evidence_url": "https://epic.org/pondera-surveillance/",
+        "name": "Thomson Reuters Pondera",
+        "one_liner": "FraudCaster integrity analytics for Medicaid, SNAP, UI, WIC, and TANF; EPIC maintains a critical spotlight on the product line.",
+        "tier": "specialist"
+      },
+      {
+        "gov_evidence_url": null,
+        "name": "SAS",
+        "one_liner": "State UI integrity analytics, including in the MiDAS era; the cautionary record is rendered beside any match.",
+        "tier": "specialist"
+      }
+    ],
+    "failure_modes": [
+      {
+        "description": "Idaho's \"trade secret\" budget formula collapsed in court (with a 2025 contempt finding), Arkansas's RUGs-based algorithm was invalidated, and State v. Loomis cautions on trade-secret scores in consequential decisions (https://harvardlawreview.org/print/vol-130/state-v-loomis/). Ask on day one: what will the adverse-action notice say?",
+        "named_incident": "K.W. v. Armstrong (Idaho) and the Arkansas ARChoices injunction",
+        "source_url": "https://www.acluidaho.org/en/cases/kw-v-armstrong",
+        "title": "Black-box scores driving consequential decisions"
+      },
+      {
+        "description": "Fraud is rare, so even a statistically strong model mostly flags innocent people. The IRS's non-identity-theft fraud filters ran an 81% false-positive rate and delayed about $20 billion in legitimate refunds while protecting $7.6 billion (oversight finding). Michigan's MiDAS was 93% wrong per the state Auditor General. Florida's FIRRE flagged trivial discrepancies, produced a 600%+ flag surge, and ended in a $92.4M rebuild (https://www.btah.org/case-studies.html).",
+        "named_incident": "IRS fraud filters at an 81% false-positive rate (Taxpayer Advocate, oversight)",
+        "source_url": "https://www.taxpayeradvocate.irs.gov/wp-content/uploads/2020/07/ARC18_Volume1_MSP_05_FalsePositiveRates.pdf",
+        "title": "Base rates make \"accurate\" models mostly wrong about people"
+      },
+      {
+        "description": "A heat map or a score becomes the de facto decision with no appeal path. Michigan's Zynda settlement now requires human review of automated determinations.",
+        "named_incident": "Michigan Zynda settlement requiring human review of automated determinations",
+        "source_url": "https://www.btah.org/case-studies.html",
+        "title": "Decision support quietly becoming the decision-maker"
+      },
+      {
+        "description": "Idaho ran its formula on unreliable historical data; Missouri's algorithm shipped with literal syntax errors; Michigan's SNAP felony match auto-terminated roughly 19,000 people before being struck down in 2015. An LLM layer adds a hallucination surface on top of every data defect.",
+        "named_incident": "Michigan SNAP felony-match auto-terminations, struck down in 2015",
+        "source_url": "https://www.btah.org/case-studies.html",
+        "title": "Garbage in, scored anyway"
+      },
+      {
+        "description": "The Allegheny Family Screening Tool drew DOJ civil-rights attention over disability discrimination, and Oregon dropped its analogous tool.",
+        "named_incident": "DOJ examination of the Allegheny Family Screening Tool",
+        "source_url": "https://www.pbs.org/newshour/nation/ap-report-doj-examining-ai-screening-tool-used-by-pa-child-welfare-agency",
+        "title": "Bias under federal scrutiny"
+      },
+      {
+        "description": "\"Identifies savings of $X\" framing counts what was blocked, not what was delayed or wrongly denied. The IRS \"protected $7.6B\" while delaying about $20B in legitimate refunds. Demand both sides of the ledger before accepting a savings number.",
+        "named_incident": "IRS refund-fraud filters: $7.6B protected versus about $20B in legitimate refunds delayed (oversight)",
+        "source_url": "https://www.taxpayeradvocate.irs.gov/wp-content/uploads/2020/07/ARC18_Volume1_MSP_05_FalsePositiveRates.pdf",
+        "title": "Savings claims that hide the harm side of the ledger"
+      }
+    ],
+    "inclusion_test": [
+      "Does the pitch offer dashboards, BI, \"insights,\" or an AI layer over agency data?",
+      "Does it offer predictive analytics, risk scores, prioritization, or \"program integrity\" and fraud analytics?",
+      "Does it offer assessment or allocation algorithms (care hours, screening scores, caseload prioritization)?",
+      "Does it offer an LLM \"chat with your data\" interface?"
+    ],
+    "incumbent_landscape": "For BI and dashboards, Power BI, Tableau, and Esri/ArcGIS are ubiquitous. Government-specific players include Tyler Data & Insights (formerly Socrata, FedRAMP-listed; NYC, Chicago, San Francisco, Los Angeles, and the states of New York, Illinois, and Texas; https://www.fedramp.gov/marketplace/products/SOCRATA/), OpenGov (AI budgeting and performance features, Mar 2024), Polco \"Polly,\" and Zencity 360. For fraud and integrity analytics: LexisNexis Risk Solutions (unemployment insurance, tax refund investigation), Thomson Reuters Pondera (FraudCaster for Medicaid, SNAP, UI, WIC, and TANF; EPIC maintains a critical spotlight at https://epic.org/pondera-surveillance/), and SAS (state UI work). Assessment algorithms (RUGs, SIS, Optum ARIA) allocate care hours and form the sub-category with the worst documented track record in government AI. Two standing reference shelves answer \"has this category hurt people before\": the Benefits Tech Advocacy Hub case library (https://www.btah.org/case-studies.html) and the AI Incident Database (https://incidentdatabase.ai/).",
+    "known_gaps": "- Current Pondera, LexisNexis, and SAS product claims were not re-verified\n  this cycle.\n- ID.me's pandemic-era record was excluded as unverified this cycle.\n- OpenGov, Polco, and Zencity deployment metrics are vendor-reported, and\n  no independent source URL was captured for them.\n- The Zynda settlement's primary court documents are not directly linked;\n  it is cited through the BTAH case library.",
+    "last_updated": "2026-08-28",
+    "legal_context": "- The due-process line of cases, Goldberg v. Kelly (1970) through K.W. v.\n  Armstrong (D. Idaho; 2025 contempt finding): scores that affect people\n  must be explainable and contestable\n  (https://www.acluidaho.org/en/cases/kw-v-armstrong).\n- State v. Loomis (Wis. 2016): judicial caution on trade-secret risk\n  scores in consequential decisions\n  (https://harvardlawreview.org/print/vol-130/state-v-loomis/).\n- OMB M-25-21 (2025): fraud detection is presumptively high-impact AI,\n  with required testing, human oversight, and appeals.\n- State automated-decision-system laws: New York's LOADinG Act\n  (meaningful human review) and California SIMM 150 risk ratings for\n  decision systems.",
+    "pack_id": "data-analytics",
+    "pack_name": "Data Analytics & Decision Support",
+    "realistic_pricing": "No reliable public price anchors exist for integrity analytics. General\nBI (Power BI, Tableau) is commodity-priced per seat and often already\nlicensed. Treat pricing as secondary to the decoration-or-decision fork:\nuntil questions q01 through q05 have good answers, the price of an\nadverse-action scoring system is not the issue.",
+    "reference_deployments": [
+      {
+        "agency": "NYC, Chicago, San Francisco, Los Angeles, and several states",
+        "metric": "FedRAMP-listed platform with major-city and state deployments",
+        "metric_source_type": "government-page",
+        "source_url": "https://www.fedramp.gov/marketplace/products/SOCRATA/",
+        "vendor_stack": "Tyler Data & Insights (formerly Socrata)",
+        "what": "Open-data and internal analytics platform"
+      },
+      {
+        "agency": "IRS (cautionary)",
+        "metric": "81% false-positive rate; about $20B in legitimate refunds delayed while $7.6B was protected",
+        "metric_source_type": "oversight",
+        "source_url": "https://www.taxpayeradvocate.irs.gov/wp-content/uploads/2020/07/ARC18_Volume1_MSP_05_FalsePositiveRates.pdf",
+        "vendor_stack": "Non-identity-theft refund fraud filters",
+        "what": "Refund fraud screening"
+      },
+      {
+        "agency": "Michigan (cautionary)",
+        "metric": "Wrong more than 90% of the time per state audit; $20M settlement",
+        "metric_source_type": "oversight",
+        "source_url": "https://www.michigan.gov/ag/news/press-releases/2022/10/20/som-settlement-of-civil-rights-class-action-alleging-false-accusations-of-unemployment-fraud",
+        "vendor_stack": "MiDAS (SAS and FAST Enterprises era)",
+        "what": "Automated UI fraud adjudication"
+      },
+      {
+        "agency": "Allegheny County, PA (cautionary)",
+        "metric": "Drew DOJ civil-rights attention over disability discrimination; Oregon dropped its analogous tool",
+        "metric_source_type": "independent-press",
+        "source_url": "https://www.pbs.org/newshour/nation/ap-report-doj-examining-ai-screening-tool-used-by-pa-child-welfare-agency",
+        "vendor_stack": "Allegheny Family Screening Tool",
+        "what": "Child-welfare call screening"
+      }
+    ],
+    "refresh_cadence": "quarterly",
+    "registries_to_check": [
+      {
+        "name": "FedRAMP Marketplace",
+        "url": "https://marketplace.fedramp.gov/",
+        "what_it_proves": "Whether this specific product holds a federal cloud authorization, and at what level."
+      },
+      {
+        "name": "GovRAMP Authorized Product List",
+        "url": "https://govramp.org/",
+        "what_it_proves": "State-oriented cloud security verification. Formerly StateRAMP; the name changed in February 2025."
+      },
+      {
+        "name": "Benefits Tech Advocacy Hub case library",
+        "url": "https://www.btah.org/case-studies.html",
+        "what_it_proves": "A negative registry: documented cases where benefits technology harmed people. Check whether the vendor or the category appears."
+      },
+      {
+        "name": "AI Incident Database",
+        "url": "https://incidentdatabase.ai/",
+        "what_it_proves": "A public log of AI system failures. Search the vendor and product name."
+      },
+      {
+        "name": "EPIC screening-and-scoring spotlights",
+        "url": "https://epic.org/pondera-surveillance/",
+        "what_it_proves": "Independent critical documentation of integrity-analytics products, including Pondera FraudCaster."
+      }
+    ],
+    "scrutiny_tier": "standard",
+    "skepticism_triggers": [
+      {
+        "claim_pattern": "\"Accuracy\" quoted without precision and recall at the operating threshold and your base rate",
+        "source_url": "https://www.taxpayeradvocate.irs.gov/wp-content/uploads/2020/07/ARC18_Volume1_MSP_05_FalsePositiveRates.pdf",
+        "threshold": "Any bare accuracy number",
+        "why": "At fraud-level base rates, high \"accuracy\" coexists with false-positive rates of 80–90%+ among flags. The IRS 81% figure is the benchmark."
+      },
+      {
+        "claim_pattern": "A proprietary score with a trade-secret disclosure posture",
+        "source_url": "https://www.acluidaho.org/en/cases/kw-v-armstrong",
+        "threshold": "Any refusal to disclose model logic",
+        "why": "The Idaho precedent makes this constitutional exposure, not a licensing preference."
+      },
+      {
+        "claim_pattern": "\"Predicts fraud\" or \"predicts risk\" with no false-positive rate, review-queue staffing model, or affected-person notice",
+        "source_url": "https://www.btah.org/case-studies.html",
+        "threshold": "Absence of all three",
+        "why": "The MiDAS and FIRRE pattern."
+      },
+      {
+        "claim_pattern": "\"Identifies savings of $X\"",
+        "source_url": "https://www.taxpayeradvocate.irs.gov/wp-content/uploads/2020/07/ARC18_Volume1_MSP_05_FalsePositiveRates.pdf",
+        "threshold": "Any savings figure without the delayed-or-denied side",
+        "why": "Protected-versus-delayed framing matters: the IRS \"protected $7.6B\" while delaying about $20B in legitimate refunds."
+      },
+      {
+        "claim_pattern": "An LLM \"ask your data\" interface with no query or row provenance",
+        "source_url": null,
+        "threshold": "Generated numbers that do not link to the underlying query and rows",
+        "why": "Hallucinated numbers end up in official decisions. Demand that every generated claim link to the query and rows behind it."
+      },
+      {
+        "claim_pattern": "\"Bias-free\"",
+        "source_url": null,
+        "threshold": "Any such claim",
+        "why": "Unfalsifiable. Demand the disparate-impact testing methodology and the results."
+      },
+      {
+        "claim_pattern": "Scores executed without mandatory human sign-off",
+        "source_url": "https://www.btah.org/case-studies.html",
+        "threshold": "Any auto-executed adverse action",
+        "why": "Maps to the strongest caution band through the eligibility-case-mgmt overlay."
+      }
+    ]
+  },
+  "document-processing": {
+    "definition": "AI that classifies, extracts data from, redacts, or routes documents: mailroom automation, form and handwriting extraction, verification-document processing, and records redaction. This pack does not cover systems that make eligibility decisions from extracted data (that adds the eligibility-case-mgmt overlay) or general document drafting for staff (see the staff-productivity pack).",
+    "diligence_questions": [
+      {
+        "good_answer": "A field-level number with methodology, and an unhesitating yes to a pilot on your real document mix.",
+        "id": "document-processing-q01",
+        "question": "What field-level accuracy do you achieve on documents like ours, and will you demonstrate it in a pilot on 250–1,000 of our real documents, including faxes, phone photos, and handwriting?",
+        "red_flag": "One blended \"99%\" figure, or benchmark scores from public datasets instead of your documents.",
+        "source_url": "https://airparser.com/blog/ai-document-extraction-accuracy-benchmarks/"
+      },
+      {
+        "good_answer": "A precise definition. 99% character accuracy can mean roughly 80% field accuracy and far lower document-level accuracy.",
+        "id": "document-processing-q02",
+        "question": "Is that character, field, or document accuracy? Define the denominator.",
+        "red_flag": "The vendor cannot or will not say what the denominator is.",
+        "source_url": "https://airparser.com/blog/ai-document-extraction-accuracy-benchmarks/"
+      },
+      {
+        "good_answer": "Production numbers in the 65–84% range with a clear definition. Covered California reports 84%; California DMV reports 65–70%.",
+        "id": "document-processing-q03",
+        "question": "What straight-through-processing rate do your government customers achieve in production, and how do you define STP?",
+        "red_flag": "Claims above 90% before any pilot on your documents.",
+        "source_url": "https://statetechmagazine.com/article/2025/04/state-and-local-agencies-deploy-artificial-intelligence-document-processing"
+      },
+      {
+        "good_answer": "A concrete routing design, a staffing model, and a cost estimate at your volume.",
+        "id": "document-processing-q04",
+        "question": "Show the human review workflow: how do confidence scores route low-confidence fields, who staffs the queue, and what does that labor cost at our volume?",
+        "red_flag": "\"No human review needed.\" Mature agencies mandate review at any accuracy level.",
+        "source_url": null
+      },
+      {
+        "good_answer": "A direct number backed by calibration data. Ten or fewer is consistent with the stated confidence.",
+        "id": "document-processing-q05",
+        "question": "If we sample 100 fields you marked at 90% confidence or higher, how many will be wrong?",
+        "red_flag": "More than 10 wrong signals miscalibrated confidence scores; no answer signals it has never been measured.",
+        "source_url": null
+      },
+      {
+        "good_answer": "A line-item price at your volume with a written definition of a page.",
+        "id": "document-processing-q06",
+        "question": "What is the all-in price per 1,000 pages at our real volume: API or license fees, feature add-ons, review tooling, integration, and reprocessing? And what counts as a \"page\"?",
+        "red_flag": "A single per-page teaser rate. Full extraction runs 20–47x plain OCR once features stack.",
+        "source_url": "https://aws.amazon.com/textract/pricing/"
+      },
+      {
+        "good_answer": "Written terms. Anchors: Azure deletes in 24 hours and does not train; Google does not train; AWS requires an explicit organization-level opt-out.",
+        "id": "document-processing-q07",
+        "question": "Where is our data processed and stored, is it used to train your models or any third party's, and what is the deletion timeline? We need this in writing.",
+        "red_flag": "Verbal assurances, or terms that defer to an upstream provider's defaults.",
+        "source_url": "https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_ai-opt-out.html"
+      },
+      {
+        "good_answer": "Named engines and a subprocessor list. This separates platforms from wrappers.",
+        "id": "document-processing-q08",
+        "question": "Which underlying OCR or extraction engine or foundation model do you use, and which subprocessors touch our documents?",
+        "red_flag": "\"Proprietary\" used as a reason not to name the engines the pitch depends on.",
+        "source_url": null
+      },
+      {
+        "good_answer": "Product-level authorizations you can verify yourself on the FedRAMP Marketplace and the GovRAMP list.",
+        "id": "document-processing-q09",
+        "question": "Which authorizations do you hold: FedRAMP (at what level), GovRAMP, SOC 2 Type II? Can you support IRS Pub 1075, HIPAA, or SNAP confidentiality requirements as applicable?",
+        "red_flag": "\"Compliant\" language, a SOC 2 Type I passed off as Type II, or authorizations that exist only company-wide.",
+        "source_url": "https://marketplace.fedramp.gov/"
+      },
+      {
+        "good_answer": "Both numbers reported separately, plus a described QA step on the residual.",
+        "id": "document-processing-q10",
+        "question": "For redaction: give us precision and recall separately. What percentage of PII do you miss, and what QA catches misses before records go public?",
+        "red_flag": "One blended \"success rate.\" A missed SSN is a disclosure incident.",
+        "source_url": "https://statetechmagazine.com/article/2025/04/state-and-local-agencies-deploy-artificial-intelligence-document-processing"
+      },
+      {
+        "good_answer": "Named references. SSA, VA, Colorado HCPF, Missouri DSS, California DMV, Covered California, King County, and the Arkansas courts all exist in this category.",
+        "id": "document-processing-q11",
+        "question": "Name three government references at agencies our size, in production 12 or more months, including one where the rollout was hard.",
+        "red_flag": "\"References are confidential.\"",
+        "source_url": null
+      },
+      {
+        "good_answer": "A complete exportable audit trail and a drift-monitoring process.",
+        "id": "document-processing-q12",
+        "question": "What per-document audit trail exists (model version, confidence score, every human touch), exportable for QC and inspector-general staff? What happens when document formats drift?",
+        "red_flag": "No per-document trail. GAO names opacity as the accountability risk in this category (GAO-26-109137).",
+        "source_url": "https://www.gao.gov/products/gao-26-109137"
+      },
+      {
+        "good_answer": "A written export commitment with format and cost.",
+        "id": "document-processing-q13",
+        "question": "What are the exit terms: can we export our trained models, templates, and labeled data at contract end, and at what cost?",
+        "red_flag": "Export treated as a change order, or trained artifacts owned by the vendor.",
+        "source_url": null
+      },
+      {
+        "good_answer": "A named language list with measured quality per language.",
+        "id": "document-processing-q14",
+        "question": "Which languages do you support, as a named list matched to our limited-English-proficiency population, not an adjective?",
+        "red_flag": "\"Multilingual\" with no list and no measurements.",
+        "source_url": null
+      }
+    ],
+    "elevated_scrutiny_rules": [
+      {
+        "action": "Apply the eligibility-case-mgmt overlay.",
+        "condition": "Extracted data feeds an eligibility or benefit determination, or a fraud flag"
+      },
+      {
+        "action": "Require the recall-reporting question (q10) in the output; raise caution if the vendor gives a single \"success rate.\"",
+        "condition": "The pitch involves redaction of records for public release"
+      },
+      {
+        "action": "Flag prominently regardless of vendor size.",
+        "condition": "The pitch coaches sole-source or bid-waiver justification"
+      },
+      {
+        "action": "Make the data-handling questions (q07, q09) mandatory-answer items.",
+        "condition": "The documents contain federal tax information, HIPAA data, or immigration data"
+      }
+    ],
+    "established_vendors": [
+      {
+        "gov_evidence_url": "https://www.hyperscience.ai/blog/united-states-social-security-administration-adopts-hyperscience/",
+        "name": "Hyperscience",
+        "one_liner": "Gartner MQ Leader; FedRAMP High and IL5 claimed; SSA ($81M award), VA, Colorado HCPF, Missouri DSS; sells \"Hypercell for SNAP.\" Also this pack's exhibit for sole-source-coaching red flags (see failure modes).",
+        "tier": "platform"
+      },
+      {
+        "gov_evidence_url": "https://statetechmagazine.com/article/2025/04/state-and-local-agencies-deploy-artificial-intelligence-document-processing",
+        "name": "ABBYY",
+        "one_liner": "Seven-time Everest Leader; California DMV digital mailroom at 65–70% automation.",
+        "tier": "platform"
+      },
+      {
+        "gov_evidence_url": "https://www.carahsoft.com/tungsten-automation",
+        "name": "Tungsten Automation (formerly Kofax)",
+        "one_liner": "FedRAMP High and GovRAMP Authorized (TotalAgility Cloud); claims 350+ U.S. agency customers (vendor-reported count).",
+        "tier": "platform"
+      },
+      {
+        "gov_evidence_url": "https://www.gartner.com/en/documents/6912666",
+        "name": "UiPath / Infrrd / WorkFusion / HCLTech",
+        "one_liner": "Analyst-ranked leaders (Gartner Magic Quadrant and Everest PEAK 2025).",
+        "tier": "platform"
+      },
+      {
+        "gov_evidence_url": "https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_ai-opt-out.html",
+        "name": "AWS Textract",
+        "one_liner": "Hyperscaler extraction API, available in GovCloud. Caveat: by default, AWS may use content for service improvement unless the organization opts out at the org level.",
+        "tier": "platform"
+      },
+      {
+        "gov_evidence_url": "https://learn.microsoft.com/en-us/azure/foundry/responsible-ai/document-intelligence/data-privacy-security",
+        "name": "Microsoft Azure AI Document Intelligence",
+        "one_liner": "Hyperscaler extraction API; deletes input data within 24 hours and does not train on inputs.",
+        "tier": "platform"
+      },
+      {
+        "gov_evidence_url": "https://docs.cloud.google.com/document-ai/docs/data-usage",
+        "name": "Google Document AI",
+        "one_liner": "Hyperscaler extraction API; FedRAMP High, HIPAA support, no training on customer content; Covered California, Hawaii Safe Travels.",
+        "tier": "platform"
+      },
+      {
+        "gov_evidence_url": "https://www.extractsystems.com/gov-resources",
+        "name": "Extract Systems (ID Shield)",
+        "one_liner": "County recorder and court redaction; Pierce County WA (36M+ images), Hamilton County OH (vendor-reported).",
+        "tier": "specialist"
+      },
+      {
+        "gov_evidence_url": "https://arcourts.gov/administration/acap/redactioncontract",
+        "name": "CSI Intellidact",
+        "one_liner": "Statewide Arkansas Judiciary redaction contract (government contract page).",
+        "tier": "specialist"
+      }
+    ],
+    "failure_modes": [
+      {
+        "description": "Buyers report a 15–25 point drop from vendor benchmark to production on their own document mix, and character accuracy is often presented as field accuracy: 99% character accuracy can equal roughly 80% field accuracy (https://airparser.com/blog/ai-document-extraction-accuracy-benchmarks/). The compounding math matters too: 97% per-field accuracy on a 20-field document means only about 55% of documents come through error-free.",
+        "named_incident": "VA OIG found 27% of reviewed automation-assisted claims had inaccurate determinations (oversight finding)",
+        "source_url": "https://www.vaoig.gov/reports/review/improvements-needed-vbas-claims-automation-project",
+        "title": "Benchmark-to-production accuracy gap"
+      },
+      {
+        "description": "Vendors blur automation rate, straight-through-processing (STP) rate, and accuracy. Independently reported government results run 65–84% (California DMV, Covered California), and those are good outcomes.",
+        "named_incident": "California DMV (65–70% automation) and Covered California (84%) set the documented ceiling for clean deployments",
+        "source_url": "https://statetechmagazine.com/article/2025/04/state-and-local-agencies-deploy-artificial-intelligence-document-processing",
+        "title": "Automation-rate and straight-through-processing inflation"
+      },
+      {
+        "description": "Feature stacking changes the price by more than an order of magnitude: Textract with Forms, Tables, and Queries costs $0.070 per page, roughly 47x plain OCR (https://aws.amazon.com/textract/pricing/), and Google's Form Parser and Custom Extractor run about 20x plain OCR (https://cloud.google.com/document-ai/pricing). Watch for page-per-side counting, reprocessing billed again, and undisclosed minimums.",
+        "named_incident": "Published hyperscaler price sheets show 20–47x spreads between plain OCR and full extraction",
+        "source_url": "https://aws.amazon.com/textract/pricing/",
+        "title": "Per-page pricing surprises"
+      },
+      {
+        "description": "At an honest 80% STP rate on 1 million pages per year, the 200,000 exception pages equal roughly three or more FTEs of review labor, plus per-review tooling fees (AWS A2I lists $0.03 per reviewed page, https://aws.amazon.com/augmented-ai/pricing/). Mature agencies budget review permanently.",
+        "named_incident": "King County, WA runs a \"no production without a human reviewer\" policy on its redaction pipeline (StateTech, Apr 2025)",
+        "source_url": "https://statetechmagazine.com/article/2025/04/state-and-local-agencies-deploy-artificial-intelligence-document-processing",
+        "title": "Hidden human-review costs"
+      },
+      {
+        "description": "Provider defaults differ sharply. AWS allows service-improvement use of content unless the organization opts out (https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_ai-opt-out.html), Azure deletes inputs within 24 hours (https://learn.microsoft.com/en-us/azure/foundry/responsible-ai/document-intelligence/data-privacy-security), and Google does not train on customer content (https://docs.cloud.google.com/document-ai/docs/data-usage). A startup wrapper calling a commercial LLM adds an unvetted second processor. Benefits documents implicate IRS Pub 1075, HIPAA, and SNAP confidentiality rules.",
+        "named_incident": "Divergent published data-use defaults across AWS, Azure, and Google (documented on each provider's own pages)",
+        "source_url": "https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_ai-opt-out.html",
+        "title": "PII handling and retention divergence"
+      },
+      {
+        "description": "A missed SSN in a published record is a disclosure incident. Recall (the miss rate) must be reported separately from precision; a single \"success rate\" number hides the misses. King County's 96% still implies human QA on the residual.",
+        "named_incident": "King County, WA redaction: 96% success, 30 minutes down to under 5 seconds per document, with mandatory human review",
+        "source_url": "https://statetechmagazine.com/article/2025/04/state-and-local-agencies-deploy-artificial-intelligence-document-processing",
+        "title": "Redaction's asymmetric risk"
+      },
+      {
+        "description": "Hyperscience's SNAP four-pager coaches agencies on sole-source justification (\"unique, non-substitutable\") in a field with 100+ vendors and five analyst-ranked Leaders (https://aphsa.org/wp-content/uploads/2026/04/251029-Hyperscience-SNAP_4-Pager.pdf). Oversight has flagged the same pattern federally.",
+        "named_incident": "TIGTA flagged non-competitive IRS \"Zero Paper\" awards (oversight finding, Feb 2026)",
+        "source_url": "https://www.tigta.gov/sites/default/files/reports/2026-02/2026408003fr.pdf",
+        "title": "Procurement-pressure red flags"
+      }
+    ],
+    "inclusion_test": [
+      "Does the pitch mention OCR, document extraction or classification, IDP, \"digital mailroom,\" forms processing, or handwriting recognition?",
+      "Does it target document backlogs, verification documents, scanned mail or faxes, or records digitization?",
+      "Does it offer redaction of PII from records (court, land, personnel)?",
+      "Does it claim an \"automation rate\" or \"straight-through processing,\" or use per-page or per-document pricing?"
+    ],
+    "incumbent_landscape": "A mature category being disrupted by LLM-native extraction. Gartner's first IDP Magic Quadrant (Sep 3, 2025) covers a market of 100+ vendors with five Leaders: ABBYY, Hyperscience, Infrrd, Tungsten Automation, and UiPath (https://www.gartner.com/en/documents/6912666). Five tiers: (1) hyperscaler APIs (AWS Textract, Azure AI Document Intelligence, Google Document AI), usually arriving inside an integrator's pitch; (2) enterprise IDP platforms (the Leaders above, plus WorkFusion, IBM Datacap, OpenText Captiva, Grooper); (3) government redaction specialists (Extract Systems, CSI Intellidact); (4) ECM incumbents with AI add-ons (Laserfiche, Hyland OnBase, Tyler). Check whether your existing ECM contract already includes capture or IDP before engaging a new vendor; many cold pitches duplicate capability you already own. (5) LLM-native startups (Extend, Reducto, Sensible, Instabase, LandingAI, Nanonets, Docsumo). Most inbound cold email comes from this tier, and few of these hold FedRAMP or GovRAMP authorizations or named U.S. state references. The core triage insight: many pitches are thin wrappers over the same three hyperscaler APIs. Ask what engine is actually under the hood.",
+    "known_gaps": "- Government-reference claims by Instabase, Reducto, and Extend could not be\n  verified in public sources this cycle.\n- Azure Document Intelligence exact list prices conflicted across sources;\n  confirm on the live pricing page.\n- Extract Systems image counts and Tungsten's agency-customer count are\n  vendor-reported.\n- GovAI Coalition Trellis registry URL was not confirmed this cycle, so it\n  is cited by name only.",
+    "last_updated": "2026-08-28",
+    "legal_context": "- IRS Publication 1075 (federal tax information safeguards) applies when\n  processed documents contain FTI. Standing requirement as of Aug 28, 2026.\n- HIPAA applies to health documents; a business associate agreement is\n  required.\n- SNAP confidentiality rules (7 CFR 272.1) restrict use and disclosure of\n  applicant information.\n- State breach-notification laws apply to processing failures that expose\n  PII.\n- Title VI language-access obligations extend to how documents from\n  limited-English-proficiency residents are handled.",
+    "pack_id": "document-processing",
+    "pack_name": "Document Processing & Intake (IDP)",
+    "realistic_pricing": "Plain OCR runs about $1.50 per 1,000 pages at every hyperscaler. Full\nextraction (forms, tables, queries) runs $30–70 per 1,000 pages\n(https://aws.amazon.com/textract/pricing/,\nhttps://cloud.google.com/document-ai/pricing). Human review adds about $30\nper 1,000 reviewed pages in tooling fees (AWS A2I,\nhttps://aws.amazon.com/augmented-ai/pricing/) plus the review labor itself.\nA 1-million-page-per-year program at full-feature Textract rates is roughly\n$70K per year in API fees before any integrator markup. Azure list prices\nconflicted across sources this cycle; check the live pricing page rather\nthan a quoted number.",
+    "reference_deployments": [
+      {
+        "agency": "Social Security Administration",
+        "metric": "$81M award, roughly 250 million documents per year (the contract award is public record; the metric appears on the vendor's page)",
+        "metric_source_type": "vendor-reported",
+        "source_url": "https://www.hyperscience.ai/blog/united-states-social-security-administration-adopts-hyperscience/",
+        "vendor_stack": "Hyperscience with Accenture Federal",
+        "what": "Document processing at national scale"
+      },
+      {
+        "agency": "VA Veterans Benefits Administration",
+        "metric": "Sorting time cut from about 10 days to about half a day (GAO-corroborated). The same program's hypertension-claims automation had a 27% error rate per VA OIG; cite both halves together.",
+        "metric_source_type": "oversight",
+        "source_url": "https://www.gao.gov/products/gao-26-109137",
+        "vendor_stack": "Hyperscience",
+        "what": "Claims document sorting"
+      },
+      {
+        "agency": "Colorado HCPF",
+        "metric": "Absorbed 700–1,000% image-volume growth; 99.2%/99.4% accuracy figures are vendor-reported; an ACT-IAC award provides third-party corroboration",
+        "metric_source_type": "vendor-reported",
+        "source_url": "https://www.hyperscience.ai/resource/state-department-of-healthcare-policy-financing-automates-snap-and-magi-documents/",
+        "vendor_stack": "Hyperscience",
+        "what": "SNAP and MAGI renewal-surge document automation"
+      },
+      {
+        "agency": "Missouri DSS",
+        "metric": "Named deployment; metrics are vendor-reported",
+        "metric_source_type": "vendor-reported",
+        "source_url": "https://aphsa.org/wp-content/uploads/2026/04/251029-Hyperscience-SNAP_4-Pager.pdf",
+        "vendor_stack": "Hyperscience",
+        "what": "SNAP and MAGI document processing"
+      },
+      {
+        "agency": "California DMV",
+        "metric": "65–70% automation",
+        "metric_source_type": "independent-press",
+        "source_url": "https://statetechmagazine.com/article/2025/04/state-and-local-agencies-deploy-artificial-intelligence-document-processing",
+        "vendor_stack": "ABBYY",
+        "what": "Digital mailroom"
+      },
+      {
+        "agency": "Covered California",
+        "metric": "84% verification rate; roughly 10,000 people-hours freed in year one",
+        "metric_source_type": "independent-press",
+        "source_url": "https://statetechmagazine.com/article/2025/04/state-and-local-agencies-deploy-artificial-intelligence-document-processing",
+        "vendor_stack": "Google Document AI",
+        "what": "Verification-document processing"
+      },
+      {
+        "agency": "King County, WA",
+        "metric": "96% redaction success; 30 minutes down to under 5 seconds per document; explicit no-production-without-reviewer policy",
+        "metric_source_type": "independent-press",
+        "source_url": "https://statetechmagazine.com/article/2025/04/state-and-local-agencies-deploy-artificial-intelligence-document-processing",
+        "vendor_stack": "AWS Textract",
+        "what": "Records redaction with mandatory human review"
+      },
+      {
+        "agency": "State of Hawaii",
+        "metric": "25,000+ documents per day (vendor blog with a named state official)",
+        "metric_source_type": "vendor-reported",
+        "source_url": "https://cloud.google.com/blog/topics/public-sector/document-ai-government-makes-it-easier-process-documents-and-deliver-better-constituent-services",
+        "vendor_stack": "Google Document AI",
+        "what": "Safe Travels document processing"
+      },
+      {
+        "agency": "Arkansas Judiciary",
+        "metric": "Statewide contract (government contract page)",
+        "metric_source_type": "government-page",
+        "source_url": "https://arcourts.gov/administration/acap/redactioncontract",
+        "vendor_stack": "CSI Intellidact",
+        "what": "Statewide court records redaction"
+      },
+      {
+        "agency": "IRS Paperless Processing (cautionary)",
+        "metric": "Missed its 2025 goal; non-competitive award concerns flagged by TIGTA",
+        "metric_source_type": "oversight",
+        "source_url": "https://www.tigta.gov/sites/default/files/reports/2026-02/2026408003fr.pdf",
+        "vendor_stack": "Multiple, including an in-house system that was stopped",
+        "what": "Paper digitization initiative"
+      }
+    ],
+    "refresh_cadence": "quarterly",
+    "registries_to_check": [
+      {
+        "name": "FedRAMP Marketplace",
+        "url": "https://marketplace.fedramp.gov/",
+        "what_it_proves": "Whether this specific product holds a federal cloud authorization, and at what level."
+      },
+      {
+        "name": "GovRAMP Authorized Product List",
+        "url": "https://govramp.org/",
+        "what_it_proves": "State-oriented cloud security verification. Formerly StateRAMP; the name changed in February 2025."
+      },
+      {
+        "name": "Pavilion Contract Hub",
+        "url": "https://www.withpavilion.com/",
+        "what_it_proves": "Existing public contracts you may be able to piggyback on; confirms other governments have bought the product."
+      },
+      {
+        "name": "SAM.gov",
+        "url": "https://sam.gov/",
+        "what_it_proves": "The company exists as a registered federal contractor."
+      }
+    ],
+    "scrutiny_tier": "standard",
+    "skepticism_triggers": [
+      {
+        "claim_pattern": "Accuracy of 98% or higher without a field-level definition and a document mix",
+        "source_url": "https://airparser.com/blog/ai-document-extraction-accuracy-benchmarks/",
+        "threshold": "Accuracy claims at or above 98% with no denominator",
+        "why": "The benchmark-to-production gap runs 15–25 points, and character accuracy is routinely conflated with field accuracy."
+      },
+      {
+        "claim_pattern": "A straight-through-processing promise above 90% before a pilot on your documents",
+        "source_url": "https://statetechmagazine.com/article/2025/04/state-and-local-agencies-deploy-artificial-intelligence-document-processing",
+        "threshold": "STP above 90% pre-pilot",
+        "why": "Real government results run 65–84%; 70–90% is the ceiling for clean documents."
+      },
+      {
+        "claim_pattern": "\"No human review required\" or \"fully autonomous\"",
+        "source_url": "https://www.vaoig.gov/reports/review/improvements-needed-vbas-claims-automation-project",
+        "threshold": "Any such claim, at any accuracy level",
+        "why": "Mature agencies mandate review. VA OIG found 27% of reviewed automation-assisted claims had inaccurate determinations."
+      },
+      {
+        "claim_pattern": "A handwriting accuracy claim of 97% or higher without a stated character-error rate",
+        "source_url": "https://www.llamaindex.ai/blog/ocr-accuracy",
+        "threshold": "Handwriting claims at or above 97%",
+        "why": "A 3–5% character error rate is a good result for handwriting."
+      },
+      {
+        "claim_pattern": "\"Only solution on the market\" or sole-source coaching",
+        "source_url": "https://aphsa.org/wp-content/uploads/2026/04/251029-Hyperscience-SNAP_4-Pager.pdf",
+        "threshold": "Any uniqueness claim or bid-waiver coaching",
+        "why": "100+ vendors and five Gartner Leaders exist in this category; even market leaders make this claim in writing."
+      },
+      {
+        "claim_pattern": "A simple per-page rate with no feature, review, or minimum breakdown",
+        "source_url": "https://aws.amazon.com/textract/pricing/",
+        "threshold": "A single blended per-page rate",
+        "why": "Full extraction is 20–47x plain OCR once features stack, and review adds fees plus staff time."
+      },
+      {
+        "claim_pattern": "ROI multiples (615%, 167%) without your volumes and baseline labor cost",
+        "source_url": null,
+        "threshold": "Any ROI multiple presented without your inputs",
+        "why": "These figures trace to vendor-commissioned studies (IDC for Hyperscience), not to your operation."
+      },
+      {
+        "claim_pattern": "\"Deployed in 45 days\" for work that touches an eligibility system",
+        "source_url": "https://www.tigta.gov/sites/default/files/reports/2026-02/2026408003fr.pdf",
+        "threshold": "Any promise under 90 days for eligibility-system integration",
+        "why": "The vendor's own FAQ concedes timelines vary, and the IRS missed a multi-year digitization goal (oversight finding)."
+      },
+      {
+        "claim_pattern": "A redaction \"success rate\" quoted as one number",
+        "source_url": "https://statetechmagazine.com/article/2025/04/state-and-local-agencies-deploy-artificial-intelligence-document-processing",
+        "threshold": "A single blended redaction metric",
+        "why": "Demand recall (the miss rate) reported separately. A missed SSN is a disclosure incident."
+      },
+      {
+        "claim_pattern": "No written data-retention or no-training commitment",
+        "source_url": "https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_ai-opt-out.html",
+        "threshold": "Absence of written terms",
+        "why": "Provider defaults differ sharply; verify GovRAMP and FedRAMP listings independently rather than taking the pitch's word."
+      },
+      {
+        "claim_pattern": "All-federal or logos-only references",
+        "source_url": null,
+        "threshold": "Zero named state or local references",
+        "why": "Named state and local references exist across this category; their absence is diagnostic."
+      }
+    ]
+  },
+  "eligibility-case-mgmt": {
+    "definition": "AI that touches who gets benefits or what happens to their case: eligibility screening and determination, renewals, verification, fraud detection and identity-proofing, case-management copilots, benefit-notice generation, and work-requirement compliance tooling. This is the only pack where a software error is, by legal definition, a deprivation of a constitutionally protected property interest (Goldberg v. Kelly, 397 U.S. 254). Not this pack alone: pure document extraction (see document-processing, unless the output feeds determinations) and applicant-side benefit screeners that only widen access, which sit in a different risk class.",
+    "diligence_questions": [
+      {
+        "good_answer": "An unambiguous \"a named human makes every adverse decision,\" with UI evidence showing how.",
+        "id": "eligibility-case-mgmt-q01",
+        "question": "Does your system ever deny, reduce, terminate, or flag-for-fraud on its own, or does a named human make every adverse decision?",
+        "red_flag": "\"Configurable,\" \"auto-adjudication,\" or any hedging. This question has no acceptable middle answer.",
+        "source_url": null
+      },
+      {
+        "good_answer": "Actual notice text that satisfies 42 CFR 431.210 (Medicaid) or 7 CFR 273.13 (SNAP): specific reasons, specific regulation.",
+        "id": "eligibility-case-mgmt-q02",
+        "question": "Show the exact notice a person receives after an AI-influenced denial. Does it state the specific factual reasons and the regulation relied on?",
+        "red_flag": "A generic template, or a generated paragraph offered as the \"explanation.\"",
+        "source_url": null
+      },
+      {
+        "good_answer": "Yes to both, in writing. Idaho's K.W. v. Armstrong establishes that due process outranks trade secrets.",
+        "id": "eligibility-case-mgmt-q03",
+        "question": "On appeal, can you produce the complete record (inputs, extractions, model version, what the human saw and did), and will you commit in contract that nothing is withheld as a trade secret?",
+        "red_flag": "Any trade-secret carve-out over decision logic.",
+        "source_url": "https://www.acluidaho.org/en/cases/kw-v-armstrong"
+      },
+      {
+        "good_answer": "State-specific evaluation results with a defined denominator, or an honest \"we have not measured that yet.\"",
+        "id": "eligibility-case-mgmt-q04",
+        "question": "What is your measured accuracy on OUR state's rules, evaluated against our policy manual and historically adjudicated cases, and what is the denominator?",
+        "red_flag": "A generic accuracy number from another state or from a demo corpus.",
+        "source_url": null
+      },
+      {
+        "good_answer": "Published or shareable breakouts, plus support for independent testing.",
+        "id": "eligibility-case-mgmt-q05",
+        "question": "Break error rates out by language, disability status, age, and, where lawful, race and ethnicity. What disparate-performance testing exists, and will you support our own pre-deployment and annual testing?",
+        "red_flag": "\"Our AI is unbiased\" with no data behind it.",
+        "source_url": null
+      },
+      {
+        "good_answer": "A confidence-threshold design, the share of items routed to humans, and sampling audits of high-confidence outputs.",
+        "id": "eligibility-case-mgmt-q06",
+        "question": "What happens when the model is wrong but confident?",
+        "red_flag": "No sampling of high-confidence outputs; those are exactly the errors that reach residents.",
+        "source_url": null
+      },
+      {
+        "good_answer": "A named process with a turnaround commitment and regression testing.",
+        "id": "eligibility-case-mgmt-q07",
+        "question": "Who updates the system when our state plan, waivers, or verification rules change, how fast, and how is the change tested?",
+        "red_flag": "No update pipeline. NYC's chatbot stayed wrong for roughly two years.",
+        "source_url": "https://themarkup.org/artificial-intelligence/2024/03/29/nycs-ai-chatbot-tells-businesses-to-break-the-law"
+      },
+      {
+        "good_answer": "Written no-training terms and authorizations you can verify at https://marketplace.fedramp.gov/ and https://govramp.org/. \"In process\" is not \"authorized.\"",
+        "id": "eligibility-case-mgmt-q08",
+        "question": "Where does our data go? Is applicant data used to train models or shared with third parties? Which of these do you hold: GovRAMP or FedRAMP authorization, SOC 2 Type II, IRS Pub 1075 and HIPAA compliance?",
+        "red_flag": "Verbal assurances, or \"compliant\" phrasing.",
+        "source_url": "https://marketplace.fedramp.gov/"
+      },
+      {
+        "good_answer": "A knowledgeable answer about 45 CFR 95.611 and named states where the vendor navigated it.",
+        "id": "eligibility-case-mgmt-q09",
+        "question": "Does this require an APD amendment or CMS/FNS sign-off, and have you been through that process in other states?",
+        "red_flag": "A vendor who has never heard of an APD has never really deployed in this space.",
+        "source_url": null
+      },
+      {
+        "good_answer": "Named production references plus any independent evaluation. Cross-check the CCF AI Knowledge Hub and Code for America's landscape assessment.",
+        "id": "eligibility-case-mgmt-q10",
+        "question": "Name three comparable agencies in production, not pilots, that we can call. What independent evaluations of your product exist?",
+        "red_flag": "Pilots presented as production, or logos with no callable contact.",
+        "source_url": "https://codeforamerica.org/explore/government-ai-landscape-assessment/"
+      },
+      {
+        "good_answer": "Real numbers: a plausible per-item review time and a nonzero override rate.",
+        "id": "eligibility-case-mgmt-q11",
+        "question": "What is the caseworker's realistic review burden: items per worker per day, and your own override-rate data?",
+        "red_flag": "No override data, or volumes that make real review impossible. Near-zero overrides means rubber-stamping.",
+        "source_url": null
+      },
+      {
+        "good_answer": "A concrete plan: affected-case query capability, notification templates, a reinstatement workflow, and timelines.",
+        "id": "eligibility-case-mgmt-q12",
+        "question": "What is your rollback plan? If we find a systematic error, how fast can we identify every affected case, notify people, and reinstate benefits?",
+        "red_flag": "No answer here means no deployment.",
+        "source_url": null
+      },
+      {
+        "good_answer": "Contractual acceptance of indemnification and audit rights.",
+        "id": "eligibility-case-mgmt-q13",
+        "question": "Who bears liability for wrongful denials caused by system error, and will you accept indemnification and audit-rights clauses?",
+        "red_flag": "Liability pushed entirely onto the agency. Deloitte's \"not our systems\" posture shows why this must be contractual.",
+        "source_url": "https://kffhealthnews.org/news/article/medicaid-deloitte-run-eligibility-systems-plagued-by-errors/"
+      }
+    ],
+    "elevated_scrutiny_rules": [
+      {
+        "action": "The output floor is the \"enhanced review\" band. The \"established vendor, proceed to demo\" band is unavailable until the human-decides-adverse-actions question (q01) is answered.",
+        "condition": "Any match on this pack"
+      },
+      {
+        "action": "Strongest caution band, always.",
+        "condition": "A claim of automated adverse action"
+      },
+      {
+        "action": "Classify as an adverse-action system regardless of framing.",
+        "condition": "A fraud-detection or identity-verification pitch"
+      },
+      {
+        "action": "Highest caution band, plus OBBBA implementation-overload context (https://www.tpr.org/news/2026-07-21/deloitte-run-systems-denied-medicaid-to-disabled-people-new-laws-could-make-it-worse).",
+        "condition": "A work-requirement or exemption-screening pitch (the 2026 build-out wave)"
+      },
+      {
+        "action": "May be evaluated on standard merits, with this pack's questions q01, q02, q03, and q11 still included.",
+        "condition": "A copilot or summarization-only pitch with named-human decision-making"
+      },
+      {
+        "action": "Prepend the \"Why this category is different\" block (the top of this pack's legal_context) and add questions q01, q02, q03, and q12 to that pack's question list.",
+        "condition": "This pack is triggered as an overlay from another pack"
+      }
+    ],
+    "established_vendors": [
+      {
+        "gov_evidence_url": "https://kffhealthnews.org/news/article/medicaid-deloitte-run-eligibility-systems-plagued-by-errors/",
+        "name": "Deloitte",
+        "one_liner": "Dominant integrated-eligibility integrator (25+ states). Its systems' documented error record is rendered beside any match; a listing here is not a safety signal.",
+        "tier": "integrator"
+      },
+      {
+        "gov_evidence_url": null,
+        "name": "Accenture",
+        "one_liner": "Major eligibility and Medicaid systems integrator.",
+        "tier": "integrator"
+      },
+      {
+        "gov_evidence_url": null,
+        "name": "Gainwell",
+        "one_liner": "Medicaid Management Information Systems ecosystem vendor.",
+        "tier": "integrator"
+      },
+      {
+        "gov_evidence_url": null,
+        "name": "Conduent",
+        "one_liner": "Medicaid systems and payments integrator.",
+        "tier": "integrator"
+      },
+      {
+        "gov_evidence_url": null,
+        "name": "Optum",
+        "one_liner": "Health and human services systems and analytics vendor.",
+        "tier": "integrator"
+      },
+      {
+        "gov_evidence_url": null,
+        "name": "Maximus",
+        "one_liner": "Dominant eligibility-support BPO, now marketing AI capabilities.",
+        "tier": "integrator"
+      },
+      {
+        "gov_evidence_url": null,
+        "name": "Merative Curam",
+        "one_liner": "Social-program COTS platform (formerly IBM Curam).",
+        "tier": "platform"
+      },
+      {
+        "gov_evidence_url": null,
+        "name": "Salesforce",
+        "one_liner": "Case-management-on-platform offering for human services.",
+        "tier": "platform"
+      },
+      {
+        "gov_evidence_url": null,
+        "name": "ServiceNow",
+        "one_liner": "Case-management-on-platform offering for human services.",
+        "tier": "platform"
+      },
+      {
+        "gov_evidence_url": null,
+        "name": "RedMane",
+        "one_liner": "Human-services-specific case management tooling.",
+        "tier": "specialist"
+      },
+      {
+        "gov_evidence_url": null,
+        "name": "Northwoods",
+        "one_liner": "Human-services-specific document and case tooling.",
+        "tier": "specialist"
+      },
+      {
+        "gov_evidence_url": "https://www.hyperscience.ai/resource/state-department-of-healthcare-policy-financing-automates-snap-and-magi-documents/",
+        "name": "Hyperscience",
+        "one_liner": "Benefits document and intake automation (Colorado HCPF, Missouri DSS); see the document-processing pack for the full record.",
+        "tier": "platform"
+      },
+      {
+        "gov_evidence_url": "https://www.navapbc.com/insights",
+        "name": "Nava PBC",
+        "one_liner": "Caseworker-assist pilots with published guardrails and an open-source toolkit; the methodological transparency benchmark.",
+        "tier": "specialist"
+      }
+    ],
+    "failure_modes": [
+      {
+        "description": "Michigan's MiDAS system auto-adjudicated unemployment-insurance fraud with no human review. A state audit found its determinations were wrong more than 90% of the time. Roughly 40,000 people were accused, with wage garnishments and bankruptcies that followed. The state paid a $20 million settlement, and vendor-liability claims proceeded against SAS and FAST Enterprises in Cahoo (https://www.btah.org/case-study/michigan-unemployment-insurance-false-fraud-determinations.html).",
+        "named_incident": "Michigan MiDAS false fraud determinations; $20M civil-rights settlement (2022)",
+        "source_url": "https://www.michigan.gov/ag/news/press-releases/2022/10/20/som-settlement-of-civil-rights-class-action-alleging-false-accusations-of-unemployment-fraud",
+        "title": "Automated fraud adjudication without human review (Michigan MiDAS)"
+      },
+      {
+        "description": "Australia's Robodebt scheme unlawfully raised A$1.76 billion in debts against roughly 433,000 people through automated income averaging. It ended in a Royal Commission.",
+        "named_incident": "Australia Robodebt Royal Commission (2023)",
+        "source_url": "https://clcs.org.au/robodebt-royal-commission-report-unravels-systemic-injustice-and-recommends-urgent-reform/",
+        "title": "Automated debt raising at national scale (Robodebt)"
+      },
+      {
+        "description": "Arkansas replaced nurse judgment with an algorithm that cut home-care hours and failed to account for cerebral palsy in its logic. A court permanently enjoined its use.",
+        "named_incident": "Arkansas ARChoices care-hour algorithm permanently enjoined (2018)",
+        "source_url": "https://arktimes.com/news/arkansas-reporter/2018/05/31/archoices-rule-blocked",
+        "title": "An algorithm replacing professional discretion (Arkansas ARChoices)"
+      },
+      {
+        "description": "Idaho's \"trade secret\" budget formula for disability services was struck down as effectively arbitrary, and in 2025 the court found the state in contempt over delays. Due process outranks trade secrets.",
+        "named_incident": "K.W. v. Armstrong (Idaho); 2025 contempt finding",
+        "source_url": "https://www.acluidaho.org/en/cases/kw-v-armstrong",
+        "title": "Trade-secret formulas struck down (Idaho, K.W. v. Armstrong)"
+      },
+      {
+        "description": "Tennessee's Deloitte-built $400 million eligibility system contributed to roughly 250,000 children losing coverage. A federal court found Medicaid Act, due process, and ADA violations in A.M.C. v. Smith.",
+        "named_incident": "A.M.C. v. Smith (Tennessee TEDS), federal court ruling",
+        "source_url": "https://healthlaw.org/resource/case-explainer-amc-v-smith/",
+        "title": "Modernization that cut children off coverage (Tennessee TEDS)"
+      },
+      {
+        "description": "NYC's MyCity chatbot confidently invented program rules on an official government channel, gave contradictory answers to identical questions, and stayed running for years afterward.",
+        "named_incident": "NYC MyCity chatbot (The Markup, Mar 29, 2024)",
+        "source_url": "https://themarkup.org/artificial-intelligence/2024/03/29/nycs-ai-chatbot-tells-businesses-to-break-the-law",
+        "title": "Confident hallucination on an official channel (NYC MyCity)"
+      },
+      {
+        "description": "Documented and near-term patterns specific to language models: a post-hoc rationalization is not an appeal-safe explanation (a generated \"reason\" cannot honestly populate a 42 CFR 431.210 notice unless the decision logic is deterministic and cited); automation bias turns a nominal \"human in the loop\" into rubber-stamping at MiDAS and Robodebt scale; extraction errors propagate silently into denials; models can be sycophantic toward a caseworker's fraud hypothesis; performance gaps hit multilingual users and people with disabilities; and rules-to-code translation is promising but error-prone in practice.",
+        "named_incident": "Beeck Center rules-as-code experiments with public-benefits policy found translation errors",
+        "source_url": "https://digitalgovernmenthub.org/library/ai-powered-rules-as-code-experiments-with-public-benefits-policy/",
+        "title": "LLM-specific failure patterns in benefits work"
+      }
+    ],
+    "inclusion_test": [
+      "Does the pitch mention eligibility, determinations, enrollment, renewals or recertification, benefits processing, or case management for Medicaid, SNAP, TANF, unemployment insurance, child care, or child welfare?",
+      "Does it mention fraud detection, program integrity, identity verification, or \"payment accuracy\" for a benefits program?",
+      "Does it mention work-requirement or community-engagement verification or exemption screening (the 2026 OBBBA build-out wave)?",
+      "Does it offer caseworker copilots, case summarization, or benefit-notice drafting?",
+      "Does any other pack's pitch describe outputs that could deny, reduce, terminate, or flag a person's benefits? (This is the overlay trigger.)"
+    ],
+    "incumbent_landscape": "Integrators and COTS: Deloitte dominates integrated eligibility (25+ states, $5B+ in contracts, roughly 53 million Medicaid enrollees on its systems, per KFF Health News: https://kffhealthnews.org/news/article/medicaid-deloitte-run-eligibility-systems-plagued-by-errors/). Accenture, Gainwell, Conduent, and Optum populate the Medicaid systems ecosystem; Maximus is the dominant eligibility-support BPO now marketing AI; Merative Curam (formerly IBM) is the social-program COTS; Salesforce and ServiceNow push case-management-on-platform; RedMane, Diona, and Northwoods sell human-services-specific tooling. Critical context: the incumbents' deterministic systems, before any generative AI, produced wrong notices, impossible deadlines, 25,000 erroneous Kentucky terminations, and 2026 Michigan disability miscoverage (https://www.npr.org/2026/07/20/nx-s1-5896359/medicaid-disabled-patients-denied-deloitte-michigan). Deloitte's defense (\"they're not Deloitte systems\") shows accountability allocation is contested even among the biggest incumbents, so a listing in this pack is emphatically not a safety signal. The legitimate near-term AI layer is document and intake automation (Hyperscience in Colorado and Missouri; Pennsylvania legibility scanning; New Jersey document validation; North Carolina summarization, per Code for America: https://codeforamerica.org/explore/government-ai-landscape-assessment/). The 2025–26 copilot wave: Nava PBC (the most methodologically transparent, with an open-source Caseworker Empowerment Toolkit and published guardrails), the Maryland and Anthropic navigation agent, Augintel, and frontier-lab GSA OneGov seats putting near-free LLMs inside agencies. AI increasingly arrives through staff tooling, not procurement. The highest-risk adjacent lane is fraud and identity vendors (SAS and FAST Enterprises in the MiDAS era; Pondera, now Thomson Reuters; LexisNexis; ID.me). Treat any \"AI fraud detection\" pitch as an adverse-action system, full stop.",
+    "known_gaps": "- The final disposition of Cahoo (vendor-liability claims from MiDAS) was\n  not re-verified this cycle.\n- The 2023 Medicaid unwinding ex parte error event (roughly 30 states ran\n  renewals at the household level; CMS forced reinstatement of about\n  500,000 people, mostly children) is excluded from failure modes until\n  the primary CMS document is re-fetched.\n- Current product claims by fraud and identity vendors (Pondera,\n  LexisNexis, ID.me) were not re-verified this cycle.\n- Colorado AI Act 2026 amendment status is uncertain; verify before\n  citing.",
+    "last_updated": "2026-08-28",
+    "legal_context": "## Why this category is different\n\nWhen AI touches who gets Medicaid, SNAP, unemployment, or child care\nassistance, errors are not inconveniences. They are unlawful deprivations.\nCourts have already ruled against automated benefits systems in Michigan\n(a $20M settlement over false fraud accusations; auto-adjudicated fraud\nfindings wrong more than 90% of the time), Tennessee (due process and ADA\nviolations), and Arkansas and Idaho (invalidated care-cutting algorithms),\nand Australia's Robodebt collapsed into a royal commission. Federal policy\n(OMB M-25-21) presumes AI used in benefits adjudication and fraud\ndetection is \"high-impact,\" requiring testing, human oversight, and\nappeals, and several states now require meaningful human review by law.\nThis tool therefore applies its strictest evidence bar here: any vendor\nclaiming to automate or accelerate adverse decisions (denials, reductions,\nterminations, fraud flags) is flagged for enhanced review regardless of\ncompany size or references. AI that helps staff read documents, summarize\ncases, and draft communications, with a named human making every decision,\nappeal-ready explanations, and audit trails, can be evaluated on its\nmerits. AI that decides is not a product category this tool will ever mark\nlow-risk.\n\n## Controlling law and policy\n\n- Goldberg v. Kelly, 397 U.S. 254 (1970) and Mathews v. Eldridge (1976):\n  the constitutional floor for process before benefits are taken away\n  (https://www.law.cornell.edu/supremecourt/text/397/254).\n- 42 CFR 431.210 (Medicaid) and 7 CFR 273.13 (SNAP): what a legally\n  sufficient adverse-action notice must contain.\n- K.W. v. Armstrong (D. Idaho): no trade-secret shield over decision\n  logic; 2025 contempt finding\n  (https://www.acluidaho.org/en/cases/kw-v-armstrong).\n- A.M.C. v. Smith (M.D. Tenn.): ADA liability attaches to\n  eligibility-system failures\n  (https://healthlaw.org/resource/case-explainer-amc-v-smith/).\n- OMB M-25-21 (2025): benefits adjudication, continued-eligibility\n  determination, and fraud detection are presumptively high-impact, with\n  mandatory pre-deployment testing, impact assessment, monitoring, trained\n  human oversight with a fail-safe, and remedies and appeals\n  (https://www.whitehouse.gov/wp-content/uploads/2025/02/M-25-21-Accelerating-Federal-Use-of-AI-through-Innovation-Governance-and-Public-Trust.pdf).\n- New York LOADinG Act: requires \"continued, operational and meaningful\n  human review.\" New York NYS-P24-001: \"Automated final decision systems\n  are not permitted.\"\n- Texas TRAIGA (effective Jan 1, 2026). Verify current status before\n  citing.\n- Colorado AI Act (delayed to Jun 30, 2026). Verify current status before\n  citing.\n- 45 CFR 95.611: APD approval gates for changes to federally funded\n  eligibility systems.\n- California SIMM 150: rates \"service eligibility assessments for housing\n  or income assistance\" at least Moderate risk.",
+    "pack_id": "eligibility-case-mgmt",
+    "pack_name": "Eligibility, Benefits Processing & Case Management",
+    "realistic_pricing": "No published price anchors exist for determination-adjacent AI in public\nbenefits. The honest guidance: any pricing conversation is premature until\ndiligence questions q01 through q03 pass. For the document-automation\nslice, use the document-processing pack's anchors.",
+    "reference_deployments": [
+      {
+        "agency": "Multiple state agencies (Nava PBC pilots)",
+        "metric": "Open-source Caseworker Empowerment Toolkit published Apr 2026",
+        "metric_source_type": "vendor-reported",
+        "source_url": "https://www.navapbc.com/insights",
+        "vendor_stack": "Nava PBC",
+        "what": "Caseworker-assist pilots with published guardrails (transparency, oversight prompts, intervention controls, plain-language explanations)"
+      },
+      {
+        "agency": "Pennsylvania",
+        "metric": "Cited as a scaled, lower-risk intake use in Code for America's second annual landscape assessment",
+        "metric_source_type": "independent-press",
+        "source_url": "https://codeforamerica.org/news/code-for-america-unveils-second-annual-government-ai-landscape-assessment/",
+        "vendor_stack": "Document legibility scanning at intake",
+        "what": "Legibility scanning at intake, scaled"
+      },
+      {
+        "agency": "Maryland, New Jersey, and Utah",
+        "metric": "Documented as pilots, not production determinations",
+        "metric_source_type": "independent-press",
+        "source_url": "https://codeforamerica.org/explore/government-ai-landscape-assessment/",
+        "vendor_stack": "Applicant navigation and assistant pilots (Maryland with Anthropic)",
+        "what": "Benefits navigation and applicant-assistant pilots"
+      },
+      {
+        "agency": "Colorado HCPF and Missouri DSS",
+        "metric": "Colorado absorbed 700–1,000% image-volume growth during the renewal surge",
+        "metric_source_type": "vendor-reported",
+        "source_url": "https://www.hyperscience.ai/resource/state-department-of-healthcare-policy-financing-automates-snap-and-magi-documents/",
+        "vendor_stack": "Hyperscience",
+        "what": "Intake automation with confidence-threshold human routing"
+      },
+      {
+        "agency": "CCF Public Benefit Innovation Fund awardees (multi-state)",
+        "metric": "$8.5M committed in Dec 2025",
+        "metric_source_type": "independent-press",
+        "source_url": "https://www.centerforcivicfutures.org/resources/center-for-civic-futures-and-partners-commit-8-5m-for-ai-solutions-that-improve-safety-net-program-delivery",
+        "vendor_stack": "APHSA/Nava multi-state SNAP-Medicaid work verification; Maryland DOL; New Jersey cross-program eligibility; Mississippi SNAP; New Mexico and Oregon benefit notices; a Vals AI SNAP GenAI benchmark",
+        "what": "Funded, evaluated safety-net AI projects, the alternative to cold-pitch adoption"
+      }
+    ],
+    "refresh_cadence": "monthly",
+    "registries_to_check": [
+      {
+        "name": "FedRAMP Marketplace",
+        "url": "https://marketplace.fedramp.gov/",
+        "what_it_proves": "Whether this specific product holds a federal cloud authorization, and at what level. \"In process\" is not \"authorized.\""
+      },
+      {
+        "name": "GovRAMP Authorized Product List",
+        "url": "https://govramp.org/",
+        "what_it_proves": "State-oriented cloud security verification. Formerly StateRAMP; the name changed in February 2025."
+      },
+      {
+        "name": "Benefits Tech Advocacy Hub case library",
+        "url": "https://www.btah.org/case-studies.html",
+        "what_it_proves": "A negative registry: documented cases where benefits technology harmed people. Check whether the vendor or the category appears."
+      },
+      {
+        "name": "AI Incident Database",
+        "url": "https://incidentdatabase.ai/",
+        "what_it_proves": "A public log of AI system failures. Search the vendor and product name."
+      },
+      {
+        "name": "Center for Civic Futures AI Knowledge Hub",
+        "url": "https://www.centerforcivicfutures.org/",
+        "what_it_proves": "Partner-maintained record of government AI projects and evaluations, including funded safety-net work."
+      }
+    ],
+    "scrutiny_tier": "elevated",
+    "skepticism_triggers": [
+      {
+        "claim_pattern": "\"Fully automated eligibility determination\" or \"touchless processing\"",
+        "source_url": "https://www.btah.org/case-study/michigan-unemployment-insurance-false-fraud-determinations.html",
+        "threshold": "Any such claim applied to adverse actions",
+        "why": "Presumptively disqualifying. This is the MiDAS and Robodebt pattern, and it maps to the tool's strongest caution band regardless of vendor pedigree."
+      },
+      {
+        "claim_pattern": "\"Reduces fraud by X%\"",
+        "source_url": "https://www.michigan.gov/ag/news/press-releases/2022/10/20/som-settlement-of-civil-rights-class-action-alleging-false-accusations-of-unemployment-fraud",
+        "threshold": "Any fraud-reduction percentage",
+        "why": "Demand the false-positive rate and what happens to flagged people while \"under review.\" MiDAS was wrong more than 90% of the time."
+      },
+      {
+        "claim_pattern": "\"99%+ accuracy\"",
+        "source_url": null,
+        "threshold": "Any accuracy claim without state-specific evaluation, a denominator, and breakouts by field, case type, language, and disability",
+        "why": "Blended accuracy hides exactly the errors that become wrongful denials."
+      },
+      {
+        "claim_pattern": "\"Unbiased AI\" or \"bias-free AI\"",
+        "source_url": null,
+        "threshold": "Any such claim",
+        "why": "Unfalsifiable. The honest form is \"here is our disparate-performance testing and here are the results.\""
+      },
+      {
+        "claim_pattern": "\"Explainable AI\" meaning a chatbot paragraph",
+        "source_url": null,
+        "threshold": "An explanation that is not a legally sufficient notice",
+        "why": "A generated paragraph is not a 42 CFR 431.210 notice. Ask to see actual notice text."
+      },
+      {
+        "claim_pattern": "\"Proprietary; we cannot share how it works\"",
+        "source_url": "https://www.acluidaho.org/en/cases/kw-v-armstrong",
+        "threshold": "Any trade-secret posture over decision logic",
+        "why": "K.W. v. Armstrong establishes that due process outranks trade secrets."
+      },
+      {
+        "claim_pattern": "\"Deploy in weeks\" for anything touching the eligibility system",
+        "source_url": null,
+        "threshold": "A deployment promise under 90 days",
+        "why": "It ignores APD and CMS/FNS approval gates (45 CFR 95.611). Kentucky's single defect took 10 months and $522K to fix."
+      },
+      {
+        "claim_pattern": "\"Human in the loop\" without numbers",
+        "source_url": null,
+        "threshold": "No items-per-reviewer-per-day or override-rate data",
+        "why": "Near-zero overrides means the human is a rubber stamp."
+      },
+      {
+        "claim_pattern": "\"FedRAMP compliant\" or \"StateRAMP compliant\"; a SOC 2 Type I passed off as Type II",
+        "source_url": "https://marketplace.fedramp.gov/",
+        "threshold": "The word \"compliant\" instead of \"authorized\"",
+        "why": "Verify authorization status on the marketplaces directly. \"In process\" is not \"authorized.\""
+      },
+      {
+        "claim_pattern": "\"Trusted by [state]\"",
+        "source_url": null,
+        "threshold": "A reference that turns out to be an unpaid pilot or a constituent-services chatbot rebranded as eligibility tech",
+        "why": "Call the named agency and ask what is actually in production."
+      },
+      {
+        "claim_pattern": "\"AI will clear your backlog\"",
+        "source_url": "https://healthlaw.org/resource/case-explainer-amc-v-smith/",
+        "threshold": "Backlog-clearing claims during unwinding or work-requirement crunches",
+        "why": "Speed pressure on adverse actions is precisely how Tennessee and Michigan happened."
+      },
+      {
+        "claim_pattern": "\"We handle appeals too\"",
+        "source_url": null,
+        "threshold": "The vendor adjudicating appeals of its own system's decisions",
+        "why": "A due-process conflict of interest."
+      },
+      {
+        "claim_pattern": "Free pilots contingent on broad data access",
+        "source_url": "https://www.whitehouse.gov/wp-content/uploads/2025/02/M-25-21-Accelerating-Federal-Use-of-AI-through-Innovation-Governance-and-Public-Trust.pdf",
+        "threshold": "Any free pilot conditioned on access to applicant data",
+        "why": "A data-acquisition play. OMB M-25-21 tells federal agencies to bar vendor training on government data."
+      }
+    ]
+  },
+  "public-comms": {
+    "definition": "Resident-facing digital communications AI: website chatbots and AI search, notification and email platforms with AI features, real-time meeting interpretation, and machine translation of public content. This pack does not cover phone and contact-center AI (see the call-center pack) or chatbots that answer benefits-eligibility questions (that adds the eligibility-case-mgmt overlay).",
+    "diligence_questions": [
+      {
+        "good_answer": "Corpus-restricted generation with demonstrated refusal behavior.",
+        "id": "public-comms-q01",
+        "question": "Is every answer generated only from content we control? Show us what the bot says when the answer is not in that corpus: does it refuse and hand off, or improvise?",
+        "red_flag": "Open-web answering or hedged \"mostly grounded\" language. MyCity improvised.",
+        "source_url": "https://themarkup.org/artificial-intelligence/2026/01/30/mamdani-to-kill-the-nyc-ai-chatbot-we-caught-telling-businesses-to-break-the-law"
+      },
+      {
+        "good_answer": "Yes, with per-answer citations to your own pages.",
+        "id": "public-comms-q02",
+        "question": "Does each answer link to the specific official source page?",
+        "red_flag": "No citations. You cannot audit what you cannot trace.",
+        "source_url": null
+      },
+      {
+        "good_answer": "Yes, with your counsel approving the answer key before launch.",
+        "id": "public-comms-q03",
+        "question": "Will you run and share results on our top 100 real resident questions, including legally consequential ones (tenant rights, wages, deadlines), before go-live? Who signs off on the answer key, our counsel or yours?",
+        "red_flag": "Testing after launch, or vendor-graded results only.",
+        "source_url": null
+      },
+      {
+        "good_answer": "A named pipeline, a turnaround commitment, and clear responsibility.",
+        "id": "public-comms-q04",
+        "question": "When the council changes an ordinance or a fee, what is the update pipeline and SLA? Who is responsible for stale answers?",
+        "red_flag": "\"The bot re-crawls periodically\" with no SLA.",
+        "source_url": null
+      },
+      {
+        "good_answer": "Specific indemnification language in the contract.",
+        "id": "public-comms-q05",
+        "question": "Given Moffatt v. Air Canada, what does your contract say about indemnification when the bot causes harm with wrong information?",
+        "red_flag": "A disclaimer offered instead of contract terms; that argument already lost.",
+        "source_url": "https://www.americanbar.org/groups/business_law/resources/business-law-today/2024-february/bc-tribunal-confirms-companies-remain-liable-information-provided-ai-chatbot/"
+      },
+      {
+        "good_answer": "Defined handoff triggers and real staffed hours.",
+        "id": "public-comms-q06",
+        "question": "At what point (topic, confidence, frustration, or a direct request) does the bot transfer to a person, and during what hours does that person exist?",
+        "red_flag": "A bot with no human behind it.",
+        "source_url": null
+      },
+      {
+        "good_answer": "Per-language quality measurements and human review for consequential content, in line with NCSC guidance.",
+        "id": "public-comms-q07",
+        "question": "Which languages do you support, with what measured quality per language? Is there human review for benefits, legal, and health content? How do you handle low-resource languages where machine translation degrades?",
+        "red_flag": "A language count with no measurements.",
+        "source_url": "https://www.ncsc.org/sites/default/files/media/document/NCSC%20Machine%20Translation%20Guide_0.pdf"
+      },
+      {
+        "good_answer": "Full export, a stated retention schedule, and written no-training terms.",
+        "id": "public-comms-q08",
+        "question": "Are transcripts fully exportable for public-records compliance? What resident PII do you retain, for how long, and is any of it used for training?",
+        "red_flag": "No export path, or \"anonymized\" training use with no definition.",
+        "source_url": "https://www.sos.wa.gov/sites/default/files/2025-02/advice-sheet-are-generative-ai-interactions-public-records-(june-2024).pdf"
+      },
+      {
+        "good_answer": "Disclosure on by default and an accessibility conformance report.",
+        "id": "public-comms-q09",
+        "question": "Does the bot clearly disclose that it is AI (the Utah SB 452 and Maine LD 1727 pattern; TRAIGA for Texas)? Does it meet WCAG 2.1 AA accessibility?",
+        "red_flag": "Disclosure as a configurable option, or no accessibility testing.",
+        "source_url": "https://fpf.org/blog/understanding-the-new-wave-of-chatbot-legislation-california-sb-243-and-beyond/"
+      },
+      {
+        "good_answer": "Defined metrics, a named audit method, and transcript sampling rights.",
+        "id": "public-comms-q10",
+        "question": "What accuracy and containment metrics will you report monthly, how is \"accurate\" defined and audited, and can we sample real transcripts?",
+        "red_flag": "Self-graded accuracy with no sampling rights.",
+        "source_url": null
+      },
+      {
+        "good_answer": "A same-day correction path, a kill switch, and a graceful fallback page.",
+        "id": "public-comms-q11",
+        "question": "How fast can we take down a wrong answer, or the whole bot, and what is the fallback experience?",
+        "red_flag": "Correction requests routed through a support queue with no SLA.",
+        "source_url": null
+      },
+      {
+        "good_answer": "Named references plus a straight answer on decommissions.",
+        "id": "public-comms-q12",
+        "question": "Name three government customers our size, with one live for 12 or more months. Has any government customer decommissioned the product, and why?",
+        "red_flag": "No references at your scale, or evasion about churn. NYC decommissioned a high-profile bot in 2026; the question is fair.",
+        "source_url": "https://themarkup.org/artificial-intelligence/2026/01/30/mamdani-to-kill-the-nyc-ai-chatbot-we-caught-telling-businesses-to-break-the-law"
+      }
+    ],
+    "elevated_scrutiny_rules": [
+      {
+        "action": "Apply the eligibility-case-mgmt overlay. California SIMM 150 rates resident-facing chatbots at least Moderate risk.",
+        "condition": "The bot will answer benefits or eligibility questions"
+      },
+      {
+        "action": "Require q03 with counsel sign-off; raise caution one band.",
+        "condition": "The bot delivers legally consequential content (tenant rights, wages, deadlines, permits)"
+      },
+      {
+        "action": "Add the NCSC mandatory-human-review flag.",
+        "condition": "Translation of legal, benefits, or health content without human review"
+      }
+    ],
+    "established_vendors": [
+      {
+        "gov_evidence_url": "https://granicus.com/products/govdelivery/",
+        "name": "Granicus",
+        "one_liner": "The government communications incumbent (govDelivery); claims a 300M+ subscriber network (vendor-reported).",
+        "tier": "platform"
+      },
+      {
+        "gov_evidence_url": "https://statescoop.com/government-ai-chatbots-state-local-websites-2024/",
+        "name": "Tyler Technologies",
+        "one_liner": "Long-running state portal chatbots, including Mississippi \"Missi\" (2017).",
+        "tier": "platform"
+      },
+      {
+        "gov_evidence_url": "https://www.govtech.com/biz/polimorphic-raises-18-6m-as-it-beefs-up-public-sector-ai",
+        "name": "Polimorphic",
+        "one_liner": "Local-government chat with footnoted answers from government-controlled sources (vendor claims); named local-government customers.",
+        "tier": "startup-verified"
+      },
+      {
+        "gov_evidence_url": null,
+        "name": "Citibot",
+        "one_liner": "Local-government chat (Cuyahoga County OH); customer claims could not be verified this cycle because the vendor site blocked automated fetch.",
+        "tier": "startup-verified"
+      },
+      {
+        "gov_evidence_url": null,
+        "name": "Verint",
+        "one_liner": "Government chatbot and engagement tooling.",
+        "tier": "specialist"
+      },
+      {
+        "gov_evidence_url": "https://www.wordly.ai/city-council-translation",
+        "name": "Wordly",
+        "one_liner": "Live meeting interpretation (Santa Barbara CA, North Las Vegas NV).",
+        "tier": "specialist"
+      },
+      {
+        "gov_evidence_url": "https://statescoop.com/government-ai-chatbots-state-local-websites-2024/",
+        "name": "NeuroSoph",
+        "one_liner": "Massachusetts \"Ask MA\" statewide portal assistant.",
+        "tier": "specialist"
+      },
+      {
+        "gov_evidence_url": "https://statescoop.com/government-ai-chatbots-state-local-websites-2024/",
+        "name": "Zammo.ai",
+        "one_liner": "Atlanta \"Ava\" / ATL311 chatbot.",
+        "tier": "startup-verified"
+      }
+    ],
+    "failure_modes": [
+      {
+        "description": "NYC's MyCity chatbot told businesses to break the law. A \"beta\" disclaimer did not fix it. It ran roughly 2.5 years and was shut down Feb 4, 2026 as \"functionally unusable,\" after about $600K to build and about $500K per year to maintain. The lessons: disclaimers do not fix illegal advice, and sunk cost keeps broken bots alive.",
+        "named_incident": "NYC MyCity chatbot shutdown (The Markup, Jan 30, 2026)",
+        "source_url": "https://themarkup.org/artificial-intelligence/2026/01/30/mamdani-to-kill-the-nyc-ai-chatbot-we-caught-telling-businesses-to-break-the-law",
+        "title": "Hallucinated official answers, kept alive by sunk cost (NYC MyCity)"
+      },
+      {
+        "description": "A British Columbia tribunal held that a chatbot is not \"a separate legal entity\" and the organization answers for what it says. The same logic reaches an agency website bot.",
+        "named_incident": "Moffatt v. Air Canada (2024)",
+        "source_url": "https://www.americanbar.org/groups/business_law/resources/business-law-today/2024-february/bc-tribunal-confirms-companies-remain-liable-information-provided-ai-chatbot/",
+        "title": "The government is liable for its bot"
+      },
+      {
+        "description": "The National Center for State Courts documents gender-bias errors, legal-terminology misinterpretation, hallucination, and sharp degradation on low-resource languages, and recommends mandatory human review for anything with legal consequences. The July 2025 DOJ memo pushing AI-assisted translation raises the risk of quiet swap-outs of human interpretation (https://www.nextgov.com/digital-government/2025/07/justice-pushes-agencies-use-ai-assisted-translations-when-offering-them-all/406776/).",
+        "named_incident": "NCSC machine-translation guidance documenting failure classes in court contexts",
+        "source_url": "https://www.ncsc.org/sites/default/files/media/document/NCSC%20Machine%20Translation%20Guide_0.pdf",
+        "title": "Machine-translation quality collapse on the languages LEP communities speak"
+      },
+      {
+        "description": "Illinois's \"Dotty\" answered a license-renewal question with irrelevant statistics. Self-reported \"accuracy\" claims are undefined: accuracy on what test set, judged by whom?",
+        "named_incident": "Illinois \"Dotty\" (StateScoop survey of state chatbots, 2024)",
+        "source_url": "https://statescoop.com/government-ai-chatbots-state-local-websites-2024/",
+        "title": "Scripted bots that cannot answer"
+      },
+      {
+        "description": "Washington's State Archives advises that prompts and outputs can both be public records. A chatbot with no export path is a public-records problem on day one.",
+        "named_incident": "Washington State Archives advice sheet on generative-AI interactions as public records (Jun 2024)",
+        "source_url": "https://www.sos.wa.gov/sites/default/files/2025-02/advice-sheet-are-generative-ai-interactions-public-records-(june-2024).pdf",
+        "title": "Chat transcripts are public records with PII in them"
+      },
+      {
+        "description": "Utah SB 452, Maine LD 1727, and California SB 243 typify a wave of 14+ new state chatbot laws in 2026. A bot that does not disclose it is automated is out of step with where the law is heading.",
+        "named_incident": "The 2026 wave of state chatbot-disclosure legislation (Future of Privacy Forum analysis)",
+        "source_url": "https://fpf.org/blog/understanding-the-new-wave-of-chatbot-legislation-california-sb-243-and-beyond/",
+        "title": "Hardening disclosure norms"
+      }
+    ],
+    "inclusion_test": [
+      "Does the pitch offer a website chatbot, AI site search, or a \"digital assistant\" for residents?",
+      "Does it offer translation or interpretation of public content or meetings?",
+      "Does it offer resident notification, email, or engagement tooling with AI features?",
+      "Is the primary interface the agency's website or public meetings rather than the phone?"
+    ],
+    "incumbent_landscape": "A crowded small-to-mid vendor field sells chatbots and AI search to cities and counties: K12 Insight, Apptegy, Element451, Citibot, Polimorphic, Tyler Technologies, and Verint, with documented contract pricing spanning roughly $5,600 basic to $759K+ enterprise (https://blogs.civiciq.com/2025/12/02/government-ai-chatbots-311-rfps-vendor-pricing-guide-2025/). Granicus is the communications incumbent: govDelivery claims a 300M+ subscriber network (vendor-reported) plus a \"Government Experience Agent\" (https://granicus.com/products/govdelivery/). State-portal chatbots have a decade of history: Mississippi \"Missi\" (Tyler, 2017), Georgia DOL \"George A.I.\" (Cisco; 2.5 million+ users and an agency-claimed 97% accuracy we could not verify in public sources), Massachusetts \"Ask MA\" (NeuroSoph; roughly 1.2 million monthly users), Texas (Capgemini), Atlanta \"Ava\" (Zammo.ai), and Vermont \"ChatVT,\" which gets annual performance reviews (https://statescoop.com/government-ai-chatbots-state-local-websites-2024/). For translation: Wordly for live meeting interpretation (Santa Barbara CA, North Las Vegas NV; https://www.wordly.ai/city-council-translation), and New Jersey DOL with U.S. Digital Response as the standout responsible machine-translation deployment (https://www.usdigitalresponse.org/resources/how-new-jersey-is-using-generative-ai-to-scale-their-human-centered-approach-to-language-access).",
+    "known_gaps": "- Vendor and agency accuracy figures in this category are self-reported\n  (Georgia's 97%, Ask MA volumes); no independent audit was found in\n  public sources.\n- Citibot's customer claims are unverified; the vendor site blocked\n  automated fetch.\n- The underlying technology stack of NYC's MyCity bot was not re-verified\n  this cycle, so its deployment row names no vendor.\n- GovAI Coalition Trellis registry and state AI inventory URLs (the\n  Connecticut statutory inventory, New York's Section 103-e disclosures)\n  were not confirmed this cycle, so they are cited by name only.",
+    "last_updated": "2026-08-28",
+    "legal_context": "- State chatbot-disclosure wave: Utah SB 452 (2025), Maine LD 1727, and\n  California SB 243, with 14+ new state chatbot laws in 2026\n  (https://fpf.org/blog/understanding-the-new-wave-of-chatbot-legislation-california-sb-243-and-beyond/).\n- Texas TRAIGA (effective Jan 1, 2026). Verify current status before\n  citing.\n- Washington State Archives position (Jun 2024): generative-AI prompts and\n  outputs can be public records\n  (https://www.sos.wa.gov/sites/default/files/2025-02/advice-sheet-are-generative-ai-interactions-public-records-(june-2024).pdf).\n- ADA Title II digital accessibility rule (2024) and WCAG 2.1 AA:\n  public-facing digital services must be accessible.\n- Title VI: language-access obligations for limited-English-proficiency\n  residents; NCSC recommends mandatory human review for machine\n  translation with legal consequences.",
+    "pack_id": "public-comms",
+    "pack_name": "Public Communications, Websites & Chatbots",
+    "realistic_pricing": "The documented contract range runs roughly $5,600 basic to $759K+\nenterprise (CivicIQ 2025 vendor pricing guide,\nhttps://blogs.civiciq.com/2025/12/02/government-ai-chatbots-311-rfps-vendor-pricing-guide-2025/).\nA corpus-bounded FAQ bot priced above $100K deserves a written itemization\nof what the money buys.",
+    "reference_deployments": [
+      {
+        "agency": "Massachusetts (\"Ask MA\")",
+        "metric": "Roughly 3.46 million messages per month across 22 services",
+        "metric_source_type": "independent-press",
+        "source_url": "https://statescoop.com/government-ai-chatbots-state-local-websites-2024/",
+        "vendor_stack": "NeuroSoph",
+        "what": "Statewide portal assistant"
+      },
+      {
+        "agency": "Vermont (\"ChatVT\")",
+        "metric": "The accountability model; reviewed on a published annual cycle",
+        "metric_source_type": "independent-press",
+        "source_url": "https://statescoop.com/government-ai-chatbots-state-local-websites-2024/",
+        "vendor_stack": "State portal chatbot",
+        "what": "State chatbot with annual performance reviews"
+      },
+      {
+        "agency": "New Jersey DOL",
+        "metric": "One language (Spanish, 95% of demand) at roughly 90% claimed accuracy with human review",
+        "metric_source_type": "independent-press",
+        "source_url": "https://www.usdigitalresponse.org/resources/how-new-jersey-is-using-generative-ai-to-scale-their-human-centered-approach-to-language-access",
+        "vendor_stack": "Machine translation with U.S. Digital Response",
+        "what": "Plain-language-first Spanish translation with human review and published training materials for state reuse"
+      },
+      {
+        "agency": "Santa Barbara, CA and North Las Vegas, NV",
+        "metric": "Named deployments; metrics are vendor-reported",
+        "metric_source_type": "vendor-reported",
+        "source_url": "https://www.wordly.ai/city-council-translation",
+        "vendor_stack": "Wordly",
+        "what": "Live council-meeting interpretation"
+      },
+      {
+        "agency": "Mississippi (\"Missi\")",
+        "metric": "A longevity datapoint rather than a performance claim",
+        "metric_source_type": "independent-press",
+        "source_url": "https://statescoop.com/government-ai-chatbots-state-local-websites-2024/",
+        "vendor_stack": "Tyler Technologies",
+        "what": "One of the longest-running state portal chatbots (2017)"
+      },
+      {
+        "agency": "Maryland benefits-navigation agent",
+        "metric": "Documented as a pilot, not production determinations",
+        "metric_source_type": "independent-press",
+        "source_url": "https://codeforamerica.org/explore/government-ai-landscape-assessment/",
+        "vendor_stack": "Anthropic",
+        "what": "Benefits navigation assistant (the eligibility-case-mgmt overlay applies)"
+      },
+      {
+        "agency": "NYC (\"MyCity\", cautionary)",
+        "metric": "About $600K to build and about $500K per year to maintain, and it still told businesses to break the law",
+        "metric_source_type": "independent-press",
+        "source_url": "https://themarkup.org/artificial-intelligence/2026/01/30/mamdani-to-kill-the-nyc-ai-chatbot-we-caught-telling-businesses-to-break-the-law",
+        "vendor_stack": "City portal chatbot",
+        "what": "Decommissioned Feb 4, 2026 as \"functionally unusable\""
+      }
+    ],
+    "refresh_cadence": "quarterly",
+    "registries_to_check": [
+      {
+        "name": "Pavilion Contract Hub",
+        "url": "https://www.withpavilion.com/",
+        "what_it_proves": "Existing public contracts you may be able to piggyback on; confirms other governments have bought the product."
+      },
+      {
+        "name": "Procurated",
+        "url": "https://www.procurated.com/",
+        "what_it_proves": "Peer reviews of suppliers from other government buyers."
+      },
+      {
+        "name": "AI Incident Database",
+        "url": "https://incidentdatabase.ai/",
+        "what_it_proves": "A public log of AI system failures. Search the vendor and product name."
+      }
+    ],
+    "scrutiny_tier": "standard",
+    "skepticism_triggers": [
+      {
+        "claim_pattern": "Any accuracy claim without a defined test set and judge",
+        "source_url": "https://statescoop.com/government-ai-chatbots-state-local-websites-2024/",
+        "threshold": "An accuracy number with no stated test set or grader",
+        "why": "Georgia's \"97%\" is the archetype of undefined agency- or vendor-reported accuracy. Accuracy on what questions, judged by whom?"
+      },
+      {
+        "claim_pattern": "\"75+ languages\"",
+        "source_url": "https://www.usdigitalresponse.org/resources/how-new-jersey-is-using-generative-ai-to-scale-their-human-centered-approach-to-language-access",
+        "threshold": "A language count above the number of languages with measured quality",
+        "why": "Coverage is not quality. Demand per-language measured quality and human review for legal, benefits, and health content. New Jersey's honest benchmark is one language (Spanish, 95% of demand) at roughly 90% claimed accuracy, with human review and plain-language-first writing."
+      },
+      {
+        "claim_pattern": "\"Answers any question about your city\"",
+        "source_url": "https://themarkup.org/artificial-intelligence/2026/01/30/mamdani-to-kill-the-nyc-ai-chatbot-we-caught-telling-businesses-to-break-the-law",
+        "threshold": "Unbounded scope",
+        "why": "Unbounded scope is the MyCity failure. Good bots are corpus-restricted with refusal behavior."
+      },
+      {
+        "claim_pattern": "\"The disclaimer covers you\"",
+        "source_url": "https://www.americanbar.org/groups/business_law/resources/business-law-today/2024-february/bc-tribunal-confirms-companies-remain-liable-information-provided-ai-chatbot/",
+        "threshold": "A disclaimer offered as the main risk mitigation",
+        "why": "It did not cover NYC, and Air Canada's disclaimer argument lost."
+      },
+      {
+        "claim_pattern": "Enterprise pricing above $100K for a corpus-bounded FAQ bot",
+        "source_url": "https://blogs.civiciq.com/2025/12/02/government-ai-chatbots-311-rfps-vendor-pricing-guide-2025/",
+        "threshold": "Above $100K for bounded FAQ functionality",
+        "why": "The documented market spans roughly $5,600 to $759K+. Demand the itemization for anything at the high end."
+      },
+      {
+        "claim_pattern": "\"Set and forget\" content ingestion",
+        "source_url": null,
+        "threshold": "No stale-content SLA",
+        "why": "No stale-content SLA means wrong answers after every ordinance change."
+      },
+      {
+        "claim_pattern": "No exportable transcripts",
+        "source_url": "https://www.sos.wa.gov/sites/default/files/2025-02/advice-sheet-are-generative-ai-interactions-public-records-(june-2024).pdf",
+        "threshold": "Any product without a transcript export path",
+        "why": "A public-records non-starter under the Washington archivist position."
+      }
+    ]
+  },
+  "staff-productivity": {
+    "definition": "AI that helps government staff do their work: writing and drafting assistants, enterprise copilots, meeting transcription and AI notetakers, internal search and summarization, and back-office workflow automation. This pack does not cover anything resident-facing (see the public-comms and call-center packs) or anything feeding case decisions (that adds the eligibility-case-mgmt overlay).",
+    "diligence_questions": [
+      {
+        "good_answer": "A concrete, named differentiator and a defensible answer about the roadmap gap.",
+        "id": "staff-productivity-q01",
+        "question": "We already license (or can nearly freely add) Microsoft 365 Copilot or Gemini. What specifically does your product do that they do not, and what happens to that gap when their next release ships?",
+        "red_flag": "Generic productivity claims that the bundled incumbent already covers.",
+        "source_url": null
+      },
+      {
+        "good_answer": "Yes across all content types, in usable formats, demonstrated live.",
+        "id": "staff-productivity-q02",
+        "question": "Can our records officers search, retrieve, export, and verifiably delete every prompt, output, transcript, and summary you hold, in a usable format, for a public-records request?",
+        "red_flag": "Export gaps for any content type, or export sold as a professional-services engagement.",
+        "source_url": "https://mrsc.org/stay-informed/mrsc-insight/july-2024/public-records-and-ai"
+      },
+      {
+        "good_answer": "Retention configurable to your schedules, with no uncontrollable content stores.",
+        "id": "staff-productivity-q03",
+        "question": "Can retention be set to match our schedules, and is there any content (chat history, telemetry, backups) we cannot control?",
+        "red_flag": "Telemetry, chat history, or backups your records officers cannot control.",
+        "source_url": null
+      },
+      {
+        "good_answer": "Written no-training terms, named data residency, and a deletion-at-exit commitment.",
+        "id": "staff-productivity-q04",
+        "question": "Contractually: is our data used to train your models or any third party's? Where does it reside? What happens at contract end?",
+        "red_flag": "Silence on subprocessors, or \"we may use data to improve services.\"",
+        "source_url": null
+      },
+      {
+        "good_answer": "An affirmative-consent flow for every participant, including the public.",
+        "id": "staff-productivity-q05",
+        "question": "How does the tool obtain affirmative consent from every participant, including non-users and the public, in all-party-consent states? What is your exposure to Otter.ai-style litigation?",
+        "red_flag": "Consent inferred from a bot being visible; that theory is being litigated in Brewer v. Otter.ai.",
+        "source_url": "https://natlawreview.com/article/ai-notetaking-tools-under-fire-lessons-otterai-class-action-complaint"
+      },
+      {
+        "good_answer": "Technical blocklists for closed sessions and sensitive meeting types.",
+        "id": "staff-productivity-q06",
+        "question": "Can we technically block the tool from closed sessions, attorney-client calls, HR meetings, and juvenile or health matters, or does it rely on staff remembering?",
+        "red_flag": "Reliance on staff remembering to turn it off.",
+        "source_url": null
+      },
+      {
+        "good_answer": "Named authorization levels and the specific cloud tier; CJIS-touching work runs in GCC High or the equivalent.",
+        "id": "staff-productivity-q07",
+        "question": "What FedRAMP level, GovRAMP status, and SOC 2 Type II do you hold, is the tool CJIS-compatible, and in which cloud does our tenant run?",
+        "red_flag": "Commercial cloud offered for CJIS or FTI workloads.",
+        "source_url": "https://learn.microsoft.com/en-us/microsoft-copilot-studio/requirements-licensing-gcc"
+      },
+      {
+        "good_answer": "A measured error rate and UI that requires review before content becomes a record.",
+        "id": "staff-productivity-q08",
+        "question": "What is the measured error rate for summaries and drafts, and what does the UI do to force human review (such as source-linking) before content becomes an official record?",
+        "red_flag": "No error measurement; summaries flowing into official records unreviewed.",
+        "source_url": null
+      },
+      {
+        "good_answer": "Usage logs adequate for audit without keystroke-level surveillance.",
+        "id": "staff-productivity-q09",
+        "question": "What usage logs do we get, and can we audit misuse without creating a workforce-surveillance problem?",
+        "red_flag": "Either no logs at all, or workforce surveillance by default.",
+        "source_url": null
+      },
+      {
+        "good_answer": "Honest labeling of self-reported versus measured, with the methodology shared.",
+        "id": "staff-productivity-q10",
+        "question": "Are your time-savings claims self-reported user estimates (like Pennsylvania's 95 minutes per day) or independently measured? Show the methodology.",
+        "red_flag": "Self-reported figures presented as measured savings.",
+        "source_url": "https://digitalgovernmenthub.org/library/lessons-from-pennsylvanias-generative-ai-pilot-with-chatgpt/"
+      },
+      {
+        "good_answer": "A documented export process and certified deletion at termination.",
+        "id": "staff-productivity-q11",
+        "question": "On termination, how do we get every record out, and how do you certify deletion?",
+        "red_flag": "No deletion certification.",
+        "source_url": null
+      },
+      {
+        "good_answer": "A named customer that has been through it, and what they learned.",
+        "id": "staff-productivity-q12",
+        "question": "Which government customers at our scale have completed a public-records request or a litigation hold involving your product's outputs? What broke?",
+        "red_flag": "No customer has ever tested the records path; you would be first.",
+        "source_url": null
+      }
+    ],
+    "elevated_scrutiny_rules": [
+      {
+        "action": "Apply the eligibility-case-mgmt overlay.",
+        "condition": "The tool will draft or summarize case files that feed benefit decisions"
+      },
+      {
+        "action": "Make the consent and closed-session questions (q05, q06) mandatory; note the Brewer v. Otter.ai litigation.",
+        "condition": "A notetaker is pitched for public or board meetings"
+      },
+      {
+        "action": "Treat the cloud-tier question (q07) as pass/fail.",
+        "condition": "The workload touches CJIS, FTI, or HIPAA data"
+      }
+    ],
+    "established_vendors": [
+      {
+        "gov_evidence_url": "https://learn.microsoft.com/en-us/microsoft-copilot-studio/requirements-licensing-gcc",
+        "name": "Microsoft (365 Copilot)",
+        "one_liner": "Bundled enterprise copilot; GCC and GCC High tiers map to regulated state data and CJIS-touching workloads.",
+        "tier": "platform"
+      },
+      {
+        "gov_evidence_url": "https://www.gsa.gov/about-gsa/newsroom/news-releases/gsa-google-announce-gemini-onegov-agreement-08212025",
+        "name": "Google (Gemini for Government / Workspace)",
+        "one_liner": "OneGov agreement priced the federal bundle at $0.47 per agency through Sep 30, 2026.",
+        "tier": "platform"
+      },
+      {
+        "gov_evidence_url": "https://digitalgovernmenthub.org/library/lessons-from-pennsylvanias-generative-ai-pilot-with-chatgpt/",
+        "name": "OpenAI (ChatGPT Enterprise / Gov)",
+        "one_liner": "Pennsylvania's ChatGPT Enterprise pilot is the best-documented state deployment in this category.",
+        "tier": "platform"
+      },
+      {
+        "gov_evidence_url": null,
+        "name": "Anthropic (Claude)",
+        "one_liner": "Available to federal agencies through a GSA OneGov agreement; state and local applicability of those terms is uncertain.",
+        "tier": "platform"
+      },
+      {
+        "gov_evidence_url": null,
+        "name": "Zoom / Otter.ai / Fireflies / Rev / Verbit",
+        "one_liner": "Transcription and notetaker standalones, versus the bundled defaults in Teams, Zoom, and Meet. See the consent litigation in failure modes.",
+        "tier": "specialist"
+      }
+    ],
+    "failure_modes": [
+      {
+        "description": "Washington's State Archivist advises that generative-AI outputs used in government work are public records and prompts likely are too, with retention following content and function. MRSC notes Microsoft Copilot's activity history appears non-disableable and recommends contract terms requiring prompt and output export.",
+        "named_incident": "MRSC and Washington State Archivist guidance on AI records (Jul 2024)",
+        "source_url": "https://mrsc.org/stay-informed/mrsc-insight/july-2024/public-records-and-ai",
+        "title": "Public-records and retention gaps"
+      },
+      {
+        "description": "Brewer v. Otter.ai (four consolidated federal cases) alleges bot recording without all-party consent. \"The bot was visible in the meeting\" is not consent in all-party-consent states (CA, FL, IL, MD, MA, MT, NV, NH, PA, WA). Government aggravators: closed and executive sessions, attorney-client communications, HR matters, and juvenile and health information.",
+        "named_incident": "Brewer v. Otter.ai consolidated litigation",
+        "source_url": "https://natlawreview.com/article/ai-notetaking-tools-under-fire-lessons-otterai-class-action-complaint",
+        "title": "Notetaker consent litigation"
+      },
+      {
+        "description": "69% of organizations suspect prohibited generative-AI use (Gartner, 2025). Concrete incident: a New South Wales contractor uploaded 12,000+ rows of flood-victim PII to a public AI tool. A sanctioned tool is part of the defense, but only if its data terms are actually better.",
+        "named_incident": "NSW contractor uploaded flood-victim PII to a public AI tool",
+        "source_url": "https://www.secondtalent.com/resources/shadow-ai-statistics/",
+        "title": "Shadow AI use with real data"
+      }
+    ],
+    "inclusion_test": [
+      "Does the pitch offer drafting, summarization, email, or \"productivity\" assistance for staff?",
+      "Does it offer meeting recording, transcription, or AI notetaking?",
+      "Does it offer internal knowledge search or workflow automation for back-office functions (HR, finance, records)?",
+      "Is the user the employee, not the resident?"
+    ],
+    "incumbent_landscape": "This pack's defining fact: the incumbents are nearly free. Microsoft 365 Copilot reached GCC (Dec 2024) and GCC High (Dec 3, 2025), with a GSA OneGov deal giving Copilot at no added cost for up to 12 months with M365 G5 (https://www.nextgov.com/acquisition/2025/12/microsoft-makes-copilot-available-secure-cloud-customers/409912/). GSA's Gemini OneGov agreement priced the Google bundle at $0.47 per agency through Sep 30, 2026 (https://www.gsa.gov/about-gsa/newsroom/news-releases/gsa-google-announce-gemini-onegov-agreement-08212025), and similar roughly $1 offers exist for ChatGPT and Claude. It is uncertain whether state and local governments can ride OneGov terms (coverage is federal), but the pricing signal shapes the whole market. The best-documented state deployment is Pennsylvania's ChatGPT Enterprise pilot (175 employees, then 3,000+; roughly 95 minutes per day of self-reported time savings; https://digitalgovernmenthub.org/library/lessons-from-pennsylvanias-generative-ai-pilot-with-chatgpt/). Pennsylvania's approved-tool model (ChatGPT Enterprise and Copilot approved centrally, others case by case) is itself a useful triage pattern. Notetakers split between bundled defaults (Teams, Zoom, Meet) and standalones (Otter.ai, Fireflies, Rev, Verbit). The triage question for any startup in this pack: what does this do that the Copilot or Gemini the jurisdiction already (nearly) owns does not, at a price that beats near-zero?",
+    "known_gaps": "- Whether state and local governments can use OneGov terms is uncertain;\n  coverage is federal.\n- No citable public-sector incident of copilot permission-sprawl\n  oversharing was found in public sources; the risk is retained as a\n  trigger with that caveat.\n- The reported U.S. House Copilot restriction and California GenAI\n  contract awards were excluded as unverified this cycle.\n- The Gartner shadow-AI figure (69%) is a survey statistic reached\n  through a secondary source.",
+    "last_updated": "2026-08-28",
+    "legal_context": "- State public-records law: Washington's archivist advice sheets (Jun\n  2024) are the cleanest citable guidance that AI outputs, and likely\n  prompts, are records\n  (https://www.sos.wa.gov/sites/default/files/2025-02/advice-sheet-are-generative-ai-interactions-public-records-(june-2024).pdf).\n- All-party-consent wiretap statutes (CA, FL, IL, MD, MA, MT, NV, NH, PA,\n  WA) govern meeting recording by notetakers.\n- Open-meetings acts govern recording and minutes of public bodies,\n  including closed and executive sessions.\n- New Jersey 25-OIT-001 (2025): sensitive PII only in state-approved AI\n  tools\n  (https://nj.gov/it/docs/ps/25-OIT-001-State-of-New-Jersey-Guidance-on-Responsible-Use-of-Generative-AI.pdf).\n- Pennsylvania's ITP and New York NYS-G25-002 are the state AI-use policy\n  models to check against.\n- Cloud-tier compliance: CJIS, FTI (IRS Pub 1075), and HIPAA workloads\n  must run in the matching government cloud tier (GCC or GCC High, or the\n  equivalent). Commercial-cloud AI on those workloads is a compliance\n  failure regardless of tool quality\n  (https://learn.microsoft.com/en-us/microsoft-copilot-studio/requirements-licensing-gcc).",
+    "pack_id": "staff-productivity",
+    "pack_name": "Staff Productivity & Back-Office AI",
+    "realistic_pricing": "The incumbent baseline is near zero: OneGov-era deals put Copilot at no\nadded cost for up to 12 months with M365 G5, and the Gemini federal\nbundle at $0.47 per agency through Sep 30, 2026 (federal terms; state and\nlocal applicability is uncertain). Bundled copilots run roughly $0–30 per\nseat per month effective. A standalone tool priced above that baseline\nneeds a named differentiator to justify the difference.",
+    "reference_deployments": [
+      {
+        "agency": "Pennsylvania Office of Administration",
+        "metric": "Roughly 95 minutes per day of time savings, self-reported by participants",
+        "metric_source_type": "independent-press",
+        "source_url": "https://digitalgovernmenthub.org/library/lessons-from-pennsylvanias-generative-ai-pilot-with-chatgpt/",
+        "vendor_stack": "OpenAI ChatGPT Enterprise",
+        "what": "Statewide productivity pilot, 175 employees expanding to 3,000+"
+      },
+      {
+        "agency": "Pennsylvania (document intake)",
+        "metric": "80% reduction in illegible submissions; 700+ staff hours saved (per Code for America's landscape assessment)",
+        "metric_source_type": "independent-press",
+        "source_url": "https://codeforamerica.org/news/code-for-america-unveils-second-annual-government-ai-landscape-assessment/",
+        "vendor_stack": "Document legibility scanning",
+        "what": "Cutting illegible submissions at intake"
+      },
+      {
+        "agency": "North Carolina",
+        "metric": "Documented as a staff-facing use in Code for America's landscape assessment",
+        "metric_source_type": "independent-press",
+        "source_url": "https://codeforamerica.org/explore/government-ai-landscape-assessment/",
+        "vendor_stack": "Staff summarization tooling",
+        "what": "Staff-facing summarization"
+      },
+      {
+        "agency": "Federal agencies (context for the market)",
+        "metric": "GCC High availability (Dec 3, 2025) plus a OneGov no-added-cost window",
+        "metric_source_type": "independent-press",
+        "source_url": "https://www.nextgov.com/acquisition/2025/12/microsoft-makes-copilot-available-secure-cloud-customers/409912/",
+        "vendor_stack": "Microsoft 365 Copilot in GCC High",
+        "what": "Availability milestone shaping state expectations"
+      },
+      {
+        "agency": "New Jersey",
+        "metric": "Published state guidance (25-OIT-001)",
+        "metric_source_type": "government-page",
+        "source_url": "https://nj.gov/it/docs/ps/25-OIT-001-State-of-New-Jersey-Guidance-on-Responsible-Use-of-Generative-AI.pdf",
+        "vendor_stack": "State-approved AI assistant model",
+        "what": "Statewide policy: sensitive PII only in state-approved AI tools"
+      }
+    ],
+    "refresh_cadence": "quarterly",
+    "registries_to_check": [
+      {
+        "name": "FedRAMP Marketplace",
+        "url": "https://marketplace.fedramp.gov/",
+        "what_it_proves": "Whether this specific product holds a federal cloud authorization, and at what level."
+      },
+      {
+        "name": "GovRAMP Authorized Product List",
+        "url": "https://govramp.org/",
+        "what_it_proves": "State-oriented cloud security verification. Formerly StateRAMP; the name changed in February 2025."
+      }
+    ],
+    "scrutiny_tier": "standard",
+    "skepticism_triggers": [
+      {
+        "claim_pattern": "A pitch that does not name what it beats in the near-free incumbent",
+        "source_url": "https://www.nextgov.com/acquisition/2025/12/microsoft-makes-copilot-available-secure-cloud-customers/409912/",
+        "threshold": "No named differentiator versus Copilot or Gemini",
+        "why": "The beat-the-incumbent question is q01, and an unanswered q01 means the pitch fails triage."
+      },
+      {
+        "claim_pattern": "Self-reported time savings presented as measured ROI",
+        "source_url": "https://digitalgovernmenthub.org/library/lessons-from-pennsylvanias-generative-ai-pilot-with-chatgpt/",
+        "threshold": "Any productivity statistic without a methodology",
+        "why": "Pennsylvania's widely quoted 95 minutes per day is participant-self-reported, not independently measured."
+      },
+      {
+        "claim_pattern": "\"FOIA-proof\" or \"records-exempt\" claims",
+        "source_url": "https://mrsc.org/stay-informed/mrsc-insight/july-2024/public-records-and-ai",
+        "threshold": "Any such claim",
+        "why": "Content and function govern record status. No tool makes records exempt."
+      },
+      {
+        "claim_pattern": "A notetaker with no affirmative-consent mechanism",
+        "source_url": "https://natlawreview.com/article/ai-notetaking-tools-under-fire-lessons-otterai-class-action-complaint",
+        "threshold": "Consent inferred from bot visibility alone",
+        "why": "The Brewer litigation tests exactly that theory, and all-party-consent states require more."
+      },
+      {
+        "claim_pattern": "No verifiable deletion or export path",
+        "source_url": "https://mrsc.org/stay-informed/mrsc-insight/july-2024/public-records-and-ai",
+        "threshold": "Absence of either",
+        "why": "A public-records and offboarding non-starter."
+      },
+      {
+        "claim_pattern": "Per-seat pricing above the incumbent bundle without a named differentiator",
+        "source_url": "https://www.gsa.gov/about-gsa/newsroom/news-releases/gsa-google-announce-gemini-onegov-agreement-08212025",
+        "threshold": "Above the roughly $0–30 per seat effective incumbent baseline",
+        "why": "The incumbent baseline is near zero in the OneGov era. Price above it needs a reason."
+      },
+      {
+        "claim_pattern": "\"It respects your existing permissions\" offered as the whole security story",
+        "source_url": null,
+        "threshold": "Any pitch treating current file permissions as sufficient preparation",
+        "why": "Copilots surface everything a user technically can access, so permission sprawl becomes visible on day one. This is an agency readiness issue the pitch should acknowledge. We could not find a citable public-sector incident in public sources yet."
+      }
+    ]
+  }
+};

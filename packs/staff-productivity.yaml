@@ -1,0 +1,391 @@
+# Sector pack: staff-productivity (v1)
+# Authoring rules: packs/pack-spec.md. Validated by scripts/validate-packs.ts.
+pack_id: staff-productivity
+pack_name: Staff Productivity & Back-Office AI
+
+definition: >-
+  AI that helps government staff do their work: writing and drafting
+  assistants, enterprise copilots, meeting transcription and AI notetakers,
+  internal search and summarization, and back-office workflow automation.
+  This pack does not cover anything resident-facing (see the public-comms
+  and call-center packs) or anything feeding case decisions (that adds the
+  eligibility-case-mgmt overlay).
+
+inclusion_test:
+  - >-
+    Does the pitch offer drafting, summarization, email, or "productivity"
+    assistance for staff?
+  - Does it offer meeting recording, transcription, or AI notetaking?
+  - >-
+    Does it offer internal knowledge search or workflow automation for
+    back-office functions (HR, finance, records)?
+  - Is the user the employee, not the resident?
+
+scrutiny_tier: standard
+
+incumbent_landscape: >-
+  This pack's defining fact: the incumbents are nearly free. Microsoft 365
+  Copilot reached GCC (Dec 2024) and GCC High (Dec 3, 2025), with a GSA
+  OneGov deal giving Copilot at no added cost for up to 12 months with M365
+  G5
+  (https://www.nextgov.com/acquisition/2025/12/microsoft-makes-copilot-available-secure-cloud-customers/409912/).
+  GSA's Gemini OneGov agreement priced the Google bundle at $0.47 per agency
+  through Sep 30, 2026
+  (https://www.gsa.gov/about-gsa/newsroom/news-releases/gsa-google-announce-gemini-onegov-agreement-08212025),
+  and similar roughly $1 offers exist for ChatGPT and Claude. It is
+  uncertain whether state and local governments can ride OneGov terms
+  (coverage is federal), but the pricing signal shapes the whole market. The
+  best-documented state deployment is Pennsylvania's ChatGPT Enterprise
+  pilot (175 employees, then 3,000+; roughly 95 minutes per day of
+  self-reported time savings;
+  https://digitalgovernmenthub.org/library/lessons-from-pennsylvanias-generative-ai-pilot-with-chatgpt/).
+  Pennsylvania's approved-tool model (ChatGPT Enterprise and Copilot
+  approved centrally, others case by case) is itself a useful triage
+  pattern. Notetakers split between bundled defaults (Teams, Zoom, Meet) and
+  standalones (Otter.ai, Fireflies, Rev, Verbit). The triage question for
+  any startup in this pack: what does this do that the Copilot or Gemini the
+  jurisdiction already (nearly) owns does not, at a price that beats
+  near-zero?
+
+established_vendors:
+  - name: Microsoft (365 Copilot)
+    tier: platform
+    one_liner: >-
+      Bundled enterprise copilot; GCC and GCC High tiers map to regulated
+      state data and CJIS-touching workloads.
+    gov_evidence_url: https://learn.microsoft.com/en-us/microsoft-copilot-studio/requirements-licensing-gcc
+  - name: Google (Gemini for Government / Workspace)
+    tier: platform
+    one_liner: >-
+      OneGov agreement priced the federal bundle at $0.47 per agency through
+      Sep 30, 2026.
+    gov_evidence_url: https://www.gsa.gov/about-gsa/newsroom/news-releases/gsa-google-announce-gemini-onegov-agreement-08212025
+  - name: OpenAI (ChatGPT Enterprise / Gov)
+    tier: platform
+    one_liner: >-
+      Pennsylvania's ChatGPT Enterprise pilot is the best-documented state
+      deployment in this category.
+    gov_evidence_url: https://digitalgovernmenthub.org/library/lessons-from-pennsylvanias-generative-ai-pilot-with-chatgpt/
+  - name: Anthropic (Claude)
+    tier: platform
+    one_liner: >-
+      Available to federal agencies through a GSA OneGov agreement; state
+      and local applicability of those terms is uncertain.
+    gov_evidence_url: null
+  - name: Zoom / Otter.ai / Fireflies / Rev / Verbit
+    tier: specialist
+    one_liner: >-
+      Transcription and notetaker standalones, versus the bundled defaults
+      in Teams, Zoom, and Meet. See the consent litigation in failure modes.
+    gov_evidence_url: null
+
+failure_modes:
+  - title: Public-records and retention gaps
+    description: >-
+      Washington's State Archivist advises that generative-AI outputs used
+      in government work are public records and prompts likely are too, with
+      retention following content and function. MRSC notes Microsoft
+      Copilot's activity history appears non-disableable and recommends
+      contract terms requiring prompt and output export.
+    named_incident: >-
+      MRSC and Washington State Archivist guidance on AI records (Jul 2024)
+    source_url: https://mrsc.org/stay-informed/mrsc-insight/july-2024/public-records-and-ai
+  - title: Notetaker consent litigation
+    description: >-
+      Brewer v. Otter.ai (four consolidated federal cases) alleges bot
+      recording without all-party consent. "The bot was visible in the
+      meeting" is not consent in all-party-consent states (CA, FL, IL, MD,
+      MA, MT, NV, NH, PA, WA). Government aggravators: closed and executive
+      sessions, attorney-client communications, HR matters, and juvenile and
+      health information.
+    named_incident: Brewer v. Otter.ai consolidated litigation
+    source_url: https://natlawreview.com/article/ai-notetaking-tools-under-fire-lessons-otterai-class-action-complaint
+  - title: Shadow AI use with real data
+    description: >-
+      69% of organizations suspect prohibited generative-AI use (Gartner,
+      2025). Concrete incident: a New South Wales contractor uploaded
+      12,000+ rows of flood-victim PII to a public AI tool. A sanctioned
+      tool is part of the defense, but only if its data terms are actually
+      better.
+    named_incident: >-
+      NSW contractor uploaded flood-victim PII to a public AI tool
+    source_url: https://www.secondtalent.com/resources/shadow-ai-statistics/
+
+skepticism_triggers:
+  - claim_pattern: >-
+      A pitch that does not name what it beats in the near-free incumbent
+    threshold: No named differentiator versus Copilot or Gemini
+    why: >-
+      The beat-the-incumbent question is q01, and an unanswered q01 means
+      the pitch fails triage.
+    source_url: https://www.nextgov.com/acquisition/2025/12/microsoft-makes-copilot-available-secure-cloud-customers/409912/
+  - claim_pattern: Self-reported time savings presented as measured ROI
+    threshold: Any productivity statistic without a methodology
+    why: >-
+      Pennsylvania's widely quoted 95 minutes per day is
+      participant-self-reported, not independently measured.
+    source_url: https://digitalgovernmenthub.org/library/lessons-from-pennsylvanias-generative-ai-pilot-with-chatgpt/
+  - claim_pattern: '"FOIA-proof" or "records-exempt" claims'
+    threshold: Any such claim
+    why: >-
+      Content and function govern record status. No tool makes records
+      exempt.
+    source_url: https://mrsc.org/stay-informed/mrsc-insight/july-2024/public-records-and-ai
+  - claim_pattern: A notetaker with no affirmative-consent mechanism
+    threshold: Consent inferred from bot visibility alone
+    why: >-
+      The Brewer litigation tests exactly that theory, and all-party-consent
+      states require more.
+    source_url: https://natlawreview.com/article/ai-notetaking-tools-under-fire-lessons-otterai-class-action-complaint
+  - claim_pattern: No verifiable deletion or export path
+    threshold: Absence of either
+    why: A public-records and offboarding non-starter.
+    source_url: https://mrsc.org/stay-informed/mrsc-insight/july-2024/public-records-and-ai
+  - claim_pattern: >-
+      Per-seat pricing above the incumbent bundle without a named
+      differentiator
+    threshold: Above the roughly $0–30 per seat effective incumbent baseline
+    why: >-
+      The incumbent baseline is near zero in the OneGov era. Price above it
+      needs a reason.
+    source_url: https://www.gsa.gov/about-gsa/newsroom/news-releases/gsa-google-announce-gemini-onegov-agreement-08212025
+  - claim_pattern: >-
+      "It respects your existing permissions" offered as the whole security
+      story
+    threshold: >-
+      Any pitch treating current file permissions as sufficient preparation
+    why: >-
+      Copilots surface everything a user technically can access, so
+      permission sprawl becomes visible on day one. This is an agency
+      readiness issue the pitch should acknowledge. We could not find a
+      citable public-sector incident in public sources yet.
+    source_url: null
+
+diligence_questions:
+  - id: staff-productivity-q01
+    question: >-
+      We already license (or can nearly freely add) Microsoft 365 Copilot or
+      Gemini. What specifically does your product do that they do not, and
+      what happens to that gap when their next release ships?
+    good_answer: >-
+      A concrete, named differentiator and a defensible answer about the
+      roadmap gap.
+    red_flag: >-
+      Generic productivity claims that the bundled incumbent already covers.
+    source_url: null
+  - id: staff-productivity-q02
+    question: >-
+      Can our records officers search, retrieve, export, and verifiably
+      delete every prompt, output, transcript, and summary you hold, in a
+      usable format, for a public-records request?
+    good_answer: >-
+      Yes across all content types, in usable formats, demonstrated live.
+    red_flag: >-
+      Export gaps for any content type, or export sold as a
+      professional-services engagement.
+    source_url: https://mrsc.org/stay-informed/mrsc-insight/july-2024/public-records-and-ai
+  - id: staff-productivity-q03
+    question: >-
+      Can retention be set to match our schedules, and is there any content
+      (chat history, telemetry, backups) we cannot control?
+    good_answer: >-
+      Retention configurable to your schedules, with no uncontrollable
+      content stores.
+    red_flag: >-
+      Telemetry, chat history, or backups your records officers cannot
+      control.
+    source_url: null
+  - id: staff-productivity-q04
+    question: >-
+      Contractually: is our data used to train your models or any third
+      party's? Where does it reside? What happens at contract end?
+    good_answer: >-
+      Written no-training terms, named data residency, and a
+      deletion-at-exit commitment.
+    red_flag: >-
+      Silence on subprocessors, or "we may use data to improve services."
+    source_url: null
+  - id: staff-productivity-q05
+    question: >-
+      How does the tool obtain affirmative consent from every participant,
+      including non-users and the public, in all-party-consent states? What
+      is your exposure to Otter.ai-style litigation?
+    good_answer: >-
+      An affirmative-consent flow for every participant, including the
+      public.
+    red_flag: >-
+      Consent inferred from a bot being visible; that theory is being
+      litigated in Brewer v. Otter.ai.
+    source_url: https://natlawreview.com/article/ai-notetaking-tools-under-fire-lessons-otterai-class-action-complaint
+  - id: staff-productivity-q06
+    question: >-
+      Can we technically block the tool from closed sessions,
+      attorney-client calls, HR meetings, and juvenile or health matters, or
+      does it rely on staff remembering?
+    good_answer: >-
+      Technical blocklists for closed sessions and sensitive meeting types.
+    red_flag: Reliance on staff remembering to turn it off.
+    source_url: null
+  - id: staff-productivity-q07
+    question: >-
+      What FedRAMP level, GovRAMP status, and SOC 2 Type II do you hold, is
+      the tool CJIS-compatible, and in which cloud does our tenant run?
+    good_answer: >-
+      Named authorization levels and the specific cloud tier;
+      CJIS-touching work runs in GCC High or the equivalent.
+    red_flag: Commercial cloud offered for CJIS or FTI workloads.
+    source_url: https://learn.microsoft.com/en-us/microsoft-copilot-studio/requirements-licensing-gcc
+  - id: staff-productivity-q08
+    question: >-
+      What is the measured error rate for summaries and drafts, and what
+      does the UI do to force human review (such as source-linking) before
+      content becomes an official record?
+    good_answer: >-
+      A measured error rate and UI that requires review before content
+      becomes a record.
+    red_flag: >-
+      No error measurement; summaries flowing into official records
+      unreviewed.
+    source_url: null
+  - id: staff-productivity-q09
+    question: >-
+      What usage logs do we get, and can we audit misuse without creating a
+      workforce-surveillance problem?
+    good_answer: >-
+      Usage logs adequate for audit without keystroke-level surveillance.
+    red_flag: Either no logs at all, or workforce surveillance by default.
+    source_url: null
+  - id: staff-productivity-q10
+    question: >-
+      Are your time-savings claims self-reported user estimates (like
+      Pennsylvania's 95 minutes per day) or independently measured? Show the
+      methodology.
+    good_answer: >-
+      Honest labeling of self-reported versus measured, with the methodology
+      shared.
+    red_flag: Self-reported figures presented as measured savings.
+    source_url: https://digitalgovernmenthub.org/library/lessons-from-pennsylvanias-generative-ai-pilot-with-chatgpt/
+  - id: staff-productivity-q11
+    question: >-
+      On termination, how do we get every record out, and how do you certify
+      deletion?
+    good_answer: >-
+      A documented export process and certified deletion at termination.
+    red_flag: No deletion certification.
+    source_url: null
+  - id: staff-productivity-q12
+    question: >-
+      Which government customers at our scale have completed a
+      public-records request or a litigation hold involving your product's
+      outputs? What broke?
+    good_answer: >-
+      A named customer that has been through it, and what they learned.
+    red_flag: >-
+      No customer has ever tested the records path; you would be first.
+    source_url: null
+
+elevated_scrutiny_rules:
+  - condition: >-
+      The tool will draft or summarize case files that feed benefit
+      decisions
+    action: Apply the eligibility-case-mgmt overlay.
+  - condition: A notetaker is pitched for public or board meetings
+    action: >-
+      Make the consent and closed-session questions (q05, q06) mandatory;
+      note the Brewer v. Otter.ai litigation.
+  - condition: The workload touches CJIS, FTI, or HIPAA data
+    action: Treat the cloud-tier question (q07) as pass/fail.
+
+reference_deployments:
+  - agency: Pennsylvania Office of Administration
+    vendor_stack: OpenAI ChatGPT Enterprise
+    what: Statewide productivity pilot, 175 employees expanding to 3,000+
+    metric: >-
+      Roughly 95 minutes per day of time savings, self-reported by
+      participants
+    metric_source_type: independent-press
+    source_url: https://digitalgovernmenthub.org/library/lessons-from-pennsylvanias-generative-ai-pilot-with-chatgpt/
+  - agency: Pennsylvania (document intake)
+    vendor_stack: Document legibility scanning
+    what: Cutting illegible submissions at intake
+    metric: >-
+      80% reduction in illegible submissions; 700+ staff hours saved (per
+      Code for America's landscape assessment)
+    metric_source_type: independent-press
+    source_url: https://codeforamerica.org/news/code-for-america-unveils-second-annual-government-ai-landscape-assessment/
+  - agency: North Carolina
+    vendor_stack: Staff summarization tooling
+    what: Staff-facing summarization
+    metric: >-
+      Documented as a staff-facing use in Code for America's landscape
+      assessment
+    metric_source_type: independent-press
+    source_url: https://codeforamerica.org/explore/government-ai-landscape-assessment/
+  - agency: Federal agencies (context for the market)
+    vendor_stack: Microsoft 365 Copilot in GCC High
+    what: Availability milestone shaping state expectations
+    metric: >-
+      GCC High availability (Dec 3, 2025) plus a OneGov no-added-cost window
+    metric_source_type: independent-press
+    source_url: https://www.nextgov.com/acquisition/2025/12/microsoft-makes-copilot-available-secure-cloud-customers/409912/
+  - agency: New Jersey
+    vendor_stack: State-approved AI assistant model
+    what: >-
+      Statewide policy: sensitive PII only in state-approved AI tools
+    metric: Published state guidance (25-OIT-001)
+    metric_source_type: government-page
+    source_url: https://nj.gov/it/docs/ps/25-OIT-001-State-of-New-Jersey-Guidance-on-Responsible-Use-of-Generative-AI.pdf
+
+registries_to_check:
+  - name: FedRAMP Marketplace
+    url: https://marketplace.fedramp.gov/
+    what_it_proves: >-
+      Whether this specific product holds a federal cloud authorization, and
+      at what level.
+  - name: GovRAMP Authorized Product List
+    url: https://govramp.org/
+    what_it_proves: >-
+      State-oriented cloud security verification. Formerly StateRAMP; the
+      name changed in February 2025.
+
+legal_context: |-
+  - State public-records law: Washington's archivist advice sheets (Jun
+    2024) are the cleanest citable guidance that AI outputs, and likely
+    prompts, are records
+    (https://www.sos.wa.gov/sites/default/files/2025-02/advice-sheet-are-generative-ai-interactions-public-records-(june-2024).pdf).
+  - All-party-consent wiretap statutes (CA, FL, IL, MD, MA, MT, NV, NH, PA,
+    WA) govern meeting recording by notetakers.
+  - Open-meetings acts govern recording and minutes of public bodies,
+    including closed and executive sessions.
+  - New Jersey 25-OIT-001 (2025): sensitive PII only in state-approved AI
+    tools
+    (https://nj.gov/it/docs/ps/25-OIT-001-State-of-New-Jersey-Guidance-on-Responsible-Use-of-Generative-AI.pdf).
+  - Pennsylvania's ITP and New York NYS-G25-002 are the state AI-use policy
+    models to check against.
+  - Cloud-tier compliance: CJIS, FTI (IRS Pub 1075), and HIPAA workloads
+    must run in the matching government cloud tier (GCC or GCC High, or the
+    equivalent). Commercial-cloud AI on those workloads is a compliance
+    failure regardless of tool quality
+    (https://learn.microsoft.com/en-us/microsoft-copilot-studio/requirements-licensing-gcc).
+
+realistic_pricing: |-
+  The incumbent baseline is near zero: OneGov-era deals put Copilot at no
+  added cost for up to 12 months with M365 G5, and the Gemini federal
+  bundle at $0.47 per agency through Sep 30, 2026 (federal terms; state and
+  local applicability is uncertain). Bundled copilots run roughly $0–30 per
+  seat per month effective. A standalone tool priced above that baseline
+  needs a named differentiator to justify the difference.
+
+last_updated: "2026-08-28"
+refresh_cadence: quarterly
+
+known_gaps: |-
+  - Whether state and local governments can use OneGov terms is uncertain;
+    coverage is federal.
+  - No citable public-sector incident of copilot permission-sprawl
+    oversharing was found in public sources; the risk is retained as a
+    trigger with that caveat.
+  - The reported U.S. House Copilot restriction and California GenAI
+    contract awards were excluded as unverified this cycle.
+  - The Gartner shadow-AI figure (69%) is a survey statistic reached
+    through a secondary source.

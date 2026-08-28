@@ -1,0 +1,225 @@
+@import "tailwindcss";
+
+/*
+  17A brand token layer for the AI Vendor Diligence Wizard.
+  Ported from the firm's Tailwind 4 token layer (ccf-hhs-demo) and extended
+  with this app's editorial grammar: warm cream ground, color-blocked
+  sections, one pill radius, verdict-tier tokens.
+
+  Accessibility constraints baked in (verified contrast math):
+  - cobalt #1F1FD6 on white 9.44:1, on cream #FAF5E4 8.65:1 — AA/AAA pass
+  - charcoal #3B3B3B on white 11.2:1 — pass
+  - carolina #21A8E0 on white 2.71:1 — FAILS AA for text; decorative use only
+  - verdict tiers are never color alone: always color + icon + label
+*/
+
+@font-face {
+  font-family: "Source Serif 4";
+  src: url("/fonts/SourceSerif4-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Source Serif 4";
+  src: url("/fonts/SourceSerif4-Bold.ttf") format("truetype");
+  font-weight: 700;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Source Serif 4";
+  src: url("/fonts/SourceSerif4-Black.ttf") format("truetype");
+  font-weight: 900;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Source Sans 3";
+  src: url("/fonts/SourceSans3-Light.ttf") format("truetype");
+  font-weight: 300;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Source Sans 3";
+  src: url("/fonts/SourceSans3-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Source Sans 3";
+  src: url("/fonts/SourceSans3-Medium.ttf") format("truetype");
+  font-weight: 500;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Source Sans 3";
+  src: url("/fonts/SourceSans3-Bold.ttf") format("truetype");
+  font-weight: 700;
+  font-display: swap;
+}
+
+@theme {
+  --color-brand-cobalt: #1f1fd6;
+  --color-brand-cobalt-50: #f1f1ff;
+  --color-brand-cobalt-100: #e3e3ff;
+  --color-brand-cobalt-200: #c5c5ff;
+  --color-brand-cobalt-300: #9c9cff;
+  --color-brand-cobalt-deep: #1212a8;
+  --color-brand-deepblue: #1a0068;
+  --color-brand-carolina: #21a8e0;
+  --color-brand-carolina-50: #f0fafe;
+  --color-brand-carolina-100: #d9f1fb;
+  --color-brand-charcoal: #3b3b3b;
+  --color-brand-charcoal-soft: #5a5a5a;
+  --color-brand-vellum: #f1f1f2;
+  --color-brand-vellum-deep: #e7e7e9;
+  --color-brand-cream: #faf5e4;
+  --color-brand-cream-deep: #f3ecd4;
+  --color-brand-silver: #d0d2d3;
+  --color-brand-silver-soft: #e4e6e7;
+  --color-brand-steel: #878786;
+  --color-brand-ink: #1a1a1a;
+
+  /* Verdict tiers — each pairs with an icon + label in the UI, never color alone. */
+  --color-tier-nr: #5a5a5a; /* T0 Not enough to evaluate */
+  --color-tier-nr-soft: #ececec;
+  --color-tier-unverified: #b32d2d; /* T1 Could not verify basic legitimacy */
+  --color-tier-unverified-soft: #fae6e6;
+  --color-tier-gaps: #a36505; /* T2 Significant gaps (AA on white 4.7:1) */
+  --color-tier-gaps-soft: #fbf2e2;
+  --color-tier-emerging: #14597a; /* T3 Emerging vendor */
+  --color-tier-emerging-soft: #e5f2f8;
+  --color-tier-established: #1d7a46; /* T4 Established vendor */
+  --color-tier-established-soft: #e6f4ec;
+
+  --color-status-good: #1d7a46;
+  --color-status-good-soft: #e6f4ec;
+  --color-status-warn: #a36505;
+  --color-status-warn-soft: #fbf2e2;
+  --color-status-bad: #b32d2d;
+  --color-status-bad-soft: #fae6e6;
+
+  --font-serif: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --font-sans: "Source Sans 3", -apple-system, BlinkMacSystemFont, "Segoe UI",
+    Roboto, Arial, sans-serif;
+
+  --radius-pill: 999px;
+
+  --animate-marquee: marquee 40s linear infinite;
+  --animate-rise: rise 0.5s ease-out backwards;
+
+  @keyframes marquee {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(-50%);
+    }
+  }
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
+
+:root {
+  color-scheme: light;
+  --background: var(--color-brand-cream);
+  --foreground: var(--color-brand-charcoal);
+}
+
+html,
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  font-feature-settings: "kern" 1, "liga" 1, "calt" 1;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5 {
+  font-family: var(--font-serif);
+  letter-spacing: -0.015em;
+  color: var(--color-brand-ink);
+}
+
+button {
+  font-family: inherit;
+}
+
+/* Ambient dot-grid texture (brand pattern 01, circles). */
+.dot-grid {
+  background-image: radial-gradient(
+    circle at 1px 1px,
+    currentColor 1px,
+    transparent 0
+  );
+  background-size: 18px 18px;
+}
+
+.shadow-soft {
+  box-shadow:
+    0 1px 2px rgba(31, 31, 214, 0.04),
+    0 8px 24px rgba(31, 31, 214, 0.05);
+}
+
+.shadow-soft-lg {
+  box-shadow:
+    0 1px 3px rgba(31, 31, 214, 0.06),
+    0 18px 48px rgba(31, 31, 214, 0.09);
+}
+
+*:focus-visible {
+  outline: 2px solid var(--color-brand-cobalt);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Reduced motion: kill the marquee and entrance animations. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Print: the report must survive a black-and-white procurement file. */
+@media print {
+  body {
+    background: white;
+    color: black;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .print-page-break {
+    page-break-after: always;
+  }
+  a[href^="http"]::after {
+    content: " (" attr(href) ")";
+    font-size: 0.75em;
+    word-break: break-all;
+  }
+  details {
+    display: block;
+  }
+  details > summary {
+    list-style: none;
+  }
+  details[open] > *,
+  details > * {
+    display: block !important;
+  }
+}

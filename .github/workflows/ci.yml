@@ -1,0 +1,31 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Validate sector packs
+        run: npx tsx scripts/validate-packs.ts
+      - name: Packs compile is in sync
+        run: |
+          npx tsx scripts/build-packs.ts
+          git diff --exit-code supabase/functions/_shared/packs.gen.ts src/generated/packs.json
+      - name: Typecheck
+        run: npx tsc --noEmit
+      - name: Unit + static red-team suite
+        run: npx vitest run
+      - name: Readability + house style
+        run: npx tsx scripts/readability-check.ts
+      - name: Build
+        run: npx vite build

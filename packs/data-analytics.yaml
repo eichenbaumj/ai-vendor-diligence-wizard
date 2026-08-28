@@ -1,0 +1,433 @@
+# Sector pack: data-analytics (v1)
+# Standard tier with the lowest overlay threshold of any pack: this
+# category's cautionary record is the deepest and most adjudicated in
+# government AI. Authoring rules: packs/pack-spec.md.
+pack_id: data-analytics
+pack_name: Data Analytics & Decision Support
+
+definition: >-
+  AI and analytics that inform government decisions: dashboards and BI with
+  AI layers, "ask your data" LLM interfaces, predictive analytics, risk
+  scoring, fraud and program-integrity analytics, and assessment algorithms.
+  The first question in this pack is the fork: decoration or decision? A
+  dashboard that describes gets standard scrutiny. A score or flag that can
+  trigger action against a person is an adverse-action system and adds the
+  eligibility-case-mgmt overlay.
+
+inclusion_test:
+  - >-
+    Does the pitch offer dashboards, BI, "insights," or an AI layer over
+    agency data?
+  - >-
+    Does it offer predictive analytics, risk scores, prioritization, or
+    "program integrity" and fraud analytics?
+  - >-
+    Does it offer assessment or allocation algorithms (care hours, screening
+    scores, caseload prioritization)?
+  - Does it offer an LLM "chat with your data" interface?
+
+scrutiny_tier: standard
+
+incumbent_landscape: >-
+  For BI and dashboards, Power BI, Tableau, and Esri/ArcGIS are ubiquitous.
+  Government-specific players include Tyler Data & Insights (formerly
+  Socrata, FedRAMP-listed; NYC, Chicago, San Francisco, Los Angeles, and the
+  states of New York, Illinois, and Texas;
+  https://www.fedramp.gov/marketplace/products/SOCRATA/), OpenGov (AI
+  budgeting and performance features, Mar 2024), Polco "Polly," and Zencity
+  360. For fraud and integrity analytics: LexisNexis Risk Solutions
+  (unemployment insurance, tax refund investigation), Thomson Reuters
+  Pondera (FraudCaster for Medicaid, SNAP, UI, WIC, and TANF; EPIC maintains
+  a critical spotlight at https://epic.org/pondera-surveillance/), and SAS
+  (state UI work). Assessment algorithms (RUGs, SIS, Optum ARIA) allocate
+  care hours and form the sub-category with the worst documented track
+  record in government AI. Two standing reference shelves answer "has this
+  category hurt people before": the Benefits Tech Advocacy Hub case library
+  (https://www.btah.org/case-studies.html) and the AI Incident Database
+  (https://incidentdatabase.ai/).
+
+established_vendors:
+  - name: Tyler Data & Insights
+    tier: platform
+    one_liner: >-
+      Formerly Socrata; FedRAMP-listed; open-data and analytics for NYC,
+      Chicago, San Francisco, Los Angeles, and several states.
+    gov_evidence_url: https://www.fedramp.gov/marketplace/products/SOCRATA/
+  - name: OpenGov
+    tier: platform
+    one_liner: >-
+      Budgeting and performance analytics for local government; AI features
+      announced Mar 2024.
+    gov_evidence_url: null
+  - name: Polco
+    tier: specialist
+    one_liner: Community-survey and engagement analytics ("Polly").
+    gov_evidence_url: null
+  - name: Zencity
+    tier: specialist
+    one_liner: Resident-sentiment and engagement analytics (Zencity 360).
+    gov_evidence_url: null
+  - name: Microsoft (Power BI)
+    tier: platform
+    one_liner: Ubiquitous general BI stack in government.
+    gov_evidence_url: null
+  - name: Salesforce (Tableau)
+    tier: platform
+    one_liner: Ubiquitous general BI stack in government.
+    gov_evidence_url: null
+  - name: Esri (ArcGIS)
+    tier: platform
+    one_liner: Ubiquitous geospatial analytics stack in government.
+    gov_evidence_url: null
+  - name: LexisNexis Risk Solutions
+    tier: specialist
+    one_liner: >-
+      Integrity analytics for UI and tax refund investigation. This pack
+      renders the integrity-analytics cautionary record beside any match;
+      presence here signals "known quantity," not safety.
+    gov_evidence_url: null
+  - name: Thomson Reuters Pondera
+    tier: specialist
+    one_liner: >-
+      FraudCaster integrity analytics for Medicaid, SNAP, UI, WIC, and TANF;
+      EPIC maintains a critical spotlight on the product line.
+    gov_evidence_url: https://epic.org/pondera-surveillance/
+  - name: SAS
+    tier: specialist
+    one_liner: >-
+      State UI integrity analytics, including in the MiDAS era; the
+      cautionary record is rendered beside any match.
+    gov_evidence_url: null
+
+failure_modes:
+  - title: Black-box scores driving consequential decisions
+    description: >-
+      Idaho's "trade secret" budget formula collapsed in court (with a 2025
+      contempt finding), Arkansas's RUGs-based algorithm was invalidated,
+      and State v. Loomis cautions on trade-secret scores in consequential
+      decisions (https://harvardlawreview.org/print/vol-130/state-v-loomis/).
+      Ask on day one: what will the adverse-action notice say?
+    named_incident: >-
+      K.W. v. Armstrong (Idaho) and the Arkansas ARChoices injunction
+    source_url: https://www.acluidaho.org/en/cases/kw-v-armstrong
+  - title: Base rates make "accurate" models mostly wrong about people
+    description: >-
+      Fraud is rare, so even a statistically strong model mostly flags
+      innocent people. The IRS's non-identity-theft fraud filters ran an 81%
+      false-positive rate and delayed about $20 billion in legitimate
+      refunds while protecting $7.6 billion (oversight finding). Michigan's
+      MiDAS was 93% wrong per the state Auditor General. Florida's FIRRE
+      flagged trivial discrepancies, produced a 600%+ flag surge, and ended
+      in a $92.4M rebuild (https://www.btah.org/case-studies.html).
+    named_incident: >-
+      IRS fraud filters at an 81% false-positive rate (Taxpayer Advocate,
+      oversight)
+    source_url: https://www.taxpayeradvocate.irs.gov/wp-content/uploads/2020/07/ARC18_Volume1_MSP_05_FalsePositiveRates.pdf
+  - title: Decision support quietly becoming the decision-maker
+    description: >-
+      A heat map or a score becomes the de facto decision with no appeal
+      path. Michigan's Zynda settlement now requires human review of
+      automated determinations.
+    named_incident: >-
+      Michigan Zynda settlement requiring human review of automated
+      determinations
+    source_url: https://www.btah.org/case-studies.html
+  - title: Garbage in, scored anyway
+    description: >-
+      Idaho ran its formula on unreliable historical data; Missouri's
+      algorithm shipped with literal syntax errors; Michigan's SNAP felony
+      match auto-terminated roughly 19,000 people before being struck down
+      in 2015. An LLM layer adds a hallucination surface on top of every
+      data defect.
+    named_incident: >-
+      Michigan SNAP felony-match auto-terminations, struck down in 2015
+    source_url: https://www.btah.org/case-studies.html
+  - title: Bias under federal scrutiny
+    description: >-
+      The Allegheny Family Screening Tool drew DOJ civil-rights attention
+      over disability discrimination, and Oregon dropped its analogous
+      tool.
+    named_incident: >-
+      DOJ examination of the Allegheny Family Screening Tool
+    source_url: https://www.pbs.org/newshour/nation/ap-report-doj-examining-ai-screening-tool-used-by-pa-child-welfare-agency
+  - title: Savings claims that hide the harm side of the ledger
+    description: >-
+      "Identifies savings of $X" framing counts what was blocked, not what
+      was delayed or wrongly denied. The IRS "protected $7.6B" while
+      delaying about $20B in legitimate refunds. Demand both sides of the
+      ledger before accepting a savings number.
+    named_incident: >-
+      IRS refund-fraud filters: $7.6B protected versus about $20B in
+      legitimate refunds delayed (oversight)
+    source_url: https://www.taxpayeradvocate.irs.gov/wp-content/uploads/2020/07/ARC18_Volume1_MSP_05_FalsePositiveRates.pdf
+
+skepticism_triggers:
+  - claim_pattern: >-
+      "Accuracy" quoted without precision and recall at the operating
+      threshold and your base rate
+    threshold: Any bare accuracy number
+    why: >-
+      At fraud-level base rates, high "accuracy" coexists with false-positive
+      rates of 80–90%+ among flags. The IRS 81% figure is the benchmark.
+    source_url: https://www.taxpayeradvocate.irs.gov/wp-content/uploads/2020/07/ARC18_Volume1_MSP_05_FalsePositiveRates.pdf
+  - claim_pattern: A proprietary score with a trade-secret disclosure posture
+    threshold: Any refusal to disclose model logic
+    why: >-
+      The Idaho precedent makes this constitutional exposure, not a
+      licensing preference.
+    source_url: https://www.acluidaho.org/en/cases/kw-v-armstrong
+  - claim_pattern: >-
+      "Predicts fraud" or "predicts risk" with no false-positive rate,
+      review-queue staffing model, or affected-person notice
+    threshold: Absence of all three
+    why: The MiDAS and FIRRE pattern.
+    source_url: https://www.btah.org/case-studies.html
+  - claim_pattern: '"Identifies savings of $X"'
+    threshold: Any savings figure without the delayed-or-denied side
+    why: >-
+      Protected-versus-delayed framing matters: the IRS "protected $7.6B"
+      while delaying about $20B in legitimate refunds.
+    source_url: https://www.taxpayeradvocate.irs.gov/wp-content/uploads/2020/07/ARC18_Volume1_MSP_05_FalsePositiveRates.pdf
+  - claim_pattern: >-
+      An LLM "ask your data" interface with no query or row provenance
+    threshold: >-
+      Generated numbers that do not link to the underlying query and rows
+    why: >-
+      Hallucinated numbers end up in official decisions. Demand that every
+      generated claim link to the query and rows behind it.
+    source_url: null
+  - claim_pattern: '"Bias-free"'
+    threshold: Any such claim
+    why: >-
+      Unfalsifiable. Demand the disparate-impact testing methodology and the
+      results.
+    source_url: null
+  - claim_pattern: Scores executed without mandatory human sign-off
+    threshold: Any auto-executed adverse action
+    why: >-
+      Maps to the strongest caution band through the eligibility-case-mgmt
+      overlay.
+    source_url: https://www.btah.org/case-studies.html
+
+diligence_questions:
+  - id: data-analytics-q01
+    question: >-
+      What decisions will these outputs feed, and can a score or flag by
+      itself trigger an adverse action against a person (a benefit cut, a
+      fraud hold, an investigation)? If yes, we will treat this as a
+      high-impact system that needs a different review track.
+    good_answer: >-
+      A clear scope statement. If adverse actions are possible, the vendor
+      accepts the high-impact review track without argument.
+    red_flag: >-
+      "That depends on how you configure it," without engaging the
+      consequences.
+    source_url: null
+  - id: data-analytics-q02
+    question: >-
+      Show the exact notice text an affected resident would receive. Can a
+      caseworker explain in plain language why this specific person was
+      flagged?
+    good_answer: >-
+      Real notice text with specific reasons a caseworker can explain.
+    red_flag: No notice exists because "the score is advisory."
+    source_url: null
+  - id: data-analytics-q03
+    question: >-
+      Will you contractually commit to disclosing model logic, features, and
+      weights to us, our auditors, and a court if litigated?
+    good_answer: >-
+      Yes, in contract. Idaho's K.W. v. Armstrong shows trade-secret
+      postures fail in court.
+    red_flag: Trade-secret carve-outs over decision logic.
+    source_url: https://www.acluidaho.org/en/cases/kw-v-armstrong
+  - id: data-analytics-q04
+    question: >-
+      Not "accuracy": what are precision and recall at your recommended
+      threshold, validated on data like ours? At our prevalence, how many
+      flags per 100 are false positives, and what staffing does the review
+      queue require?
+    good_answer: >-
+      Threshold-level precision and recall plus a staffing model. The IRS
+      benchmark shows 81% false positives is what "working" can look like at
+      low base rates.
+    red_flag: A single accuracy number.
+    source_url: https://www.taxpayeradvocate.irs.gov/wp-content/uploads/2020/07/ARC18_Volume1_MSP_05_FalsePositiveRates.pdf
+  - id: data-analytics-q05
+    question: >-
+      Where exactly is human review mandatory, as a designed control? Can
+      the system technically execute an adverse action with no human
+      sign-off?
+    good_answer: >-
+      Human sign-off enforced in the system design, not just in policy.
+    red_flag: >-
+      Auto-execution is possible and "most customers add review."
+    source_url: null
+  - id: data-analytics-q06
+    question: >-
+      What testing across race, disability, age, and language has been done,
+      on which population, and will you share the results? Has any customer,
+      regulator, or DOJ inquiry examined this product?
+    good_answer: >-
+      Shared testing results and a straight answer on regulatory attention.
+    red_flag: '"Bias-free" claims, or evasion about known inquiries.'
+    source_url: https://www.pbs.org/newshour/nation/ap-report-doj-examining-ai-screening-tool-used-by-pa-child-welfare-agency
+  - id: data-analytics-q07
+    question: >-
+      When our input data is wrong, stale, or missing, does the system flag
+      uncertainty or silently score anyway?
+    good_answer: Explicit data-quality gates and uncertainty flags.
+    red_flag: >-
+      Silent scoring. Idaho scored unreliable data; Missouri's algorithm
+      shipped with syntax errors.
+    source_url: https://www.btah.org/case-studies.html
+  - id: data-analytics-q08
+    question: >-
+      What drift monitoring and revalidation exist, who sees the results,
+      and what triggers suspension of the model?
+    good_answer: >-
+      A monitoring regime with named owners and suspension triggers.
+    red_flag: No revalidation after go-live.
+    source_url: null
+  - id: data-analytics-q09
+    question: >-
+      When we discover a wrong score, what is the process to correct it,
+      find everyone else affected by the same defect, and make them whole?
+    good_answer: >-
+      A defect-to-remediation workflow that can enumerate all affected
+      people.
+    red_flag: Correction handled case by case with no systematic lookback.
+    source_url: null
+  - id: data-analytics-q10
+    question: >-
+      For LLM insight layers: how do you prevent hallucinated numbers, and
+      does every generated claim link to the underlying query and rows?
+    good_answer: >-
+      Full provenance: every claim links to the query and rows behind it.
+    red_flag: Generated narratives with no provenance.
+    source_url: null
+  - id: data-analytics-q11
+    question: >-
+      List the government deployments of this specific model or product,
+      including any that were challenged, audited, or decommissioned.
+    good_answer: >-
+      A complete list including the hard cases. This tool cross-checks
+      vendor names against the BTAH case library and the AI Incident
+      Database.
+    red_flag: >-
+      Logos-only marketing, or omission of documented challenges.
+    source_url: https://www.btah.org/case-studies.html
+  - id: data-analytics-q12
+    question: >-
+      What warranty, indemnification, and insurance terms apply when system
+      errors trigger litigation?
+    good_answer: >-
+      Concrete terms sized to the documented downside (Michigan: $20M plus a
+      rebuild; Florida: a $92.4M rebuild).
+    red_flag: Liability capped at fees paid.
+    source_url: https://www.btah.org/case-studies.html
+
+elevated_scrutiny_rules:
+  - condition: A score or flag can trigger action against a person
+    action: >-
+      Apply the eligibility-case-mgmt overlay, and use the strongest caution
+      band for auto-executed adverse actions.
+  - condition: A child-welfare or justice screening pitch
+    action: >-
+      Render the Allegheny and Loomis context; make the disparate-impact
+      question (q06) mandatory.
+  - condition: A purely descriptive dashboard or open-data pitch
+    action: >-
+      Standard track, plus an incumbent-duplication check: does an existing
+      Tyler, Power BI, or Tableau contract already cover this?
+
+reference_deployments:
+  - agency: NYC, Chicago, San Francisco, Los Angeles, and several states
+    vendor_stack: Tyler Data & Insights (formerly Socrata)
+    what: Open-data and internal analytics platform
+    metric: FedRAMP-listed platform with major-city and state deployments
+    metric_source_type: government-page
+    source_url: https://www.fedramp.gov/marketplace/products/SOCRATA/
+  - agency: IRS (cautionary)
+    vendor_stack: Non-identity-theft refund fraud filters
+    what: Refund fraud screening
+    metric: >-
+      81% false-positive rate; about $20B in legitimate refunds delayed
+      while $7.6B was protected
+    metric_source_type: oversight
+    source_url: https://www.taxpayeradvocate.irs.gov/wp-content/uploads/2020/07/ARC18_Volume1_MSP_05_FalsePositiveRates.pdf
+  - agency: Michigan (cautionary)
+    vendor_stack: MiDAS (SAS and FAST Enterprises era)
+    what: Automated UI fraud adjudication
+    metric: >-
+      Wrong more than 90% of the time per state audit; $20M settlement
+    metric_source_type: oversight
+    source_url: https://www.michigan.gov/ag/news/press-releases/2022/10/20/som-settlement-of-civil-rights-class-action-alleging-false-accusations-of-unemployment-fraud
+  - agency: Allegheny County, PA (cautionary)
+    vendor_stack: Allegheny Family Screening Tool
+    what: Child-welfare call screening
+    metric: >-
+      Drew DOJ civil-rights attention over disability discrimination; Oregon
+      dropped its analogous tool
+    metric_source_type: independent-press
+    source_url: https://www.pbs.org/newshour/nation/ap-report-doj-examining-ai-screening-tool-used-by-pa-child-welfare-agency
+
+registries_to_check:
+  - name: FedRAMP Marketplace
+    url: https://marketplace.fedramp.gov/
+    what_it_proves: >-
+      Whether this specific product holds a federal cloud authorization, and
+      at what level.
+  - name: GovRAMP Authorized Product List
+    url: https://govramp.org/
+    what_it_proves: >-
+      State-oriented cloud security verification. Formerly StateRAMP; the
+      name changed in February 2025.
+  - name: Benefits Tech Advocacy Hub case library
+    url: https://www.btah.org/case-studies.html
+    what_it_proves: >-
+      A negative registry: documented cases where benefits technology harmed
+      people. Check whether the vendor or the category appears.
+  - name: AI Incident Database
+    url: https://incidentdatabase.ai/
+    what_it_proves: >-
+      A public log of AI system failures. Search the vendor and product
+      name.
+  - name: EPIC screening-and-scoring spotlights
+    url: https://epic.org/pondera-surveillance/
+    what_it_proves: >-
+      Independent critical documentation of integrity-analytics products,
+      including Pondera FraudCaster.
+
+legal_context: |-
+  - The due-process line of cases, Goldberg v. Kelly (1970) through K.W. v.
+    Armstrong (D. Idaho; 2025 contempt finding): scores that affect people
+    must be explainable and contestable
+    (https://www.acluidaho.org/en/cases/kw-v-armstrong).
+  - State v. Loomis (Wis. 2016): judicial caution on trade-secret risk
+    scores in consequential decisions
+    (https://harvardlawreview.org/print/vol-130/state-v-loomis/).
+  - OMB M-25-21 (2025): fraud detection is presumptively high-impact AI,
+    with required testing, human oversight, and appeals.
+  - State automated-decision-system laws: New York's LOADinG Act
+    (meaningful human review) and California SIMM 150 risk ratings for
+    decision systems.
+
+realistic_pricing: |-
+  No reliable public price anchors exist for integrity analytics. General
+  BI (Power BI, Tableau) is commodity-priced per seat and often already
+  licensed. Treat pricing as secondary to the decoration-or-decision fork:
+  until questions q01 through q05 have good answers, the price of an
+  adverse-action scoring system is not the issue.
+
+last_updated: "2026-08-28"
+refresh_cadence: quarterly
+
+known_gaps: |-
+  - Current Pondera, LexisNexis, and SAS product claims were not re-verified
+    this cycle.
+  - ID.me's pandemic-era record was excluded as unverified this cycle.
+  - OpenGov, Polco, and Zencity deployment metrics are vendor-reported, and
+    no independent source URL was captured for them.
+  - The Zynda settlement's primary court documents are not directly linked;
+    it is cited through the BTAH case library.

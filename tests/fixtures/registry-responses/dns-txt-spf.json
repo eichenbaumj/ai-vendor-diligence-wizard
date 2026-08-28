@@ -1,0 +1,8 @@
+{
+  "Status": 0,
+  "Question": [{ "name": "civicsignal.ai", "type": 16 }],
+  "Answer": [
+    { "name": "civicsignal.ai", "type": 16, "TTL": 300, "data": "\"google-site-verification=abc123\"" },
+    { "name": "civicsignal.ai", "type": 16, "TTL": 300, "data": "\"v=spf1 include:_spf.google.com ~all\"" }
+  ]
+}

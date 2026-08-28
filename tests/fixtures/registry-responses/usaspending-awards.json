@@ -1,0 +1,19 @@
+{
+  "page_metadata": { "page": 1, "hasNext": false },
+  "results": [
+    {
+      "Award ID": "47QTCA24D000X",
+      "Recipient Name": "GOVASSIST AI INC",
+      "Award Amount": 1250000,
+      "Start Date": "2024-03-15",
+      "Awarding Agency": "General Services Administration"
+    },
+    {
+      "Award ID": "GS-35F-0000Y",
+      "Recipient Name": "GOVASSIST AI INC",
+      "Award Amount": 350000.5,
+      "Start Date": "2022-07-01",
+      "Awarding Agency": "Department of Veterans Affairs"
+    }
+  ]
+}

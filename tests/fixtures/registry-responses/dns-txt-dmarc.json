@@ -1,0 +1,7 @@
+{
+  "Status": 0,
+  "Question": [{ "name": "_dmarc.civicsignal.ai", "type": 16 }],
+  "Answer": [
+    { "name": "_dmarc.civicsignal.ai", "type": 16, "TTL": 300, "data": "\"v=DMARC1; p=quarantine; rua=mailto:dmarc@civicsignal.ai\"" }
+  ]
+}

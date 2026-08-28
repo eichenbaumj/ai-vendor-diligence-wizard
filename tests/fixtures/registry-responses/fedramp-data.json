@@ -1,0 +1,29 @@
+{
+  "meta": {
+    "generated": "2026-08-28T06:00:00Z",
+    "source": "marketplace-fedramp-gov-data"
+  },
+  "data": {
+    "Providers": [
+      {
+        "name": "CloudCourt Inc",
+        "designation": "Authorized",
+        "cso": "CloudCourt Gov Platform",
+        "impact_level": "Moderate"
+      },
+      {
+        "name": "GovAssist AI",
+        "designation": "In Process",
+        "cso": "GovAssist Platform",
+        "impact_level": "Low"
+      }
+    ],
+    "Products": [
+      {
+        "provider": "Acme Federal Cloud",
+        "product": "Acme GovCloud",
+        "status": "Authorized"
+      }
+    ]
+  }
+}

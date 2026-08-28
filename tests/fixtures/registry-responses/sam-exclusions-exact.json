@@ -1,0 +1,12 @@
+{
+  "totalRecords": 1,
+  "excludedEntity": [
+    {
+      "classificationType": "Firm",
+      "exclusionType": "Ineligible (Proceedings Completed)",
+      "exclusionProgram": "Reciprocal",
+      "exclusionName": "GOVASSIST AI INC",
+      "activationDate": "2025-11-02"
+    }
+  ]
+}

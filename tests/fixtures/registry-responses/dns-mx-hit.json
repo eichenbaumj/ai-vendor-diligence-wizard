@@ -1,0 +1,13 @@
+{
+  "Status": 0,
+  "TC": false,
+  "RD": true,
+  "RA": true,
+  "AD": false,
+  "CD": false,
+  "Question": [{ "name": "civicsignal.ai", "type": 15 }],
+  "Answer": [
+    { "name": "civicsignal.ai", "type": 15, "TTL": 300, "data": "1 aspmx.l.google.com." },
+    { "name": "civicsignal.ai", "type": 15, "TTL": 300, "data": "5 alt1.aspmx.l.google.com." }
+  ]
+}

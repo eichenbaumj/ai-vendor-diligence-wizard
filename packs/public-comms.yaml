@@ -1,0 +1,426 @@
+# Sector pack: public-comms (v1)
+# Authoring rules: packs/pack-spec.md. Validated by scripts/validate-packs.ts.
+pack_id: public-comms
+pack_name: Public Communications, Websites & Chatbots
+
+definition: >-
+  Resident-facing digital communications AI: website chatbots and AI search,
+  notification and email platforms with AI features, real-time meeting
+  interpretation, and machine translation of public content. This pack does
+  not cover phone and contact-center AI (see the call-center pack) or
+  chatbots that answer benefits-eligibility questions (that adds the
+  eligibility-case-mgmt overlay).
+
+inclusion_test:
+  - >-
+    Does the pitch offer a website chatbot, AI site search, or a "digital
+    assistant" for residents?
+  - >-
+    Does it offer translation or interpretation of public content or
+    meetings?
+  - >-
+    Does it offer resident notification, email, or engagement tooling with
+    AI features?
+  - >-
+    Is the primary interface the agency's website or public meetings rather
+    than the phone?
+
+scrutiny_tier: standard
+
+incumbent_landscape: >-
+  A crowded small-to-mid vendor field sells chatbots and AI search to cities
+  and counties: K12 Insight, Apptegy, Element451, Citibot, Polimorphic,
+  Tyler Technologies, and Verint, with documented contract pricing spanning
+  roughly $5,600 basic to $759K+ enterprise
+  (https://blogs.civiciq.com/2025/12/02/government-ai-chatbots-311-rfps-vendor-pricing-guide-2025/).
+  Granicus is the communications incumbent: govDelivery claims a 300M+
+  subscriber network (vendor-reported) plus a "Government Experience Agent"
+  (https://granicus.com/products/govdelivery/). State-portal chatbots have a
+  decade of history: Mississippi "Missi" (Tyler, 2017), Georgia DOL "George
+  A.I." (Cisco; 2.5 million+ users and an agency-claimed 97% accuracy we
+  could not verify in public sources), Massachusetts "Ask MA" (NeuroSoph;
+  roughly 1.2 million monthly users), Texas (Capgemini), Atlanta "Ava"
+  (Zammo.ai), and Vermont "ChatVT," which gets annual performance reviews
+  (https://statescoop.com/government-ai-chatbots-state-local-websites-2024/).
+  For translation: Wordly for live meeting interpretation (Santa Barbara CA,
+  North Las Vegas NV; https://www.wordly.ai/city-council-translation), and
+  New Jersey DOL with U.S. Digital Response as the standout responsible
+  machine-translation deployment
+  (https://www.usdigitalresponse.org/resources/how-new-jersey-is-using-generative-ai-to-scale-their-human-centered-approach-to-language-access).
+
+established_vendors:
+  - name: Granicus
+    tier: platform
+    one_liner: >-
+      The government communications incumbent (govDelivery); claims a 300M+
+      subscriber network (vendor-reported).
+    gov_evidence_url: https://granicus.com/products/govdelivery/
+  - name: Tyler Technologies
+    tier: platform
+    one_liner: >-
+      Long-running state portal chatbots, including Mississippi "Missi"
+      (2017).
+    gov_evidence_url: https://statescoop.com/government-ai-chatbots-state-local-websites-2024/
+  - name: Polimorphic
+    tier: startup-verified
+    one_liner: >-
+      Local-government chat with footnoted answers from government-controlled
+      sources (vendor claims); named local-government customers.
+    gov_evidence_url: https://www.govtech.com/biz/polimorphic-raises-18-6m-as-it-beefs-up-public-sector-ai
+  - name: Citibot
+    tier: startup-verified
+    one_liner: >-
+      Local-government chat (Cuyahoga County OH); customer claims could not
+      be verified this cycle because the vendor site blocked automated
+      fetch.
+    gov_evidence_url: null
+  - name: Verint
+    tier: specialist
+    one_liner: Government chatbot and engagement tooling.
+    gov_evidence_url: null
+  - name: Wordly
+    tier: specialist
+    one_liner: >-
+      Live meeting interpretation (Santa Barbara CA, North Las Vegas NV).
+    gov_evidence_url: https://www.wordly.ai/city-council-translation
+  - name: NeuroSoph
+    tier: specialist
+    one_liner: Massachusetts "Ask MA" statewide portal assistant.
+    gov_evidence_url: https://statescoop.com/government-ai-chatbots-state-local-websites-2024/
+  - name: Zammo.ai
+    tier: startup-verified
+    one_liner: Atlanta "Ava" / ATL311 chatbot.
+    gov_evidence_url: https://statescoop.com/government-ai-chatbots-state-local-websites-2024/
+
+failure_modes:
+  - title: Hallucinated official answers, kept alive by sunk cost (NYC MyCity)
+    description: >-
+      NYC's MyCity chatbot told businesses to break the law. A "beta"
+      disclaimer did not fix it. It ran roughly 2.5 years and was shut down
+      Feb 4, 2026 as "functionally unusable," after about $600K to build and
+      about $500K per year to maintain. The lessons: disclaimers do not fix
+      illegal advice, and sunk cost keeps broken bots alive.
+    named_incident: NYC MyCity chatbot shutdown (The Markup, Jan 30, 2026)
+    source_url: https://themarkup.org/artificial-intelligence/2026/01/30/mamdani-to-kill-the-nyc-ai-chatbot-we-caught-telling-businesses-to-break-the-law
+  - title: The government is liable for its bot
+    description: >-
+      A British Columbia tribunal held that a chatbot is not "a separate
+      legal entity" and the organization answers for what it says. The same
+      logic reaches an agency website bot.
+    named_incident: Moffatt v. Air Canada (2024)
+    source_url: https://www.americanbar.org/groups/business_law/resources/business-law-today/2024-february/bc-tribunal-confirms-companies-remain-liable-information-provided-ai-chatbot/
+  - title: >-
+      Machine-translation quality collapse on the languages LEP communities
+      speak
+    description: >-
+      The National Center for State Courts documents gender-bias errors,
+      legal-terminology misinterpretation, hallucination, and sharp
+      degradation on low-resource languages, and recommends mandatory human
+      review for anything with legal consequences. The July 2025 DOJ memo
+      pushing AI-assisted translation raises the risk of quiet swap-outs of
+      human interpretation
+      (https://www.nextgov.com/digital-government/2025/07/justice-pushes-agencies-use-ai-assisted-translations-when-offering-them-all/406776/).
+    named_incident: >-
+      NCSC machine-translation guidance documenting failure classes in court
+      contexts
+    source_url: https://www.ncsc.org/sites/default/files/media/document/NCSC%20Machine%20Translation%20Guide_0.pdf
+  - title: Scripted bots that cannot answer
+    description: >-
+      Illinois's "Dotty" answered a license-renewal question with irrelevant
+      statistics. Self-reported "accuracy" claims are undefined: accuracy on
+      what test set, judged by whom?
+    named_incident: >-
+      Illinois "Dotty" (StateScoop survey of state chatbots, 2024)
+    source_url: https://statescoop.com/government-ai-chatbots-state-local-websites-2024/
+  - title: Chat transcripts are public records with PII in them
+    description: >-
+      Washington's State Archives advises that prompts and outputs can both
+      be public records. A chatbot with no export path is a public-records
+      problem on day one.
+    named_incident: >-
+      Washington State Archives advice sheet on generative-AI interactions as
+      public records (Jun 2024)
+    source_url: https://www.sos.wa.gov/sites/default/files/2025-02/advice-sheet-are-generative-ai-interactions-public-records-(june-2024).pdf
+  - title: Hardening disclosure norms
+    description: >-
+      Utah SB 452, Maine LD 1727, and California SB 243 typify a wave of 14+
+      new state chatbot laws in 2026. A bot that does not disclose it is
+      automated is out of step with where the law is heading.
+    named_incident: >-
+      The 2026 wave of state chatbot-disclosure legislation (Future of
+      Privacy Forum analysis)
+    source_url: https://fpf.org/blog/understanding-the-new-wave-of-chatbot-legislation-california-sb-243-and-beyond/
+
+skepticism_triggers:
+  - claim_pattern: Any accuracy claim without a defined test set and judge
+    threshold: An accuracy number with no stated test set or grader
+    why: >-
+      Georgia's "97%" is the archetype of undefined agency- or
+      vendor-reported accuracy. Accuracy on what questions, judged by whom?
+    source_url: https://statescoop.com/government-ai-chatbots-state-local-websites-2024/
+  - claim_pattern: '"75+ languages"'
+    threshold: >-
+      A language count above the number of languages with measured quality
+    why: >-
+      Coverage is not quality. Demand per-language measured quality and human
+      review for legal, benefits, and health content. New Jersey's honest
+      benchmark is one language (Spanish, 95% of demand) at roughly 90%
+      claimed accuracy, with human review and plain-language-first writing.
+    source_url: https://www.usdigitalresponse.org/resources/how-new-jersey-is-using-generative-ai-to-scale-their-human-centered-approach-to-language-access
+  - claim_pattern: '"Answers any question about your city"'
+    threshold: Unbounded scope
+    why: >-
+      Unbounded scope is the MyCity failure. Good bots are corpus-restricted
+      with refusal behavior.
+    source_url: https://themarkup.org/artificial-intelligence/2026/01/30/mamdani-to-kill-the-nyc-ai-chatbot-we-caught-telling-businesses-to-break-the-law
+  - claim_pattern: '"The disclaimer covers you"'
+    threshold: A disclaimer offered as the main risk mitigation
+    why: >-
+      It did not cover NYC, and Air Canada's disclaimer argument lost.
+    source_url: https://www.americanbar.org/groups/business_law/resources/business-law-today/2024-february/bc-tribunal-confirms-companies-remain-liable-information-provided-ai-chatbot/
+  - claim_pattern: Enterprise pricing above $100K for a corpus-bounded FAQ bot
+    threshold: Above $100K for bounded FAQ functionality
+    why: >-
+      The documented market spans roughly $5,600 to $759K+. Demand the
+      itemization for anything at the high end.
+    source_url: https://blogs.civiciq.com/2025/12/02/government-ai-chatbots-311-rfps-vendor-pricing-guide-2025/
+  - claim_pattern: '"Set and forget" content ingestion'
+    threshold: No stale-content SLA
+    why: >-
+      No stale-content SLA means wrong answers after every ordinance change.
+    source_url: null
+  - claim_pattern: No exportable transcripts
+    threshold: Any product without a transcript export path
+    why: >-
+      A public-records non-starter under the Washington archivist position.
+    source_url: https://www.sos.wa.gov/sites/default/files/2025-02/advice-sheet-are-generative-ai-interactions-public-records-(june-2024).pdf
+
+diligence_questions:
+  - id: public-comms-q01
+    question: >-
+      Is every answer generated only from content we control? Show us what
+      the bot says when the answer is not in that corpus: does it refuse and
+      hand off, or improvise?
+    good_answer: >-
+      Corpus-restricted generation with demonstrated refusal behavior.
+    red_flag: >-
+      Open-web answering or hedged "mostly grounded" language. MyCity
+      improvised.
+    source_url: https://themarkup.org/artificial-intelligence/2026/01/30/mamdani-to-kill-the-nyc-ai-chatbot-we-caught-telling-businesses-to-break-the-law
+  - id: public-comms-q02
+    question: Does each answer link to the specific official source page?
+    good_answer: Yes, with per-answer citations to your own pages.
+    red_flag: No citations. You cannot audit what you cannot trace.
+    source_url: null
+  - id: public-comms-q03
+    question: >-
+      Will you run and share results on our top 100 real resident questions,
+      including legally consequential ones (tenant rights, wages, deadlines),
+      before go-live? Who signs off on the answer key, our counsel or yours?
+    good_answer: >-
+      Yes, with your counsel approving the answer key before launch.
+    red_flag: Testing after launch, or vendor-graded results only.
+    source_url: null
+  - id: public-comms-q04
+    question: >-
+      When the council changes an ordinance or a fee, what is the update
+      pipeline and SLA? Who is responsible for stale answers?
+    good_answer: >-
+      A named pipeline, a turnaround commitment, and clear responsibility.
+    red_flag: '"The bot re-crawls periodically" with no SLA.'
+    source_url: null
+  - id: public-comms-q05
+    question: >-
+      Given Moffatt v. Air Canada, what does your contract say about
+      indemnification when the bot causes harm with wrong information?
+    good_answer: Specific indemnification language in the contract.
+    red_flag: >-
+      A disclaimer offered instead of contract terms; that argument already
+      lost.
+    source_url: https://www.americanbar.org/groups/business_law/resources/business-law-today/2024-february/bc-tribunal-confirms-companies-remain-liable-information-provided-ai-chatbot/
+  - id: public-comms-q06
+    question: >-
+      At what point (topic, confidence, frustration, or a direct request)
+      does the bot transfer to a person, and during what hours does that
+      person exist?
+    good_answer: Defined handoff triggers and real staffed hours.
+    red_flag: A bot with no human behind it.
+    source_url: null
+  - id: public-comms-q07
+    question: >-
+      Which languages do you support, with what measured quality per
+      language? Is there human review for benefits, legal, and health
+      content? How do you handle low-resource languages where machine
+      translation degrades?
+    good_answer: >-
+      Per-language quality measurements and human review for consequential
+      content, in line with NCSC guidance.
+    red_flag: A language count with no measurements.
+    source_url: https://www.ncsc.org/sites/default/files/media/document/NCSC%20Machine%20Translation%20Guide_0.pdf
+  - id: public-comms-q08
+    question: >-
+      Are transcripts fully exportable for public-records compliance? What
+      resident PII do you retain, for how long, and is any of it used for
+      training?
+    good_answer: >-
+      Full export, a stated retention schedule, and written no-training
+      terms.
+    red_flag: >-
+      No export path, or "anonymized" training use with no definition.
+    source_url: https://www.sos.wa.gov/sites/default/files/2025-02/advice-sheet-are-generative-ai-interactions-public-records-(june-2024).pdf
+  - id: public-comms-q09
+    question: >-
+      Does the bot clearly disclose that it is AI (the Utah SB 452 and Maine
+      LD 1727 pattern; TRAIGA for Texas)? Does it meet WCAG 2.1 AA
+      accessibility?
+    good_answer: >-
+      Disclosure on by default and an accessibility conformance report.
+    red_flag: >-
+      Disclosure as a configurable option, or no accessibility testing.
+    source_url: https://fpf.org/blog/understanding-the-new-wave-of-chatbot-legislation-california-sb-243-and-beyond/
+  - id: public-comms-q10
+    question: >-
+      What accuracy and containment metrics will you report monthly, how is
+      "accurate" defined and audited, and can we sample real transcripts?
+    good_answer: >-
+      Defined metrics, a named audit method, and transcript sampling rights.
+    red_flag: Self-graded accuracy with no sampling rights.
+    source_url: null
+  - id: public-comms-q11
+    question: >-
+      How fast can we take down a wrong answer, or the whole bot, and what is
+      the fallback experience?
+    good_answer: >-
+      A same-day correction path, a kill switch, and a graceful fallback
+      page.
+    red_flag: >-
+      Correction requests routed through a support queue with no SLA.
+    source_url: null
+  - id: public-comms-q12
+    question: >-
+      Name three government customers our size, with one live for 12 or more
+      months. Has any government customer decommissioned the product, and
+      why?
+    good_answer: >-
+      Named references plus a straight answer on decommissions.
+    red_flag: >-
+      No references at your scale, or evasion about churn. NYC decommissioned
+      a high-profile bot in 2026; the question is fair.
+    source_url: https://themarkup.org/artificial-intelligence/2026/01/30/mamdani-to-kill-the-nyc-ai-chatbot-we-caught-telling-businesses-to-break-the-law
+
+elevated_scrutiny_rules:
+  - condition: The bot will answer benefits or eligibility questions
+    action: >-
+      Apply the eligibility-case-mgmt overlay. California SIMM 150 rates
+      resident-facing chatbots at least Moderate risk.
+  - condition: >-
+      The bot delivers legally consequential content (tenant rights, wages,
+      deadlines, permits)
+    action: >-
+      Require q03 with counsel sign-off; raise caution one band.
+  - condition: >-
+      Translation of legal, benefits, or health content without human review
+    action: Add the NCSC mandatory-human-review flag.
+
+reference_deployments:
+  - agency: Massachusetts ("Ask MA")
+    vendor_stack: NeuroSoph
+    what: Statewide portal assistant
+    metric: Roughly 3.46 million messages per month across 22 services
+    metric_source_type: independent-press
+    source_url: https://statescoop.com/government-ai-chatbots-state-local-websites-2024/
+  - agency: Vermont ("ChatVT")
+    vendor_stack: State portal chatbot
+    what: State chatbot with annual performance reviews
+    metric: The accountability model; reviewed on a published annual cycle
+    metric_source_type: independent-press
+    source_url: https://statescoop.com/government-ai-chatbots-state-local-websites-2024/
+  - agency: New Jersey DOL
+    vendor_stack: Machine translation with U.S. Digital Response
+    what: >-
+      Plain-language-first Spanish translation with human review and
+      published training materials for state reuse
+    metric: >-
+      One language (Spanish, 95% of demand) at roughly 90% claimed accuracy
+      with human review
+    metric_source_type: independent-press
+    source_url: https://www.usdigitalresponse.org/resources/how-new-jersey-is-using-generative-ai-to-scale-their-human-centered-approach-to-language-access
+  - agency: Santa Barbara, CA and North Las Vegas, NV
+    vendor_stack: Wordly
+    what: Live council-meeting interpretation
+    metric: Named deployments; metrics are vendor-reported
+    metric_source_type: vendor-reported
+    source_url: https://www.wordly.ai/city-council-translation
+  - agency: Mississippi ("Missi")
+    vendor_stack: Tyler Technologies
+    what: One of the longest-running state portal chatbots (2017)
+    metric: A longevity datapoint rather than a performance claim
+    metric_source_type: independent-press
+    source_url: https://statescoop.com/government-ai-chatbots-state-local-websites-2024/
+  - agency: Maryland benefits-navigation agent
+    vendor_stack: Anthropic
+    what: >-
+      Benefits navigation assistant (the eligibility-case-mgmt overlay
+      applies)
+    metric: Documented as a pilot, not production determinations
+    metric_source_type: independent-press
+    source_url: https://codeforamerica.org/explore/government-ai-landscape-assessment/
+  - agency: NYC ("MyCity", cautionary)
+    vendor_stack: City portal chatbot
+    what: Decommissioned Feb 4, 2026 as "functionally unusable"
+    metric: >-
+      About $600K to build and about $500K per year to maintain, and it still
+      told businesses to break the law
+    metric_source_type: independent-press
+    source_url: https://themarkup.org/artificial-intelligence/2026/01/30/mamdani-to-kill-the-nyc-ai-chatbot-we-caught-telling-businesses-to-break-the-law
+
+registries_to_check:
+  - name: Pavilion Contract Hub
+    url: https://www.withpavilion.com/
+    what_it_proves: >-
+      Existing public contracts you may be able to piggyback on; confirms
+      other governments have bought the product.
+  - name: Procurated
+    url: https://www.procurated.com/
+    what_it_proves: Peer reviews of suppliers from other government buyers.
+  - name: AI Incident Database
+    url: https://incidentdatabase.ai/
+    what_it_proves: >-
+      A public log of AI system failures. Search the vendor and product name.
+
+legal_context: |-
+  - State chatbot-disclosure wave: Utah SB 452 (2025), Maine LD 1727, and
+    California SB 243, with 14+ new state chatbot laws in 2026
+    (https://fpf.org/blog/understanding-the-new-wave-of-chatbot-legislation-california-sb-243-and-beyond/).
+  - Texas TRAIGA (effective Jan 1, 2026). Verify current status before
+    citing.
+  - Washington State Archives position (Jun 2024): generative-AI prompts and
+    outputs can be public records
+    (https://www.sos.wa.gov/sites/default/files/2025-02/advice-sheet-are-generative-ai-interactions-public-records-(june-2024).pdf).
+  - ADA Title II digital accessibility rule (2024) and WCAG 2.1 AA:
+    public-facing digital services must be accessible.
+  - Title VI: language-access obligations for limited-English-proficiency
+    residents; NCSC recommends mandatory human review for machine
+    translation with legal consequences.
+
+realistic_pricing: |-
+  The documented contract range runs roughly $5,600 basic to $759K+
+  enterprise (CivicIQ 2025 vendor pricing guide,
+  https://blogs.civiciq.com/2025/12/02/government-ai-chatbots-311-rfps-vendor-pricing-guide-2025/).
+  A corpus-bounded FAQ bot priced above $100K deserves a written itemization
+  of what the money buys.
+
+last_updated: "2026-08-28"
+refresh_cadence: quarterly
+
+known_gaps: |-
+  - Vendor and agency accuracy figures in this category are self-reported
+    (Georgia's 97%, Ask MA volumes); no independent audit was found in
+    public sources.
+  - Citibot's customer claims are unverified; the vendor site blocked
+    automated fetch.
+  - The underlying technology stack of NYC's MyCity bot was not re-verified
+    this cycle, so its deployment row names no vendor.
+  - GovAI Coalition Trellis registry and state AI inventory URLs (the
+    Connecticut statutory inventory, New York's Section 103-e disclosures)
+    were not confirmed this cycle, so they are cited by name only.

@@ -1,0 +1,29 @@
+Subject: Permit review assistants for mid-sized cities
+
+Hi Mr. Alvarez,
+
+My name is Priya Raman and I am the co-founder of Meadowlark Labs. We
+are an early-stage company (founded 2024, 7 people, based in Denver)
+building an AI tool that pre-screens building permit applications for
+completeness before a human reviewer sees them.
+
+Where we are today:
+
+- One paid pilot with a Colorado front-range city (12,000 permits per
+  year). We can connect you with the permitting director there.
+- SOC 2 Type I completed in March 2026 with Ridgeline Assurance LLP;
+  the Type II observation window is in progress.
+- We sign a data processing agreement with every customer and train no
+  models on customer data.
+- Backed by a $2.1M seed round led by Front Range Ventures.
+
+We are not the biggest vendor in this space, and we will not pretend to
+be. What we offer is a focused tool, direct access to the founding
+team, and pricing that fits a pilot budget.
+
+Would a 20-minute intro call be useful? Happy to send our security
+one-pager first.
+
+Priya Raman
+Co-founder, Meadowlark Labs
+priya@meadowlarklabs.example.com | meadowlarklabs.example.com

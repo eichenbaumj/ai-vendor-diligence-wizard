@@ -1,0 +1,20 @@
+{
+  "totalRecords": 1,
+  "entityData": [
+    {
+      "entityRegistration": {
+        "ueiSAM": "ABC123DEF456",
+        "cageCode": "1XYZ9",
+        "legalBusinessName": "GOVASSIST AI INC",
+        "registrationStatus": "Active",
+        "registrationExpirationDate": "2027-03-15"
+      },
+      "coreData": {
+        "physicalAddress": {
+          "city": "AUSTIN",
+          "stateOrProvinceCode": "TX"
+        }
+      }
+    }
+  ]
+}

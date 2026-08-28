@@ -1,0 +1,33 @@
+{
+  "took": 5,
+  "timed_out": false,
+  "hits": {
+    "total": { "value": 2, "relation": "eq" },
+    "hits": [
+      {
+        "_index": "edgar_file",
+        "_id": "0001999999-24-000001:primary_doc.xml",
+        "_source": {
+          "ciks": ["0001999999"],
+          "display_names": ["CivicSignal Inc  (CIK 0001999999)"],
+          "file_type": "D",
+          "root_forms": ["D"],
+          "file_date": "2024-05-01",
+          "inc_states": ["DE"]
+        }
+      },
+      {
+        "_index": "edgar_file",
+        "_id": "0001888888-23-000004:primary_doc.xml",
+        "_source": {
+          "ciks": ["0001888888"],
+          "display_names": ["Unrelated Ventures LLC  (CIK 0001888888)"],
+          "file_type": "D",
+          "root_forms": ["D"],
+          "file_date": "2023-02-01",
+          "inc_states": ["NY"]
+        }
+      }
+    ]
+  }
+}

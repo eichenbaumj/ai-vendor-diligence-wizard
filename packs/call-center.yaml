@@ -1,0 +1,646 @@
+# Sector pack: call-center (v1)
+# Authoring rules: packs/pack-spec.md. Validated by scripts/validate-packs.ts.
+pack_id: call-center
+pack_name: Call Center & Phone AI
+
+definition: >-
+  AI that answers, routes, or assists resident phone and chat contact: virtual
+  agents and IVR bots, voice AI, agent-assist and after-call summarization, and
+  the cloud contact-center (CCaaS) platforms they run on. This pack does not
+  cover website-only chatbots with no contact-center function (see the
+  public-comms pack) or anything that determines eligibility or flags fraud
+  from a call (that adds the eligibility-case-mgmt overlay).
+
+inclusion_test:
+  - >-
+    Does the pitch mention phone calls, IVR, voice agents, hold times, call
+    deflection or containment, or contact-center agents?
+  - >-
+    Does it target 311, benefits hotlines, unemployment lines, DMV lines, or
+    "resident support"?
+  - >-
+    Does it offer agent-assist, call summarization, or transcription for
+    call-center staff?
+  - >-
+    Does it name a CCaaS platform (Amazon Connect, Genesys, NICE, Five9,
+    Talkdesk) as its base?
+
+scrutiny_tier: standard
+
+incumbent_landscape: >-
+  Three layers, and the first triage step is establishing which layer the
+  sender occupies. Layer 1, platforms: AWS (Amazon Connect), Google Cloud
+  (Customer Engagement Suite, formerly "Contact Center AI"), Genesys, NICE,
+  Five9, Talkdesk, Salesforce Agentforce, ServiceNow, and Verint/SoundHound,
+  all with real, named state and local deployments. Layer 2, the integrators
+  and BPOs who deliver most state deployments: Deloitte (TrueServe on AWS),
+  Accenture (Texas TWC "Larry"), Quantiphi/Presidio/Cisco (Illinois IDES),
+  Smartronix (West Virginia), C1 Gov (NYC DSS), and Maximus. When a platform
+  pitches, ask who delivers. When an integrator pitches, ask which platform.
+  The accountability split between the two is where deployments fail. Layer 3,
+  startups: govtech-native companies (Polimorphic, Citibot) with named
+  local-government customers, versus commercial AI-agent startups (Sierra,
+  Decagon, Parloa, PolyAI, Replicant). We could not verify any U.S. state or
+  local government customer for that second group in public sources as of
+  August 2026, so a "government-proven" claim from that cohort is unverified
+  until the vendor names an agency you can call.
+
+established_vendors:
+  - name: AWS Amazon Connect
+    tier: platform
+    one_liner: >-
+      Consumption-priced CCaaS with the deepest state and local roster
+      (Kentucky Transportation, South Carolina DSS, New Mexico HSD, Atlanta
+      311, Tamarac FL, Arizona MVD, Workforce West Virginia).
+    gov_evidence_url: https://aws.amazon.com/products/connect/customer/slg/
+  - name: Google Cloud Customer Engagement Suite
+    tier: platform
+    one_liner: >-
+      Gemini-based virtual agents; Illinois IDES, Minnesota DVS, Colorado
+      CDLE.
+    gov_evidence_url: https://cloud.google.com/customers/state-of-illinois
+  - name: Genesys Cloud CX
+    tier: platform
+    one_liner: >-
+      FedRAMP Moderate; large legacy government base; public list pricing is
+      useful for quote benchmarking (https://www.genesys.com/pricing).
+    gov_evidence_url: https://www.genesys.com/company/newsroom/announcements/122908
+  - name: NICE CXone
+    tier: platform
+    one_liner: >-
+      San Diego County access center; NYC DSS via C1 Gov (metrics are
+      vendor-reported).
+    gov_evidence_url: https://www.nice.com/industries/government
+  - name: Five9
+    tier: platform
+    one_liner: NJ 211 statewide network; 50-seat minimum.
+    gov_evidence_url: https://www.five9.com/resources/case-study-nj-2-1-1
+  - name: Talkdesk
+    tier: platform
+    one_liner: >-
+      Full FedRAMP authorization; fewer named state and local references.
+    gov_evidence_url: https://www.talkdesk.com/news-and-press/press-releases/fedramp-authorization/
+  - name: Salesforce Agentforce
+    tier: platform
+    one_liner: >-
+      City of Kyle, TX: resolution time cut from 4.37 to 2.41 days across
+      12,000+ requests.
+    gov_evidence_url: https://statetechmagazine.com/article/2025/08/kyle-texas-uses-ai-expedite-citizen-service-delivery
+  - name: ServiceNow
+    tier: platform
+    one_liner: >-
+      Missouri DSS (Route Fifty, May 21, 2026); ID.me/Servos
+      benefits-modernization partnership (PR Newswire, Jun 23, 2026).
+    gov_evidence_url: null
+  - name: Deloitte / Accenture / Maximus / C1 Gov / Smartronix / Quantiphi
+    tier: integrator
+    one_liner: >-
+      The delivery layer for most state contact-center deployments; named
+      projects appear in the landscape summary above.
+    gov_evidence_url: null
+  - name: Polimorphic
+    tier: startup-verified
+    one_liner: >-
+      Local-government AI chat and phone agents; $18.6M Series A; Pacifica CA,
+      Tooele County UT, Polk County NC, Palm Beach FL.
+    gov_evidence_url: https://www.govtech.com/biz/polimorphic-raises-18-6m-as-it-beefs-up-public-sector-ai
+  - name: Verint / SoundHound (Amelia)
+    tier: specialist
+    one_liner: >-
+      Coral Springs FL; USCIS "Emma" lineage (Federal Times, Nov 16, 2015).
+    gov_evidence_url: null
+
+failure_modes:
+  - title: Hallucinated benefit or legal guidance on an official line
+    description: >-
+      A bot on an official government line invents policy and residents rely
+      on it. The organization owns everything its bot says: a Canadian
+      tribunal held Air Canada liable for its chatbot's invented refund policy
+      (https://www.cbsnews.com/news/aircanada-chatbot-discount-customer/), and
+      even Cursor, an AI company, saw its own support bot invent a policy that
+      did not exist (Ars Technica, Apr 17, 2025).
+    named_incident: >-
+      NYC's MyCity chatbot told businesses to break the law (The Markup, Mar
+      29, 2024)
+    source_url: https://themarkup.org/artificial-intelligence/2024/03/29/nycs-ai-chatbot-tells-businesses-to-break-the-law
+  - title: Missing or buried human escalation
+    description: >-
+      Klarna publicly reversed its "AI replaced 700 agents" posture and
+      rehired humans (Forbes, May 18, 2025; direct article URL pending
+      re-capture, see known gaps). For callers in crisis, callers with limited
+      English, and callers with low digital literacy, a bot with no exit to a
+      person is a due-process problem. The IRS voice-bot rollout is the design
+      benchmark: taxpayers can always reach an English- or Spanish-speaking
+      representative.
+    named_incident: >-
+      Klarna reversed its AI-only support strategy and rehired human agents
+      (Forbes, May 18, 2025)
+    source_url: https://www.irs.gov/newsroom/irs-expands-voice-bot-options-for-faster-service-less-wait-time
+  - title: Containment inflation through definition games
+    description: >-
+      Vendors count abandons, IVR menu completions, and "caller did not reply"
+      as "contained." Gartner's own bullish forecast is 80% of common issues
+      resolved without a human by 2029
+      (https://www.gartner.com/en/newsroom/press-releases/2025-03-05-gartner-predicts-agentic-ai-will-autonomously-resolve-80-percent-of-common-customer-service-issues-without-human-intervention-by-2029),
+      so a higher present-tense claim deserves the metric-definition question
+      below.
+    named_incident: >-
+      Documented government reality: Tamarac, FL reached 20% full
+      self-service, and West Virginia's roughly 90% came from a narrow
+      scripted FAQ surge line
+    source_url: https://aws.amazon.com/blogs/publicsector/how-the-city-of-tamarac-transformed-resident-experience-with-amazon-connect/
+  - title: Per-resolution pricing games
+    description: >-
+      Intercom's $0.99 "outcome" pricing includes a customer who simply goes
+      silent. Gartner predicts generative-AI cost-per-resolution will exceed
+      offshore human cost by 2030 (Gartner press release, Jan 26, 2026), and
+      pricing-model churn (Salesforce, Jun 2026; HubSpot, Apr 2026) makes a
+      multi-year per-resolution commitment unsafe without a contractual
+      resolution definition and an audit right.
+    named_incident: >-
+      Intercom's published per-resolution pricing counts a customer who goes
+      silent as a resolved outcome
+    source_url: https://www.intercom.com/pricing
+  - title: Language-access failures shipped without native-speaker QA
+    description: >-
+      Washington state removed an AI voice after Spanish-speaking callers got
+      Spanish-accented English instead of Spanish (StateScoop, Feb 27, 2026;
+      direct article URL pending re-capture, see known gaps). The contrast
+      benchmark is Minnesota's community-informed four-language model, with
+      languages chosen from caller demographics.
+    named_incident: >-
+      Washington state removed an AI voice over failed Spanish support
+      (StateScoop, Feb 27, 2026)
+    source_url: https://statetechmagazine.com/article/2024/03/state-governments-deploy-contact-center-ai-bolster-customer-service
+  - title: Voice cloning and disclosure exposure
+    description: >-
+      FCC ruling 24-17 classifies AI-generated voices as "artificial" under
+      the TCPA, so outbound use requires prior express consent. The FBI has
+      warned about cloning of official voices (NPR, Jul 9, 2025). A synthetic
+      voice marketed as indistinguishable from a human is a liability, not a
+      feature.
+    named_incident: >-
+      FCC declaratory ruling 24-17 on AI voices under the TCPA (Feb 2024)
+    source_url: https://docs.fcc.gov/public/attachments/FCC-24-17A1.pdf
+
+skepticism_triggers:
+  - claim_pattern: >-
+      A containment or deflection rate of 80% or more (for voice, 40% or more)
+    threshold: >-
+      Text containment at or above 80%; voice containment at or above 40–50%
+    why: >-
+      Gartner's optimistic forecast is 80% of common issues by 2029.
+      Documented government reality: Tamarac reached 20% full self-service,
+      and West Virginia's roughly 90% came from a narrow scripted FAQ surge
+      line.
+    source_url: https://aws.amazon.com/blogs/publicsector/how-the-city-of-tamarac-transformed-resident-experience-with-amazon-connect/
+  - claim_pattern: '"99%+ accuracy" or "never hallucinates"'
+    threshold: Any accuracy claim without a test-set methodology
+    why: >-
+      NYC and Cursor show that well-resourced deployers still ship
+      wrong-answer bots. An accuracy number with no test set, denominator, or
+      judge is a marketing number.
+    source_url: https://themarkup.org/artificial-intelligence/2024/03/29/nycs-ai-chatbot-tells-businesses-to-break-the-law
+  - claim_pattern: '"Replaces N agents" or a named dollar-savings figure'
+    threshold: Any named FTE or dollar savings without an audited source
+    why: >-
+      Illinois's "$100M per year savings" was an initial vendor-story
+      estimate, not an audited figure, and Klarna reversed its
+      agent-replacement strategy.
+    source_url: https://cloud.google.com/customers/state-of-illinois
+  - claim_pattern: '"Deploy in days" combined with "integrated"'
+    threshold: >-
+      A deployment promise under 30 days alongside claims of system
+      integration
+    why: >-
+      The two claims contradict each other. Days is true only for scripted FAQ
+      bots (Texas TWC's "Larry": 5 days; West Virginia: 72 hours, both 2020
+      surge lines). Claim-status or eligibility integration takes months.
+    source_url: https://www.dallasnews.com/business/jobs/2020/04/01/texas-launches-chatbot-named-larry-to-help-with-surge-in-unemployment-claims/
+  - claim_pattern: Per-resolution price under $1, or an undefined "resolution"
+    threshold: Under $1 per resolution, or no contractual definition
+    why: >-
+      Intercom's $0.99 outcome pricing counts a customer who goes silent.
+      Demand a contractual resolution definition plus an audit right.
+    source_url: https://www.intercom.com/pricing
+  - claim_pattern: '"FedRAMP compliant" or "StateRAMP compliant"'
+    threshold: The word "compliant" instead of "authorized"
+    why: >-
+      "Compliant" is not "authorized." Verify the specific product at the
+      FedRAMP Marketplace and on the GovRAMP authorized product list. A vendor
+      still saying "StateRAMP" does not know the program became GovRAMP in
+      February 2025.
+    source_url: https://marketplace.fedramp.gov/
+  - claim_pattern: '"Supports 75+ languages"'
+    threshold: >-
+      A language count above the number of languages with native-speaker QA
+    why: >-
+      Machine-translation coverage is not language access. Ask which languages
+      have native-speaker QA. Minnesota's four-language community-informed
+      model is the honest benchmark.
+    source_url: https://statetechmagazine.com/article/2024/03/state-governments-deploy-contact-center-ai-bolster-customer-service
+  - claim_pattern: '"No integration required"'
+    threshold: Any claim that useful answers need no system integration
+    why: >-
+      It means FAQ-only. The bot cannot answer "where is my payment," which is
+      most benefits-line volume.
+    source_url: null
+  - claim_pattern: '"Indistinguishable from a human voice"'
+    threshold: Any pitch marketing voice realism without disclosure
+    why: >-
+      FCC 24-17 treats AI voices as artificial under the TCPA, several states
+      require bot disclosure, and the Colorado AI Act takes effect Jun 30,
+      2026. Realism without disclosure is a liability.
+    source_url: https://docs.fcc.gov/public/attachments/FCC-24-17A1.pdf
+  - claim_pattern: '"Government-proven" with no named agency'
+    threshold: Zero named, callable government customers
+    why: >-
+      This applies with force to commercial AI-agent startups (the Sierra,
+      Decagon, Parloa, PolyAI, Replicant cohort). We could not verify any U.S.
+      state or local government customer for that cohort in public sources as
+      of August 2026.
+    source_url: null
+  - claim_pattern: A new platform pitched as the fix for a struggling program
+    threshold: >-
+      Replatforming presented as the remedy for backlogs, improper payments,
+      or debt problems
+    why: >-
+      California's billion-dollar EDDNext replatforming had not resolved the
+      underlying fraud and debt problems (KQED, Dec 4, 2024; direct article
+      URL pending re-capture, see known gaps). Process problems follow the
+      program onto the new platform.
+    source_url: null
+
+diligence_questions:
+  - id: call-center-q01
+    question: >-
+      Show the exact formula for the containment or resolution rate you
+      quoted. Do abandons, IVR completions, transfers, or 7-day callbacks
+      count? Give the same metric for your three most comparable government
+      clients at 90 days and 12 months.
+    good_answer: >-
+      A written formula with numerator and denominator, exclusions named, and
+      the same metric reported for named government clients at both time
+      points.
+    red_flag: >-
+      A single marketing number with no formula, or a definition that counts
+      abandons and menu completions as contained.
+    source_url: null
+  - id: call-center-q02
+    question: >-
+      Name three government agencies of comparable volume and program type in
+      production today, with contacts who will confirm your deck's metrics.
+    good_answer: >-
+      Three named agencies with contact information, and metrics that match
+      the deck's claims.
+    red_flag: >-
+      Refusal is disqualifying. Every credible vendor in this category has
+      named references; "our customer list is confidential" is not an
+      acceptable answer here.
+    source_url: null
+  - id: call-center-q03
+    question: >-
+      Walk us through every path to a human: what happens when a caller says
+      "agent" on turn one? After two failed answers? At 2 a.m.? Is the
+      transfer warm, meaning the agent sees the transcript and the collected
+      data?
+    good_answer: >-
+      Immediate escalation on request, automatic escalation after failures, a
+      clear after-hours path, and warm transfer with full context.
+    red_flag: >-
+      Escalation requires fighting through the bot, has no after-hours path,
+      or drops the caller's context at transfer.
+    source_url: null
+  - id: call-center-q04
+    question: >-
+      Is the system restricted to content we approve, with the source cited
+      for each answer? What does it do when the answer is not there: guess,
+      refuse, or escalate? What is the measured wrong-answer rate on a
+      benefits test set, and can we run our own test before award?
+    good_answer: >-
+      Corpus-restricted generation with per-answer citations, explicit refusal
+      or escalation when the answer is absent, a measured wrong-answer rate
+      with methodology, and yes to a pre-award test.
+    red_flag: >-
+      Open-ended generation, no citations, no measured wrong-answer rate, or
+      resistance to pre-award testing.
+    source_url: null
+  - id: call-center-q05
+    question: >-
+      If the bot gives a claimant wrong information, what does the contract
+      say? What are the correction SLAs and the indemnification terms?
+    good_answer: >-
+      Specific contract language on correction timelines and indemnification
+      for bot-caused harm.
+    red_flag: >-
+      "That has never happened" or a disclaimer-only answer. A tribunal held
+      Air Canada liable for its bot's invented policy; the agency owns what
+      its bot says.
+    source_url: https://www.cbsnews.com/news/aircanada-chatbot-discount-customer/
+  - id: call-center-q06
+    question: >-
+      Which languages do you support, on which channels, with what human
+      review? Is spoken Spanish actual Spanish reviewed by native speakers?
+      Show us the interpreter-handoff flow.
+    good_answer: >-
+      A named language list matched to caller demographics, native-speaker
+      QA, and a working interpreter handoff.
+    red_flag: >-
+      A large language count with no QA process. Washington state removed an
+      AI voice in February 2026 after Spanish callers got Spanish-accented
+      English.
+    source_url: https://statetechmagazine.com/article/2024/03/state-governments-deploy-contact-center-ai-bolster-customer-service
+  - id: call-center-q07
+    question: >-
+      Have you integrated with our exact stack (our IVR plus our CRM or
+      eligibility system)? Name the client. Is the integration fixed-price?
+      What does the bot read, and what does it write?
+    good_answer: >-
+      A named client on the same stack, fixed-price integration, and a precise
+      read/write scope.
+    red_flag: >-
+      "Our API can integrate with anything" with no named client on your
+      stack, or open-ended integration billing.
+    source_url: null
+  - id: call-center-q08
+    question: >-
+      Which FedRAMP or GovRAMP authorization does this specific product hold?
+      Where are recordings and transcripts stored, how long are they retained,
+      and is any of our data used to train models, yours or a subprocessor's?
+    good_answer: >-
+      A product-level authorization you can verify on the marketplace, a named
+      storage location and retention period, and a written no-training
+      commitment.
+    red_flag: >-
+      "Compliant" instead of "authorized," company-level claims for a
+      product-level question, or vague data-use terms.
+    source_url: https://marketplace.fedramp.gov/
+  - id: call-center-q09
+    question: >-
+      Which LLM and speech-recognition vendors are under the hood, and where
+      are they hosted? When the underlying model updates, how do you
+      regression-test our flows before residents see the change?
+    good_answer: >-
+      Named model providers and hosting, plus a described regression-test
+      process tied to model updates.
+    red_flag: >-
+      Refusal to name subprocessors, or no regression-testing process at all.
+    source_url: null
+  - id: call-center-q10
+    question: >-
+      Does the system disclose that it is automated at the start of each
+      interaction? For outbound calls: how do you comply with FCC ruling
+      24-17, which treats AI voices as artificial voices under the TCPA? How
+      do you handle state bot-disclosure laws and the Colorado AI Act
+      (effective Jun 30, 2026)?
+    good_answer: >-
+      Disclosure on by default, prior-express-consent handling for outbound
+      calls, and specific answers on state laws.
+    red_flag: >-
+      Disclosure treated as optional or configurable off, or unfamiliarity
+      with FCC 24-17.
+    source_url: https://docs.fcc.gov/public/attachments/FCC-24-17A1.pdf
+  - id: call-center-q11
+    question: >-
+      Break the price into platform, per-minute or per-message usage, telecom
+      passthrough, AI metering, integration, and support. What happens to our
+      bill in a 10x claims surge? What are the minimums and the overage rates?
+    good_answer: >-
+      A line-item decomposition with surge modeling and stated minimums.
+    red_flag: >-
+      One bundled number, no surge answer, or minimums that only appear in the
+      contract draft.
+    source_url: https://aws.amazon.com/connect/pricing/
+  - id: call-center-q12
+    question: >-
+      Do we get raw transcripts plus a dashboard covering containment,
+      escalation, abandonment, wait time, and per-intent accuracy? Can our
+      staff review any interaction? What is exported at contract end, in what
+      format, and at what cost?
+    good_answer: >-
+      Full transcript access, per-intent reporting, staff review rights, and a
+      no-cost or low-cost export commitment in a usable format.
+    red_flag: >-
+      Vendor-controlled reporting only, sampled transcripts, or export treated
+      as a paid professional service.
+    source_url: null
+  - id: call-center-q13
+    question: >-
+      When your AI is down, what does a caller hear: a queue or a dead line?
+      What is your uptime SLA, and can we see your last two incident
+      postmortems?
+    good_answer: >-
+      Automatic failover to the human queue, a specific uptime SLA, and real
+      postmortems shared.
+    red_flag: No failover story, or refusal to share incident history.
+    source_url: null
+  - id: call-center-q14
+    question: >-
+      Can we buy after-call summarization alone, without a resident-facing
+      bot? What accuracy review exists for auto-summaries written into our
+      CRM?
+    good_answer: >-
+      Yes, agent-assist can be bought alone (the lowest-risk entry point),
+      with a described human review step for summaries that become records.
+    red_flag: >-
+      Bundling that forces a resident-facing bot, or summaries written to the
+      CRM with no review.
+    source_url: null
+  - id: call-center-q15
+    question: >-
+      If you project staffing savings, name the client where that happened and
+      tell us what happened to their quality metrics afterward.
+    good_answer: >-
+      A named client, with before-and-after quality metrics alongside the
+      staffing change.
+    red_flag: >-
+      Projected savings with no named client. Klarna reversed its
+      agent-replacement strategy after quality suffered.
+    source_url: null
+
+elevated_scrutiny_rules:
+  - condition: >-
+      The pitch claims the phone AI determines eligibility, changes claims, or
+      flags fraud
+    action: Apply the eligibility-case-mgmt overlay.
+  - condition: The pitch proposes outbound AI-voice calling
+    action: Add the mandatory TCPA / FCC 24-17 legal block to the output.
+  - condition: >-
+      The pitch proposes a synthetic human-like voice without disclosure
+    action: Raise the caution band floor one level.
+  - condition: >-
+      The sender is a commercial AI-agent startup claiming government traction
+      with no verifiable state or local reference
+    action: >-
+      Use "we could not verify a named government customer in public sources"
+      language in the output.
+
+reference_deployments:
+  - agency: Illinois IDES
+    vendor_stack: Google Contact Center AI via Quantiphi/Presidio on Cisco
+    what: Unemployment virtual agent stood up during the pandemic surge
+    metric: >-
+      140,000+ inquiries per day at peak; the widely quoted "$100M savings" is
+      an initial, unaudited estimate
+    metric_source_type: vendor-reported
+    source_url: https://cloud.google.com/customers/state-of-illinois
+  - agency: Colorado CDLE
+    vendor_stack: Google virtual agent, phased rollout
+    what: >-
+      FAQs first, then authenticated claim status; the assistant explicitly
+      "cannot change your claim"
+    metric: The design benchmark for scope restraint rather than a volume claim
+    metric_source_type: government-page
+    source_url: https://cdle.colorado.gov/virtual-assistant-tips
+  - agency: Texas Workforce Commission ("Larry")
+    vendor_stack: Accenture + AWS
+    what: Surge FAQ bot stood up in 5 days during the 2020 unemployment spike
+    metric: 21 million+ questions handled
+    metric_source_type: independent-press
+    source_url: https://www.dallasnews.com/business/jobs/2020/04/01/texas-launches-chatbot-named-larry-to-help-with-surge-in-unemployment-claims/
+  - agency: Workforce West Virginia
+    vendor_stack: Amazon Connect via Smartronix
+    what: Surge line stood up in 72 hours in 2020
+    metric: Roughly 90% resolution, on a narrow scripted FAQ surge line
+    metric_source_type: vendor-reported
+    source_url: https://aws.amazon.com/blogs/publicsector/accelerating-response-west-virginia-workforces-needs-cloud
+  - agency: South Carolina DSS
+    vendor_stack: Amazon Connect
+    what: 19 contact centers modernized for benefits delivery
+    metric: Named statewide modernization; metrics are vendor-reported
+    metric_source_type: vendor-reported
+    source_url: https://aws.amazon.com/blogs/publicsector/how-south-carolina-dss-modernized-19-contact-centers-to-improve-benefits-delivery-with-amazon-connect/
+  - agency: NJ 211
+    vendor_stack: Five9
+    what: Statewide 211 network
+    metric: 110 multilingual agents; metrics are vendor-reported
+    metric_source_type: vendor-reported
+    source_url: https://www.five9.com/resources/case-study-nj-2-1-1
+  - agency: City of Tamarac, FL
+    vendor_stack: Amazon Connect
+    what: Resident service line with self-service options
+    metric: >-
+      20% of residents fully self-serve, the honest self-service anchor, from
+      the vendor's own case study
+    metric_source_type: vendor-reported
+    source_url: https://aws.amazon.com/blogs/publicsector/how-the-city-of-tamarac-transformed-resident-experience-with-amazon-connect/
+  - agency: Minnesota DVS
+    vendor_stack: Google Dialogflow chatbot
+    what: >-
+      Chatbot in English, Spanish, Hmong, and Somali, with languages chosen
+      from caller demographics
+    metric: 87,813 conversations in 2023
+    metric_source_type: independent-press
+    source_url: https://statetechmagazine.com/article/2024/03/state-governments-deploy-contact-center-ai-bolster-customer-service
+  - agency: Kentucky Transportation Cabinet
+    vendor_stack: Amazon Connect
+    what: Transportation services chatbot
+    metric: 900,000+ chatbot interactions per month
+    metric_source_type: vendor-reported
+    source_url: https://aws.amazon.com/solutions/case-studies/kentucky-transportation-case-study/
+  - agency: City of Kyle, TX
+    vendor_stack: Salesforce Agentforce
+    what: Resident service request handling
+    metric: >-
+      Resolution time cut from 4.37 to 2.41 days across 12,000+ requests
+    metric_source_type: independent-press
+    source_url: https://statetechmagazine.com/article/2025/08/kyle-texas-uses-ai-expedite-citizen-service-delivery
+  - agency: IRS
+    vendor_stack: Voice bots on the main service lines
+    what: Federal design benchmark for escalation
+    metric: >-
+      Callers can always reach an English- or Spanish-speaking representative
+      if needed
+    metric_source_type: government-page
+    source_url: https://www.irs.gov/newsroom/irs-expands-voice-bot-options-for-faster-service-less-wait-time
+  - agency: NYC DSS
+    vendor_stack: NICE CXone via C1 Gov
+    what: Benefits contact center
+    metric: Named deployment; metrics are vendor-reported
+    metric_source_type: vendor-reported
+    source_url: https://www.nice.com/industries/government
+
+registries_to_check:
+  - name: FedRAMP Marketplace
+    url: https://marketplace.fedramp.gov/
+    what_it_proves: >-
+      Whether this specific product holds a federal cloud authorization, and
+      at what level. Verify the product, not the company.
+  - name: GovRAMP Authorized Product List
+    url: https://govramp.org/
+    what_it_proves: >-
+      State-oriented cloud security verification. Formerly StateRAMP; the name
+      changed in February 2025.
+  - name: SAM.gov
+    url: https://sam.gov/
+    what_it_proves: >-
+      The company exists as a registered federal contractor.
+  - name: NASPO ValuePoint
+    url: https://www.naspovaluepoint.org/
+    what_it_proves: >-
+      Whether the vendor sells through established cooperative state
+      purchasing agreements.
+  - name: Carahsoft
+    url: https://www.carahsoft.com/
+    what_it_proves: >-
+      Whether the vendor is distributed through the main government IT
+      reseller channel.
+  - name: Pavilion Contract Hub
+    url: https://www.withpavilion.com/
+    what_it_proves: >-
+      Existing public contracts you may be able to piggyback on; confirms
+      other governments have bought the product.
+  - name: Procurated
+    url: https://www.procurated.com/
+    what_it_proves: Peer reviews of suppliers from other government buyers.
+
+legal_context: |-
+  - FCC declaratory ruling 24-17 (Feb 2024): AI-generated voices are
+    "artificial voices" under the TCPA; outbound use requires prior express
+    consent (https://docs.fcc.gov/public/attachments/FCC-24-17A1.pdf).
+  - California B.O.T. Act (SB 1001, effective 2019): bots that try to
+    influence a purchase or a vote must disclose that they are bots.
+  - Utah AI Policy Act (2024): disclosure requirements for generative AI in
+    consumer interactions.
+  - Colorado AI Act (effective Jun 30, 2026): AI affecting access to
+    government services is treated as high-risk. Verify current status before
+    citing; the effective date has shifted once already.
+  - Executive Order 14224 (2025) does not erase Title VI language-access
+    obligations. A vendor citing it as a reason to cut language QA is a red
+    flag. Enforcement posture after the EO is unsettled; treat as uncertain.
+
+realistic_pricing: |-
+  Per-seat CCaaS list prices: Genesys $75–240 per user per month
+  (https://www.genesys.com/pricing), Five9 from $119–159 with a 50-seat
+  minimum, Talkdesk $85–225. Consumption pricing: Amazon Connect $0.038 per
+  voice minute and $0.010 per chat message
+  (https://aws.amazon.com/connect/pricing/). Rule of thumb: at roughly
+  $0.04–0.10 per minute all-in, a 500,000-call-per-year line at 5 minutes per
+  call runs about $100K–250K per year in platform consumption before
+  integration and telecom. A quote at 10x that level means asking which layer
+  the money is in. Per-resolution pricing is workable for digital FAQ traffic
+  only, and only with a contractual definition of "resolution." Govtech
+  startups typically sell annual jurisdiction-tier subscriptions, commonly low
+  five figures for small jurisdictions; that figure is uncertain, so negotiate
+  per jurisdiction.
+
+last_updated: "2026-08-28"
+refresh_cadence: quarterly
+
+known_gaps: |-
+  - Google Conversational Agents pricing was not fetched this cycle; confirm
+    at quote time.
+  - Citibot's customer list is unverified; the vendor site blocked automated
+    fetch.
+  - AWS, NICE, Five9, and Polimorphic metrics are vendor-published and not
+    independently verified.
+  - Title VI enforcement posture after EO 14224 is unsettled.
+  - Direct article URLs for the Klarna reversal (Forbes, May 18, 2025), the
+    Washington AI-voice removal (StateScoop, Feb 27, 2026), and the EDDNext
+    caution (KQED, Dec 4, 2024) were not captured this cycle; those items are
+    retained with citations by outlet and date.
+  - Amarillo TX "Emma," Atlanta 311, and Coral Springs FL (Amelia) are named
+    deployments in the research record but lacked direct source URLs this
+    cycle, so they are omitted from reference deployments.
+  - TX-RAMP program page and GovAI Coalition Trellis registry URLs were not
+    confirmed this cycle, so those registries are cited by name only.

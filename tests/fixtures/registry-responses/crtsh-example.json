@@ -1,0 +1,44 @@
+[
+  {
+    "issuer_ca_id": 183267,
+    "issuer_name": "C=US, O=Let's Encrypt, CN=R3",
+    "common_name": "civicsignal.ai",
+    "name_value": "civicsignal.ai\nwww.civicsignal.ai",
+    "id": 111,
+    "entry_timestamp": "2025-06-03T00:00:00",
+    "not_before": "2025-06-03T00:00:00",
+    "not_after": "2025-09-01T00:00:00"
+  },
+  {
+    "issuer_ca_id": 183267,
+    "issuer_name": "C=US, O=Let's Encrypt, CN=R3",
+    "common_name": "app.civicsignal.ai",
+    "name_value": "app.civicsignal.ai",
+    "id": 112,
+    "entry_timestamp": "2025-07-01T00:00:00"
+  },
+  {
+    "issuer_ca_id": 183267,
+    "issuer_name": "C=US, O=Let's Encrypt, CN=R3",
+    "common_name": "api.civicsignal.ai",
+    "name_value": "api.civicsignal.ai\n*.api.civicsignal.ai",
+    "id": 113,
+    "entry_timestamp": "2025-07-01T00:00:00"
+  },
+  {
+    "issuer_ca_id": 183267,
+    "issuer_name": "C=US, O=Let's Encrypt, CN=R3",
+    "common_name": "docs.civicsignal.ai",
+    "name_value": "docs.civicsignal.ai",
+    "id": 114,
+    "entry_timestamp": "2025-08-15T00:00:00"
+  },
+  {
+    "issuer_ca_id": 183267,
+    "issuer_name": "C=US, O=Let's Encrypt, CN=R3",
+    "common_name": "mail.civicsignal.ai",
+    "name_value": "mail.civicsignal.ai",
+    "id": 115,
+    "entry_timestamp": "2025-06-10T00:00:00"
+  }
+]

@@ -131,7 +131,8 @@ Real government contracts leave public traces: payment records, contract lists, 
 
 **What we look at.** When the pitch names specific government customers, whether those agencies' own websites, council agendas, or meeting minutes mention the vendor.
 **Public sources.** Site-restricted searches of the named agencies' .gov websites; public meeting portals such as [Legistar](https://www.legistar.com/) agenda systems.
-**How it runs.** AI-assisted web research.
+**How it runs.** AI-assisted web research, with the verdict decided by code over the retrieved evidence.
+**What counts as verified.** A customer claim is marked VERIFIED only when a class 1 or class 2 source ties the customer and the vendor together in content the tool actually retrieved: the page title or the quoted passage. The customer tie may also come from the page sitting on the customer's own official site, but the vendor tie must always appear in retrieved content. A link alone never verifies: when research surfaces an official page whose address mentions the customer but nothing was retrieved from it, the row stays "could not verify" at Medium weight, the link is attached, and a manual check card asks the reader to open it and look for the vendor's name.
 **If adverse.** A specific named customer with no trace anywhere after a full search is weighted High, and the report recommends the decisive manual step: call or email the named agency. Only agency confirmation can settle it. The finding is always phrased as "we could not find," never as an accusation.
 
 ### D2.5 Public AI registries
@@ -437,7 +438,7 @@ Invisible Unicode characters (zero-width, directional, or tag characters) that c
 
 ### ADV-04 Possible planted corroboration
 
-The same marketing phrasing repeated across multiple low-authority websites, a pattern consistent with content placed to be found by AI research tools. Reported with the matching pages linked, as an observation, not an accusation.
+The same marketing phrasing repeated across multiple low-authority websites, a pattern consistent with content placed to be found by AI research tools. The scan is code over retrieved passages: a run of eight or more identical words recurring on at least two unrelated sites that present as independent. Press wires syndicating the same release do not count, and neither does the vendor repeating its own copy on its own properties; both are ordinary marketing. Reported with the matching sites named, as an observation, not an accusation.
 
 ---
 
@@ -551,7 +552,7 @@ Every external source the tool consults, with its refresh cadence. This table is
 | TinEye / Google Lens | Reverse image search | Links on manual cards only | Manual card | Manual |
 | State business registries without open data | Entity records in the other 45 jurisdictions | See the [state coverage map](./coverage-map.md) | Manual cards with deep links | Manual |
 
-**How web research sources are collected.** Sources from the research step arrive on two channels. When the research tool retrieves a page, the tool's platform records the link along with the page title and the exact passage it drew on. The research step also writes links inline in its notes; those links are collected as URL-only references, with nothing retrieved from the page. Both channels are combined, duplicate links are removed, the list is capped at 40 sources per report, and every link's authority class is assigned by code from the public class lists in this repository. The report's source list shows both kinds.
+**How web research sources are collected.** Sources from the research step arrive on two channels. When the research tool retrieves a page, the tool's platform records the link along with the page title and the exact passage it drew on. The research step also writes links inline in its notes; those links are collected as URL-only references, with nothing retrieved from the page. Both channels are combined, duplicate links are removed, the list is capped at 40 sources per report, and every link's authority class is assigned by code from the public class lists in this repository. The report's source list shows both kinds. A link that appears only in the research notes, with nothing retrieved from the page, is never used to verify a claim; at most it appears as an unconfirmed lead for the reader to check.
 
 ---
 

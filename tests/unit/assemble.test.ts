@@ -1,0 +1,201 @@
+/*
+  Tests for the customer-trace verification rule in report assembly.
+
+  The rule under test: a customer-trace row VERIFIES only when a class 1-2
+  citation ties the customer and the vendor together in retrieved content
+  (title / cited_text). The customer tie may instead come from the page
+  living on the customer's own site, but the vendor tie must always come
+  from retrieved content. URL strings alone never verify — a class 1-2 URL
+  that merely names the customer in its address becomes an unconfirmed lead
+  (COULD_NOT_VERIFY at MEDIUM with the link attached and a manual card).
+*/
+import { describe, expect, it } from "vitest";
+import { assemble, type AssembleInput } from "@shared/assemble.ts";
+import type { Citation, PitchExtract } from "@shared/schemas.ts";
+
+const AT = "2026-08-28T00:00:00.000Z";
+
+function cite(
+  url: string,
+  domain_class: 1 | 2 | 3 | 4,
+  title: string | null = null,
+  cited_text: string | null = null,
+): Citation {
+  return { url, title, cited_text, retrieved_at: AT, domain_class };
+}
+
+function extractWith(customers: string[]): PitchExtract {
+  return {
+    vendor_name_candidates: ["Acme AI"],
+    domains: ["acmeai.example.com"],
+    sender_email: null,
+    people: [],
+    named_customers: customers,
+    claims: customers.map((c, i) => ({
+      id: `clm-${i}`,
+      type: "customer" as const,
+      quote: `${c} uses our platform.`,
+      subject: c,
+    })),
+    use_case_description: "Resident service chatbot for local government.",
+    urgency_language: [],
+    state_mentioned: null,
+    injection_screen: {
+      injection_suspected: false,
+      addressed_to_ai: false,
+      suspicious_spans: [],
+    },
+  };
+}
+
+function input(customers: string[], citations: Citation[]): AssembleInput {
+  return {
+    extract: extractWith(customers),
+    checks: [],
+    identity: { identity_resolved: true, identifiers_found: ["co_sos", "edgar_fts"] },
+    citations,
+    adv_findings: [],
+    sector: { pack_ids: [], elevated: false, overlay_reason: null, state_items: [] },
+    packs: {},
+    resolvable: true,
+    generated_at: AT,
+  };
+}
+
+function customerRows(result: ReturnType<typeof assemble>) {
+  return result.ledger.filter((r) => r.methodology_ref === "d2-4");
+}
+
+describe("customer-trace verification: grounded rule", () => {
+  it("harvested URL-only .gov citation naming the customer becomes a lead, not VERIFIED", () => {
+    const out = assemble(
+      input(
+        ["Franklin County"],
+        [cite("https://www.franklincountyohio.gov/agenda/2026-03-acme-ai-pilot.pdf", 1)],
+      ),
+    );
+    const [row] = customerRows(out);
+    expect(row.result).toBe("COULD_NOT_VERIFY");
+    expect(row.severity).toBe("MEDIUM");
+    expect(row.sources).toHaveLength(1);
+    expect(row.sources[0].url).toContain("franklincountyohio.gov");
+    const leadCard = out.manualChecks.find((m) => m.id === "manual-customer-1");
+    expect(leadCard).toBeDefined();
+    expect(leadCard?.link).toContain("franklincountyohio.gov");
+    expect(out.tierInputs.green_dimensions).not.toContain("D2");
+    expect(out.tierInputs.startup_bar_met).toBe(false);
+  });
+
+  it("a .gov URL without the customer's tokens stays COULD_NOT_VERIFY at HIGH with no lead", () => {
+    const out = assemble(
+      input(["Franklin County"], [cite("https://www.usa.gov/some/unrelated/page", 1)]),
+    );
+    const [row] = customerRows(out);
+    expect(row.result).toBe("COULD_NOT_VERIFY");
+    expect(row.severity).toBe("HIGH");
+    expect(row.sources).toHaveLength(0);
+    expect(out.manualChecks.some((m) => m.id.startsWith("manual-customer"))).toBe(false);
+  });
+
+  it("class-2 press citation whose title names vendor and customer VERIFIES at T3", () => {
+    const out = assemble(
+      input(
+        ["Franklin County"],
+        [
+          cite(
+            "https://www.govtech.com/story",
+            2,
+            "Acme AI wins Franklin County contract",
+          ),
+        ],
+      ),
+    );
+    const [row] = customerRows(out);
+    expect(row.result).toBe("VERIFIED");
+    expect(row.evidence_tier).toBe("T3");
+    expect(out.tierInputs.green_dimensions).toContain("D2");
+    expect(out.tierInputs.startup_bar_met).toBe(true);
+  });
+
+  it("customer-host citation with cited_text naming the vendor VERIFIES at T1", () => {
+    const out = assemble(
+      input(
+        ["Franklin County"],
+        [
+          cite(
+            "https://franklincountyohio.gov/board/minutes",
+            1,
+            "Board minutes, March 2026",
+            "the board approved a service agreement with Acme AI",
+          ),
+        ],
+      ),
+    );
+    const [row] = customerRows(out);
+    expect(row.result).toBe("VERIFIED");
+    expect(row.evidence_tier).toBe("T1");
+  });
+
+  it("own-host regression: customer-site page that never names the vendor does NOT verify", () => {
+    const out = assemble(
+      input(
+        ["Franklin County"],
+        [
+          cite(
+            "https://franklincountyohio.gov/parks/schedule",
+            1,
+            "Parks and recreation schedule",
+            "summer hours for county parks",
+          ),
+        ],
+      ),
+    );
+    const [row] = customerRows(out);
+    expect(row.result).toBe("COULD_NOT_VERIFY");
+  });
+
+  it("class-3 vendor-controlled citation naming both parties never verifies", () => {
+    const out = assemble(
+      input(
+        ["Franklin County"],
+        [
+          cite(
+            "https://acmeai.example.com/case-studies",
+            3,
+            "Acme AI and Franklin County case study",
+            "Acme AI serves Franklin County",
+          ),
+        ],
+      ),
+    );
+    const [row] = customerRows(out);
+    expect(row.result).toBe("COULD_NOT_VERIFY");
+  });
+
+  it("zero verified customers still fires the aggregate D2 finding, noting leads when present", () => {
+    const out = assemble(
+      input(
+        ["Franklin County"],
+        [cite("https://www.franklincountyohio.gov/agenda/acme-ai.pdf", 1)],
+      ),
+    );
+    const finding = out.tierInputs.findings.find((f) => f.id === "customers");
+    expect(finding).toBeDefined();
+    expect(finding?.severity).toBe("HIGH");
+    expect(finding?.detail).toContain("manual checks");
+  });
+
+  it("lead cards cap at two and manual checks stay within the schema cap of eight", () => {
+    const customers = ["Franklin County", "Marion County", "Union County"];
+    const out = assemble(
+      input(customers, [
+        cite("https://franklincountyohio.gov/a/acme.pdf", 1),
+        cite("https://marioncounty.gov/b/acme.pdf", 1),
+        cite("https://unioncounty.gov/c/acme.pdf", 1),
+      ]),
+    );
+    const leads = out.manualChecks.filter((m) => m.id.startsWith("manual-customer"));
+    expect(leads).toHaveLength(2);
+    expect(out.manualChecks.length).toBeLessThanOrEqual(8);
+  });
+});

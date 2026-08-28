@@ -61,14 +61,38 @@ function tokensOf(s: string): string[] {
     .filter((t) => t.length > 2);
 }
 
-/* A citation "mentions" a subject when its title or cited_text contains a
-   majority of the subject's tokens. Deterministic and conservative. */
-function citationMentions(c: Citation, subject: string): boolean {
-  const hay = norm(`${c.title ?? ""} ${c.cited_text ?? ""} ${c.url}`);
+/* A haystack "covers" a subject when it contains a majority of the
+   subject's tokens. Deterministic and conservative. */
+function tokenMajority(hay: string, subject: string): boolean {
   const toks = tokensOf(subject);
   if (toks.length === 0) return false;
   const hits = toks.filter((t) => hay.includes(t)).length;
   return hits >= Math.max(1, Math.ceil(toks.length * 0.6));
+}
+
+/* Verification is grounded in retrieved content. contentMentions matches a
+   subject against what the search tool actually captured from a page (title
+   and quoted passage) — narrative-harvested links carry neither and can
+   never match. urlMentions matches against the URL string alone: enough to
+   surface a lead for manual confirmation, never enough to verify, because
+   nothing was fetched for a URL the research model merely wrote down.
+   hostCovers ties a citation to a customer when the page lives on the
+   customer's own site. */
+function contentMentions(c: Citation, subject: string): boolean {
+  if (c.title === null && c.cited_text === null) return false;
+  return tokenMajority(norm(`${c.title ?? ""} ${c.cited_text ?? ""}`), subject);
+}
+
+function urlMentions(url: string, subject: string): boolean {
+  return tokenMajority(norm(url), subject);
+}
+
+function hostCovers(url: string, subject: string): boolean {
+  try {
+    return tokenMajority(norm(new URL(url).hostname), subject);
+  } catch {
+    return false;
+  }
 }
 
 function find(checks: RegistryCheck[], id: string): RegistryCheck | undefined {
@@ -295,11 +319,22 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
   }
 
   /* Named-customer traces via research citations (deterministic over citation
-     metadata: only class 1-2 sources can verify). */
+     metadata: only class 1-2 sources can verify). A row VERIFIES only when
+     one citation ties the customer and the vendor together in retrieved
+     content: the customer tie may come from page content or from the page
+     living on the customer's own site; the vendor tie must come from page
+     content. A class 1-2 URL that merely names the customer in its address
+     becomes an unconfirmed lead: the row stays COULD_NOT_VERIFY at MEDIUM,
+     the link is attached, and a manual card offers one-click confirmation.
+     Leads never count as verified customers. */
   let verifiedCustomers = 0;
+  const leadCards: ManualCheck[] = [];
   for (const customer of extract.named_customers.slice(0, 8)) {
     const support = citations.find(
-      (c) => canVerify(c.domain_class) && citationMentions(c, customer),
+      (c) =>
+        canVerify(c.domain_class) &&
+        (contentMentions(c, customer) || hostCovers(c.url, customer)) &&
+        contentMentions(c, vendorName),
     );
     const claim = extract.claims.find(
       (c) => c.type === "customer" && c.subject && norm(c.subject) === norm(customer),
@@ -326,6 +361,9 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
         methodology_ref: "d2-4",
       });
     } else {
+      const lead = citations.find(
+        (c) => canVerify(c.domain_class) && urlMentions(c.url, customer),
+      );
       ledger.push({
         id: rowId(),
         dimension: "D2",
@@ -333,11 +371,30 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
         what_checked: `Public traces of the claimed customer relationship with ${customer}`,
         result: "COULD_NOT_VERIFY",
         evidence_tier: "T4",
-        severity: "HIGH",
-        sources: [],
+        severity: lead ? "MEDIUM" : "HIGH",
+        sources: lead
+          ? [{ url: lead.url, title: lead.title, retrieved_at: lead.retrieved_at }]
+          : [],
         note: "",
         methodology_ref: "d2-4",
       });
+      if (lead && leadCards.length < 2) {
+        leadCards.push({
+          id: `manual-customer-${leadCards.length + 1}`,
+          label: `Confirm the ${customer} page`.slice(0, 160),
+          instructions:
+            `Research surfaced an official page whose address mentions ${customer}, but the tool did not retrieve it. Open the link and check whether the page names ${vendorName}.`.slice(
+              0,
+              600,
+            ),
+          link: lead.url,
+          what_bad_looks_like:
+            `The page never names ${vendorName}, or it covers an unrelated topic.`.slice(
+              0,
+              400,
+            ),
+        });
+      }
     }
   }
   if (extract.named_customers.length > 0 && verifiedCustomers === 0) {
@@ -346,7 +403,10 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
       dimension: "D2",
       severity: "HIGH",
       resolved: false,
-      detail: `None of the ${extract.named_customers.length} named government customers left a public trace we could find.`,
+      detail:
+        leadCards.length > 0
+          ? `None of the ${extract.named_customers.length} named government customers could be verified in retrieved public records. Candidate pages on official sites are linked under manual checks for confirmation.`
+          : `None of the ${extract.named_customers.length} named government customers left a public trace we could find.`,
     });
   }
 
@@ -787,12 +847,14 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
     });
   }
 
+  manualChecks.push(...leadCards);
+
   return {
     tierInputs,
     ledger,
     greenFlagFacts,
     questions: finalQuestions,
     honesty,
-    manualChecks,
+    manualChecks: manualChecks.slice(0, 8),
   };
 }

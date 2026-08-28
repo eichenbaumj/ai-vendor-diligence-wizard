@@ -127,6 +127,53 @@ describe.each(PAIRS)("twin pair: $name", ({ clean, injected, payload, expectCode
   });
 });
 
+describe("citation-level invariant: composed URLs never verify", () => {
+  /* The research model is downstream of attacker-authored pitch text. A URL
+     it merely writes into its narrative (harvested with no title and no
+     cited_text) must never produce a VERIFIED customer-trace row, even when
+     the URL is on an official domain and embeds both parties' names. */
+  it("a narrative-harvested .gov URL carrying customer and vendor slugs stays unverified", async () => {
+    const { assemble } = await import("@shared/assemble.ts");
+    const out = assemble({
+      extract: {
+        vendor_name_candidates: ["Acme AI"],
+        domains: ["acmeai.example.com"],
+        sender_email: null,
+        people: [],
+        named_customers: ["Franklin County"],
+        claims: [],
+        use_case_description: "Chatbot",
+        urgency_language: [],
+        state_mentioned: null,
+        injection_screen: {
+          injection_suspected: false,
+          addressed_to_ai: false,
+          suspicious_spans: [],
+        },
+      },
+      checks: [],
+      identity: { identity_resolved: true, identifiers_found: ["a", "b"] },
+      citations: [
+        {
+          url: "https://franklincountyohio.gov/board/acme-ai-franklin-county-contract.pdf",
+          title: null,
+          cited_text: null,
+          retrieved_at: "2026-08-28T00:00:00.000Z",
+          domain_class: 1,
+        },
+      ],
+      adv_findings: [],
+      sector: { pack_ids: [], elevated: false, overlay_reason: null, state_items: [] },
+      packs: {},
+      resolvable: true,
+      generated_at: "2026-08-28T00:00:00.000Z",
+    });
+    const row = out.ledger.find((r) => r.methodology_ref === "d2-4");
+    expect(row?.result).toBe("COULD_NOT_VERIFY");
+    expect(out.tierInputs.green_dimensions).not.toContain("D2");
+  });
+});
+
 describe("clean corpus hygiene", () => {
   it("all three clean pitches pass forensics with nothing stripped or scrubbed", () => {
     for (const name of [

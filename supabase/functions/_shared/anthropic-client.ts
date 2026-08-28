@@ -302,49 +302,59 @@ export interface ResearchRunResult {
   continuations: number;
 }
 
-/* Run the S3 research request with the pause_turn loop: re-send paused
-   assistant content unmodified (byte-identical tools) up to maxContinuations
-   times, respecting an overall deadline. */
+/* Run the S3 research request as NON-STREAMING pause_turn cycles.
+
+   Why not one streamed turn: with server tools, a streamed turn never
+   pauses — the server keeps searching, filtering, and thinking for as long
+   as it likes, and the model writes its findings only at the end. Live-fire
+   runs showed 7+ minutes of tool blocks with zero narrative text, which no
+   edge-function wall clock survives. Non-streaming requests pause the
+   server-side sampling loop every ~10 iterations (stop_reason pause_turn)
+   and return the blocks generated so far, so the work arrives in bounded,
+   salvageable chunks: whatever cycles complete are kept even if a later
+   cycle times out.
+
+   Continuations re-send the paused assistant content unmodified with a
+   byte-identical tool array (also the prompt-cache-friendly shape). Content
+   is accumulated across cycles so citations and narrative written in any
+   cycle survive. */
 export async function runResearchLoop(
   initial: AnthropicRequestBody,
   opts: CallOpts & { deadlineMs: number; maxContinuations?: number },
 ): Promise<ResearchRunResult> {
   const start = Date.now();
-  const maxCont = opts.maxContinuations ?? 4;
+  const maxCont = opts.maxContinuations ?? 12;
   let req = initial;
   let usage = ZERO_USAGE;
   let continuations = 0;
-  let content: ContentBlock[] = [];
+  const allContent: ContentBlock[] = [];
 
   for (;;) {
     const remaining = opts.deadlineMs - (Date.now() - start);
-    if (remaining < 10_000) {
-      return { ...collect(content), partial: true, usage, continuations };
+    if (remaining < 15_000) {
+      return { ...collect(allContent), partial: true, usage, continuations };
     }
-    /* Streaming: no total-time ceiling on the turn itself — only an idle
-       timeout (bytes flow every few seconds during a healthy search loop)
-       and the overall stage deadline. */
-    const res = await streamAnthropic(req, {
+    /* A cycle is ~10 server iterations; give it generous room but never the
+       whole deadline, so one slow cycle cannot erase earlier cycles' work. */
+    const res = await callAnthropic(req, {
       ...opts,
-      idleTimeoutMs: Math.min(90_000, remaining),
-      deadlineMs: remaining,
+      timeoutMs: Math.min(180_000, remaining - 5_000),
     });
     usage = addUsage(usage, res.usage);
     if (!res.ok) {
-      /* Research failure is survivable, and a deadline abort mid-stream still
-         carries salvaged findings: degrade to a partial report, never an
-         empty one. */
-      if (res.content && res.content.length > 0) content = res.content;
-      return { ...collect(content), partial: true, usage, continuations };
+      /* Research failure is survivable: return what earlier cycles produced
+         and degrade to a partial report, never an empty one. */
+      return { ...collect(allContent), partial: true, usage, continuations };
     }
-    content = res.content ?? [];
+    const cycleContent = res.content ?? [];
+    allContent.push(...cycleContent);
     if (res.stop_reason === "pause_turn" && continuations < maxCont) {
       continuations += 1;
-      req = buildResearchContinuation(req, content);
+      req = buildResearchContinuation(req, cycleContent);
       continue;
     }
     return {
-      ...collect(content),
+      ...collect(allContent),
       partial: res.stop_reason === "pause_turn",
       usage,
       continuations,

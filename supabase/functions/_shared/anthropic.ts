@@ -207,17 +207,24 @@ export function buildExtractRequest(
 }
 
 /* The S3 tool array — constructed once per request and reused byte-identical
-   across pause_turn continuations. */
+   across pause_turn continuations.
+
+   Deliberately the BASIC search/fetch variants, not the dynamic-filtering
+   ones: dynamic filtering runs free server-side code execution between
+   searches, and live-fire runs showed that loop consuming the entire
+   400s function wall clock (7+ minutes of tool blocks, narrative never
+   written). The basic variants keep each search a simple search, which is
+   what a hard-deadlined pipeline can actually afford. */
 export function researchTools(): unknown[] {
   return [
     {
-      type: "web_search_20260318",
+      type: "web_search_20250305",
       name: "web_search",
       max_uses: 12,
       blocked_domains: BLOCKED_SEARCH_DOMAINS,
     },
     {
-      type: "web_fetch_20260318",
+      type: "web_fetch_20250910",
       name: "web_fetch",
       max_uses: 6,
       citations: { enabled: true },
@@ -230,6 +237,12 @@ export function buildResearchRequest(input: S3UserInput): AnthropicRequestBody {
   return {
     model: MODELS.research,
     max_tokens: 8192,
+    /* Research is mechanical evidence-gathering: verdicts are computed in
+       code and the synthesis stage writes the report. Medium effort keeps
+       the search loop moving (fewer, more consolidated thinking pauses
+       between tool calls) — at default effort, live runs spiraled in
+       thinking + result-filtering and never wrote their findings. */
+    output_config: { effort: "medium" },
     system: [
       {
         type: "text",

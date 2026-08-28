@@ -1,11 +1,14 @@
 /*
   The input page: paste the pitch, pick your state, run the check.
 */
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { PillButton, Section } from "@/components/brand";
 import { StateSelect } from "@/components/input/StateSelect";
-import { TurnstileWidget } from "@/components/input/TurnstileWidget";
+import {
+  TurnstileWidget,
+  type TurnstileHandle,
+} from "@/components/input/TurnstileWidget";
 import { ApiError, evaluate } from "@/lib/api";
 import { IS_MOCK } from "@/lib/config";
 import {
@@ -32,7 +35,11 @@ export default function Check() {
   const [vendorName, setVendorName] = useState("");
   const [stateCode, setStateCode] = useState("");
   const [sampleId, setSampleId] = useState<SampleId | undefined>(undefined);
-  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  /* The token lives in a ref, not state: nothing renders from it, and the
+     completion callback arriving seconds after load must not re-render the
+     page mid-interaction. */
+  const turnstileTokenRef = useRef<string | null>(null);
+  const turnstileRef = useRef<TurnstileHandle>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<{ message: string; hint: string | null } | null>(null);
 
@@ -84,11 +91,15 @@ export default function Check() {
         input_kind: isName ? "name" : "paste",
         content: value,
         state: stateCode || null,
-        turnstile_token: turnstileToken,
+        turnstile_token: turnstileTokenRef.current,
         sampleId,
       });
       navigate(`/r/${res.evaluation_id}`);
     } catch (e) {
+      /* Turnstile tokens are single-use and the server consumed this one
+         even though the request failed; reset for a fresh token before the
+         user retries. */
+      turnstileRef.current?.reset();
       if (e instanceof ApiError) {
         setError({ message: e.message, hint: e.retryHint });
       } else {
@@ -237,7 +248,12 @@ export default function Check() {
               )}
             </div>
 
-          <TurnstileWidget onToken={setTurnstileToken} />
+          <TurnstileWidget
+            ref={turnstileRef}
+            onToken={(t) => {
+              turnstileTokenRef.current = t;
+            }}
+          />
         </div>
       </Section>
     </div>

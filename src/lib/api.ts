@@ -3,6 +3,7 @@
   every call routes to the in-browser driver in mock.ts.
 */
 import { FUNCTIONS_BASE, IS_MOCK, SUPABASE_ANON_KEY } from "@/lib/config";
+import { mapApiError, type ApiSurface } from "@/lib/api-errors";
 import type {
   EvaluateRequest,
   EvaluateResponse,
@@ -54,6 +55,21 @@ export class ApiError extends Error {
   }
 }
 
+async function throwMapped(res: Response, surface: ApiSurface): Promise<never> {
+  const data = (await res.json().catch(() => ({}))) as {
+    error?: string;
+    retry_hint?: string;
+    detail?: string;
+  };
+  const friendly = mapApiError({
+    status: res.status,
+    code: data.error ?? null,
+    retryHint: data.retry_hint ?? data.detail ?? null,
+    surface,
+  });
+  throw new ApiError(res.status, friendly.headline, friendly.hint);
+}
+
 function baseHeaders(): Record<string, string> {
   return {
     "Content-Type": "application/json",
@@ -101,27 +117,7 @@ export async function evaluate(params: {
     body: JSON.stringify(body),
   });
 
-  if (res.status === 429) {
-    const data = (await res.json().catch(() => ({}))) as {
-      error?: string;
-      retry_hint?: string;
-    };
-    throw new ApiError(
-      429,
-      data.error ?? "Too many checks right now.",
-      data.retry_hint ?? "Please wait a minute and try again.",
-    );
-  }
-  if (res.status === 503) {
-    throw new ApiError(
-      503,
-      "The service is at capacity right now.",
-      "Please try again in a few minutes.",
-    );
-  }
-  if (!res.ok) {
-    throw new ApiError(res.status, `The check could not start (error ${res.status}).`);
-  }
+  if (!res.ok) await throwMapped(res, "evaluate");
   return (await res.json()) as EvaluateResponse;
 }
 
@@ -143,9 +139,7 @@ export async function getEvaluation(id: string): Promise<GetEvaluationResponse> 
   if (res.status === 404) {
     throw new ApiError(404, "We could not find that check. It may have expired.");
   }
-  if (!res.ok) {
-    throw new ApiError(res.status, `Could not load the check (error ${res.status}).`);
-  }
+  if (!res.ok) await throwMapped(res, "get-evaluation");
   return (await res.json()) as GetEvaluationResponse;
 }
 
@@ -199,11 +193,9 @@ export async function streamChat(
   if (res.status === 404 || res.status === 503) {
     throw new ChatUnavailableError();
   }
-  if (res.status === 429) {
-    throw new ApiError(429, "You have used all the questions for this report.");
-  }
-  if (!res.ok || !res.body) {
-    throw new ApiError(res.status, `Chat is not responding (error ${res.status}).`);
+  if (!res.ok) await throwMapped(res, "chat");
+  if (!res.body) {
+    throw new ApiError(res.status, "The answer did not come through.", "Please ask again in a moment.");
   }
 
   const sessionId = res.headers.get("x-session-id");

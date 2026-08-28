@@ -1,12 +1,14 @@
 /*
   Cloudflare Turnstile widget (non-interactive mode: a brief automatic check,
   no puzzles). Loads the script once, renders the widget, and hands tokens to
-  the parent. Tokens are single-use and expire after ~5 minutes; Turnstile
-  auto-refreshes expired tokens and we clear the stale one meanwhile.
+  the parent. Tokens are single-use and are consumed by server verification
+  even when the request later fails, so the parent gets a reset handle: call
+  reset() after any failed submit to drop the burned token and start a fresh
+  check; the widget then delivers a new token through onToken.
 
   Renders nothing when no site key is configured (mock mode / bare local dev).
 */
-import { useEffect, useRef } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 import { TURNSTILE_SITE_KEY } from "@/lib/config";
 
 declare global {
@@ -24,6 +26,7 @@ declare global {
         },
       ) => string;
       remove: (widgetId: string) => void;
+      reset: (widgetId?: string) => void;
     };
   }
 }
@@ -50,15 +53,36 @@ function loadScript(): Promise<void> {
   return scriptPromise;
 }
 
-export function TurnstileWidget({
-  onToken,
-}: {
-  onToken?: (token: string | null) => void;
-}) {
+export interface TurnstileHandle {
+  reset: () => void;
+}
+
+export const TurnstileWidget = forwardRef<
+  TurnstileHandle,
+  { onToken?: (token: string | null) => void }
+>(function TurnstileWidget({ onToken }, ref) {
   const containerRef = useRef<HTMLDivElement>(null);
   const widgetIdRef = useRef<string | null>(null);
   const onTokenRef = useRef(onToken);
-  onTokenRef.current = onToken;
+  useEffect(() => {
+    onTokenRef.current = onToken;
+  });
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      reset() {
+        /* Drop the stale token first, unconditionally: even when the script
+           is blocked and there is no widget, the parent must not resend a
+           consumed token. */
+        onTokenRef.current?.(null);
+        if (widgetIdRef.current && window.turnstile?.reset) {
+          window.turnstile.reset(widgetIdRef.current);
+        }
+      },
+    }),
+    [],
+  );
 
   useEffect(() => {
     if (!TURNSTILE_SITE_KEY) return;
@@ -91,7 +115,7 @@ export function TurnstileWidget({
 
   if (!TURNSTILE_SITE_KEY) return null;
   return <div ref={containerRef} className="mt-4 min-h-[65px] no-print" />;
-}
+});
 
 /* Back-compat alias for existing imports. */
 export { TurnstileWidget as TurnstilePlaceholder };

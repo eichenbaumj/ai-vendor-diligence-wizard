@@ -69,7 +69,7 @@ export function ReportChat({ evaluationId }: { evaluationId: string }) {
       if (e instanceof ChatUnavailableError) {
         setUnavailable(true);
       } else if (e instanceof ApiError) {
-        setError(e.message);
+        setError(e.retryHint ? `${e.message} ${e.retryHint}` : e.message);
         if (e.status === 429) setTurnsRemaining(0);
       } else {
         setError("Something went wrong. Please try again.");

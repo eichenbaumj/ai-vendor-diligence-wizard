@@ -152,7 +152,7 @@ function ReportView({
   );
 }
 
-function InsufficientView() {
+function InsufficientView({ reason }: { reason?: string | null }) {
   return (
     <div>
       <Section tone="cream">
@@ -163,6 +163,9 @@ function InsufficientView() {
           <h1 className="mt-5 font-serif text-4xl font-black leading-tight sm:text-5xl">
             We could not complete an evaluation.
           </h1>
+          {reason ? (
+            <p className="mt-4 max-w-xl text-lg leading-relaxed">{reason}</p>
+          ) : null}
           <p className="mt-4 max-w-xl text-lg leading-relaxed">
             This is not a negative finding. The material did not contain
             enough for us to research: we need a company we can resolve to a
@@ -230,7 +233,7 @@ export default function Evaluation() {
   if (state.status === "error" || (!id && state.report === null)) {
     body = <ErrorView message={state.error} />;
   } else if (state.status === "insufficient") {
-    body = <InsufficientView />;
+    body = <InsufficientView reason={state.error} />;
   } else if (state.status === "complete" && state.report) {
     body = (
       <ReportView

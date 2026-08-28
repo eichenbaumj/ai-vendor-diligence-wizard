@@ -183,7 +183,10 @@ export function useEvaluation(id: string | undefined): EvaluationState {
       events: merged,
       report: query.data?.report ?? null,
       disputed: query.data?.disputed ?? false,
-      error: null,
+      /* The stored error column is human copy only for insufficient
+         outcomes; for status "error" it holds raw exception text. */
+      error:
+        query.data?.status === "insufficient" ? (query.data.error ?? null) : null,
       mockCustom: query.data?.mock_custom ?? false,
     };
   }, [useMockPath, mockSnapshot, mockMissing, query.data, query.isError, query.error, liveEvents]);

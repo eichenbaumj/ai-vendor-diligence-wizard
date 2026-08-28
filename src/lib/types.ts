@@ -51,6 +51,10 @@ export interface GetEvaluationResponse {
   events: StoredEvent[];
   report: Report | null;
   disputed: boolean;
+  /* Human-readable reason recorded for insufficient outcomes. The same
+     column stores raw exception text for status "error"; only render it
+     for "insufficient". */
+  error?: string | null;
   /* Preview builds only: the user pasted their own pitch but the live engine
      is not connected, so a sample report is shown instead. */
   mock_custom?: boolean;

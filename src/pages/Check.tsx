@@ -7,6 +7,7 @@ import { PillButton, Section } from "@/components/brand";
 import { StateSelect } from "@/components/input/StateSelect";
 import { TurnstilePlaceholder } from "@/components/input/TurnstilePlaceholder";
 import { ApiError, evaluate } from "@/lib/api";
+import { IS_MOCK } from "@/lib/config";
 import {
   SAMPLE_PITCHES,
   getSamplePitch,
@@ -226,6 +227,14 @@ export default function Check() {
               >
                 {submitting ? "Starting the check…" : "Run the check"}
               </PillButton>
+              {IS_MOCK && (
+                <p className="mt-3 max-w-xl text-sm text-brand-charcoal-soft">
+                  Preview build: the live research engine is not connected yet.
+                  Submissions replay a sample report about a fictional vendor
+                  so you can see the format. The three sample buttons above
+                  show all three verdict shapes.
+                </p>
+              )}
             </div>
 
           <TurnstilePlaceholder onToken={setTurnstileToken} />

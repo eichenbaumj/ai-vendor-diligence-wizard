@@ -92,13 +92,25 @@ function ReportView({
   report,
   disputed,
   evaluationId,
+  mockCustom = false,
 }: {
   report: Report;
   disputed: boolean;
   evaluationId: string;
+  mockCustom?: boolean;
 }) {
   return (
     <div className="bg-white">
+      {mockCustom && (
+        <div className="border-b border-status-warn bg-status-warn-soft px-5 py-4 sm:px-8">
+          <p className="mx-auto max-w-5xl text-sm font-medium text-brand-charcoal">
+            <span className="font-bold">Preview build.</span> The live research
+            engine is not connected yet, so your pasted pitch was not
+            evaluated. What follows is a sample report about a fictional
+            vendor, shown so you can see what a real report looks like.
+          </p>
+        </div>
+      )}
       <DisclaimerHeader report={report} />
       <VerdictHero report={report} disputed={disputed} />
 
@@ -225,6 +237,7 @@ export default function Evaluation() {
         report={state.report}
         disputed={state.disputed}
         evaluationId={id ?? ""}
+        mockCustom={state.mockCustom}
       />
     );
   } else {

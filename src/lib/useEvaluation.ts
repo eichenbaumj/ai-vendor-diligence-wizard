@@ -130,6 +130,7 @@ export function useEvaluation(id: string | undefined): EvaluationState {
           report: null,
           disputed: false,
           error: "We could not find that check. It may have expired. Start a new one from the check page.",
+          mockCustom: false,
         };
       }
       if (!mockSnapshot) {
@@ -139,9 +140,17 @@ export function useEvaluation(id: string | undefined): EvaluationState {
           report: null,
           disputed: false,
           error: null,
+          mockCustom: false,
         };
       }
-      return { ...mockSnapshot, error: null };
+      return {
+        status: mockSnapshot.status,
+        events: mockSnapshot.events,
+        report: mockSnapshot.report,
+        disputed: mockSnapshot.disputed,
+        error: null,
+        mockCustom: mockSnapshot.mock_custom ?? false,
+      };
     }
 
     if (query.isError) {
@@ -150,6 +159,7 @@ export function useEvaluation(id: string | undefined): EvaluationState {
         events: [],
         report: null,
         disputed: false,
+        mockCustom: false,
         error:
           query.error instanceof Error
             ? query.error.message
@@ -174,6 +184,7 @@ export function useEvaluation(id: string | undefined): EvaluationState {
       report: query.data?.report ?? null,
       disputed: query.data?.disputed ?? false,
       error: null,
+      mockCustom: query.data?.mock_custom ?? false,
     };
   }, [useMockPath, mockSnapshot, mockMissing, query.data, query.isError, query.error, liveEvents]);
 }

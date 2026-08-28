@@ -302,18 +302,19 @@ const TIMELINES: Record<SampleId, () => TimelineEntry[]> = {
 
 const COMPLETE_AT = 45500;
 
-function pickSample(content: string): SampleId {
+function pickSample(content: string): { id: SampleId; matched: boolean } {
   const trimmed = content.trim();
   for (const pitch of SAMPLE_PITCHES) {
-    if (trimmed === pitch.text.trim()) return pitch.id;
+    if (trimmed === pitch.text.trim()) return { id: pitch.id, matched: true };
   }
   const lower = trimmed.toLowerCase();
-  if (lower.includes("swiftgov")) return "swiftgov";
-  if (lower.includes("claradocs")) return "claradocs";
-  if (lower.includes("meridian")) return "meridian";
-  /* Unrecognized custom input in mock mode: replay the established-vendor
-     sample so the full experience is still demonstrable. */
-  return "meridian";
+  if (lower.includes("swiftgov")) return { id: "swiftgov", matched: true };
+  if (lower.includes("claradocs")) return { id: "claradocs", matched: true };
+  if (lower.includes("meridian")) return { id: "meridian", matched: true };
+  /* Unrecognized custom input in mock mode: the live engine is not connected,
+     so we replay the established-vendor sample AND flag the run so the UI
+     says plainly that the user's own pitch was not evaluated. */
+  return { id: "meridian", matched: false };
 }
 
 export function startMockEvaluation(opts: {
@@ -321,9 +322,12 @@ export function startMockEvaluation(opts: {
   content: string;
 }): string {
   restoreRuns();
-  const sampleId = opts.sampleId ?? pickSample(opts.content);
-  const id = `mock-${sampleId}-${crypto.randomUUID()}`;
-  runs.set(id, { id, sampleId, startedAt: Date.now() });
+  const picked = opts.sampleId
+    ? { id: opts.sampleId, matched: true }
+    : pickSample(opts.content);
+  const custom = !picked.matched;
+  const id = `mock-${picked.id}-${custom ? "custom-" : ""}${crypto.randomUUID()}`;
+  runs.set(id, { id, sampleId: picked.id, startedAt: Date.now() });
   persistRuns();
   return id;
 }
@@ -373,7 +377,13 @@ export function getMockEvaluation(id: string): GetEvaluationResponse | null {
   const report: Report | null =
     status === "complete" ? getSampleReport(run.sampleId) : null;
 
-  return { status, events, report, disputed: false };
+  return {
+    status,
+    events,
+    report,
+    disputed: false,
+    mock_custom: id.includes("-custom-"),
+  };
 }
 
 export function isMockEvaluationId(id: string): boolean {

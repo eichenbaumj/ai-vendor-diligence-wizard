@@ -149,7 +149,8 @@ h4,
 h5 {
   font-family: var(--font-serif);
   letter-spacing: -0.015em;
-  color: var(--color-brand-ink);
+  /* Dark color-blocked sections set --heading-color: #fff on their wrapper. */
+  color: var(--heading-color, var(--color-brand-ink));
 }
 
 button {

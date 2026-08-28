@@ -22,11 +22,10 @@ export interface SectionProps {
 */
 const TONES: Record<SectionTone, string> = {
   cream: "bg-brand-cream text-brand-charcoal",
-  cobalt:
-    "bg-brand-cobalt text-white [&_:is(h1,h2,h3,h4,h5)]:text-white",
+  cobalt: "bg-brand-cobalt text-white [--heading-color:#fff]",
   tint: "bg-brand-cobalt-50 text-brand-charcoal",
   vellum: "bg-brand-vellum text-brand-charcoal",
-  ink: "bg-brand-ink text-brand-vellum [&_:is(h1,h2,h3,h4,h5)]:text-white",
+  ink: "bg-brand-ink text-brand-vellum [--heading-color:#fff]",
   white: "bg-white text-brand-charcoal",
 };
 

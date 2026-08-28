@@ -51,6 +51,9 @@ export interface GetEvaluationResponse {
   events: StoredEvent[];
   report: Report | null;
   disputed: boolean;
+  /* Preview builds only: the user pasted their own pitch but the live engine
+     is not connected, so a sample report is shown instead. */
+  mock_custom?: boolean;
 }
 
 /* Response of POST /evaluate. */
@@ -76,6 +79,7 @@ export interface EvaluationState {
   report: Report | null;
   disputed: boolean;
   error: string | null;
+  mockCustom: boolean;
 }
 
 export interface ChatMessage {

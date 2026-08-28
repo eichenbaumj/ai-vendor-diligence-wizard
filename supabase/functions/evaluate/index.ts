@@ -42,7 +42,7 @@ import {
 } from "../_shared/schemas.ts";
 import { computeTier } from "../_shared/tier.ts";
 import { assemble } from "../_shared/assemble.ts";
-import { lintObject, lintText } from "../_shared/lint.ts";
+import { lintObject, lintText, looseText, tidyProse } from "../_shared/lint.ts";
 import { harvestCitations } from "../_shared/harvest.ts";
 import { detectPlantedCorroboration } from "../_shared/adv-corroboration.ts";
 import { PACKS, PACK_RELEASE } from "../_shared/packs.gen.ts";
@@ -308,6 +308,18 @@ async function runPipeline(
       return;
     }
     extract = validated.data;
+    /* Verbatim guards: the extractor sometimes misremembers a name or a
+       quote ("Sarasun" for "Sarasota"), and a wrong name drives wrong
+       searches and a mislabeled ledger row, while a drifted quote breaks
+       the promise that claims are quoted verbatim. Keep only customers and
+       claim quotes that actually appear in the pitch text. */
+    const pitchLoose = looseText(pitchText);
+    extract.named_customers = extract.named_customers.filter((c) =>
+      pitchLoose.includes(looseText(c)),
+    );
+    extract.claims = extract.claims.filter((c) =>
+      pitchLoose.includes(looseText(c.quote)),
+    );
   }
 
   const vendorName = extract.vendor_name_candidates[0] ?? pitchText.slice(0, 60);
@@ -602,12 +614,15 @@ async function runPipeline(
   stageUsage.s5 = narrative.usage;
 
   /* Compose the report. */
-  const ledger = skeleton.ledger.map((r) => ({
-    ...r,
-    note:
-      narrative.value?.row_notes.find((n) => n.id === r.id)?.note.slice(0, 700) ??
-      fallbackNote(r.result, r.what_checked, r.sources[0]?.title ?? null),
-  }));
+  const ledger = skeleton.ledger.map((r) => {
+    const modelNote = narrative.value?.row_notes.find((n) => n.id === r.id)?.note;
+    return {
+      ...r,
+      note: modelNote
+        ? tidyProse(modelNote, 700)
+        : fallbackNote(r.result, r.what_checked, r.sources[0]?.title ?? null),
+    };
+  });
 
   const allowedUrls = new Set<string>([
     ...checks.flatMap((c) => (c.evidence_url ? [c.evidence_url] : [])),
@@ -623,7 +638,7 @@ async function runPipeline(
       tier: decision.tier,
       label: decision.label,
       summary:
-        (narrative.value?.verdict_summary ?? "").slice(0, 600) ||
+        tidyProse(narrative.value?.verdict_summary ?? "", 600) ||
         defaultSummary(decision.tier),
       checks_met: decision.checks_met,
       rationale: decision.rationale.slice(0, 8).map((r) => r.slice(0, 400)),
@@ -633,14 +648,14 @@ async function runPipeline(
       (g) => `${g.fact} (${g.source_name}, checked ${g.date})`,
     ))
       .slice(0, 15)
-      .map((g) => g.slice(0, 400)),
+      .map((g) => tidyProse(g, 400)),
     adv_findings: adv.slice(0, 6),
     honesty_panel: skeleton.honesty,
     questions: skeleton.questions,
     manual_checks: skeleton.manualChecks,
     next_steps: (narrative.value?.next_steps ?? defaultNextSteps(decision.tier))
       .slice(0, 8)
-      .map((s) => s.slice(0, 500)),
+      .map((s) => tidyProse(s, 500)),
     sector,
     sources: firewallSources(
       citations.map((c) => ({ url: c.url, title: c.title, retrieved_at: c.retrieved_at })),
@@ -693,7 +708,7 @@ async function runPipeline(
         } else if (issue.target_row_id && issue.replacement_note) {
           const row = report.ledger.find((r) => r.id === issue.target_row_id);
           if (row && lintText(issue.replacement_note).filter((v) => v.kind === "banned").length === 0) {
-            row.note = issue.replacement_note.slice(0, 700);
+            row.note = tidyProse(issue.replacement_note, 700);
             adjustments.push(`Tightened language (${issue.kind}): ${issue.explanation.slice(0, 120)}`);
           }
         }
@@ -702,7 +717,7 @@ async function runPipeline(
         review.verdict_summary_rewrite &&
         lintText(review.verdict_summary_rewrite).filter((v) => v.kind === "banned").length === 0
       ) {
-        report.verdict.summary = review.verdict_summary_rewrite.slice(0, 600);
+        report.verdict.summary = tidyProse(review.verdict_summary_rewrite, 600);
         adjustments.push("Rewrote the summary for accuracy");
       }
       report.review = { reviewed: true, model: MODELS.review, adjustments: adjustments.slice(0, 10) };

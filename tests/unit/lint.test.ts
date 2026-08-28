@@ -8,7 +8,7 @@
   loose match).
 */
 import { describe, expect, it } from "vitest";
-import { lintObject, lintText } from "@shared/lint.ts";
+import {lintObject, lintText, looseText, stripEmDashes, tidyProse } from "@shared/lint.ts";
 
 describe("lintText: every banned pattern fires", () => {
   const bannedCases: [sample: string, label: string][] = [
@@ -205,5 +205,37 @@ describe("lintObject", () => {
     /* A field named check_id is still prose-linted. */
     const violations = lintObject({ check_id: "a bogus check" });
     expect(violations.map((v) => v.label)).toContain("bogus");
+  });
+});
+
+describe("prose hygiene helpers", () => {
+  it("stripEmDashes rewrites em dashes as comma joins", () => {
+    expect(stripEmDashes("numbers—50% reduction—that we could not verify")).toBe(
+      "numbers, 50% reduction, that we could not verify",
+    );
+  });
+
+  it("tidyProse never ships a fragment: trims to the last complete sentence", () => {
+    const cut = "We found records. Ask the vendor in writing to provide the basis";
+    expect(tidyProse(cut, 600)).toBe("We found records.");
+  });
+
+  it("tidyProse leaves complete prose alone", () => {
+    expect(tidyProse("All checks passed. See the ledger below.", 600)).toBe(
+      "All checks passed. See the ledger below.",
+    );
+  });
+
+  it("tidyProse caps overlong prose at a sentence boundary", () => {
+    const s = "First sentence here. ".repeat(40);
+    const out = tidyProse(s, 200);
+    expect(out.length).toBeLessThanOrEqual(200);
+    expect(out.endsWith(".")).toBe(true);
+  });
+
+  it("looseText containment catches misremembered names", () => {
+    const pitch = looseText("customers include Sarasota County, FL, and others");
+    expect(pitch.includes(looseText("Sarasota County, FL"))).toBe(true);
+    expect(pitch.includes(looseText("Sarasun County, FL"))).toBe(false);
   });
 });

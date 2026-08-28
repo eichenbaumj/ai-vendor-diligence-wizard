@@ -106,3 +106,42 @@ function excerptAround(text: string, index: number): string {
   const start = Math.max(0, index - 40);
   return text.slice(start, index + 60).replace(/\s+/g, " ").trim();
 }
+
+/* ------------------------------------------------------ prose hygiene */
+
+/* House style forbids em dashes in client-facing prose. Model output is
+   asked not to use them, but enforcement is deterministic: rewrite them as
+   comma joins on the way out. */
+export function stripEmDashes(s: string): string {
+  return s
+    .replace(/\s*—\s*/g, ", ")
+    .replace(/,\s*,/g, ", ")
+    .replace(/\s+,/g, ",");
+}
+
+/* Cap model prose without ever shipping a sentence cut off mid-thought:
+   schema maxLength constraints make constrained decoding stop at the cap,
+   so a hard slice ends reports with fragments like "...and the basis". Trim
+   to the cap, then back to the last complete sentence when the text does
+   not end on terminal punctuation. */
+export function tidyProse(s: string, max: number): string {
+  let out = stripEmDashes(s).trim();
+  if (out.length > max) out = out.slice(0, max);
+  if (!/[.!?]["')\]]?$/.test(out)) {
+    let cut = -1;
+    for (const m of out.matchAll(/[.!?]["')\]]?(?=\s|$)/g)) {
+      cut = m.index + m[0].length;
+    }
+    /* Any complete sentence beats a fragment; leave untouched only when
+       there is no sentence boundary to trim to. */
+    if (cut > 0) out = out.slice(0, cut);
+  }
+  return out.trim();
+}
+
+/* Loose textual containment for verbatim guards: compares letters and
+   digits only, so punctuation and whitespace drift do not matter but a
+   misremembered name ("Sarasun" for "Sarasota") fails. */
+export function looseText(s: string): string {
+  return s.toLowerCase().replace(/[^a-z0-9]/g, "");
+}

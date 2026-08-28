@@ -73,7 +73,7 @@ describe("checkSamEntity", () => {
   it("returns a hit with UEI on an exact match", async () => {
     const check = await checkSamEntity(
       { companyNames: ["GovAssist AI, Inc."] },
-      ctxWith(makeFetch([{ match: "entity-information/v1-4", body: entityHit }])),
+      ctxWith(makeFetch([{ match: "entity-information/v3", body: entityHit }])),
     );
     RegistryCheck.parse(check);
     expect(check.status).toBe("hit");
@@ -86,7 +86,7 @@ describe("checkSamEntity", () => {
   it("frames a definitive miss as normal for state/local vendors", async () => {
     const check = await checkSamEntity(
       { companyNames: ["GovAssist AI"] },
-      ctxWith(makeFetch([{ match: "entity-information/v1-4", body: entityEmpty }])),
+      ctxWith(makeFetch([{ match: "entity-information/v3", body: entityEmpty }])),
     );
     RegistryCheck.parse(check);
     expect(check.status).toBe("definitive_miss");
@@ -120,7 +120,7 @@ describe("checkSamEntity", () => {
   it("rejects SPV-style records instead of matching them", async () => {
     const check = await checkSamEntity(
       { companyNames: ["GovAssist AI"] },
-      ctxWith(makeFetch([{ match: "entity-information/v1-4", body: entitySpv }])),
+      ctxWith(makeFetch([{ match: "entity-information/v3", body: entitySpv }])),
     );
     RegistryCheck.parse(check);
     expect(check.status).toBe("definitive_miss");
@@ -192,11 +192,11 @@ describe("copy safety", () => {
     const checks = await Promise.all([
       checkSamEntity(
         { companyNames: ["GovAssist AI, Inc."] },
-        ctxWith(makeFetch([{ match: "entity-information/v1-4", body: entityHit }])),
+        ctxWith(makeFetch([{ match: "entity-information/v3", body: entityHit }])),
       ),
       checkSamEntity(
         { companyNames: ["GovAssist AI"] },
-        ctxWith(makeFetch([{ match: "entity-information/v1-4", body: entityEmpty }])),
+        ctxWith(makeFetch([{ match: "entity-information/v3", body: entityEmpty }])),
       ),
       checkSamEntity({ companyNames: ["GovAssist AI"] }, ctxWith(failingFetch)),
       checkSamEntity({ companyNames: ["GovAssist AI"] }, { now: NOW, fetchFn: failingFetch }),

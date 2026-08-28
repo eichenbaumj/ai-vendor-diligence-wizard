@@ -207,7 +207,9 @@ export function firstString(
 
 /* ------------------------------------------------------- SAM entity check */
 
-const SAM_ENTITY_URL = "https://api.sam.gov/entity-information/v1-4/entities";
+/* GSA docs write the version as "v[1-4]" shorthand; the literal segment is a
+   real version number. v3 is the widely documented stable version. */
+const SAM_ENTITY_URL = "https://api.sam.gov/entity-information/v3/entities";
 const SAM_EXCLUSIONS_URL = "https://api.sam.gov/entity-information/v4/exclusions";
 const SAM_SEARCH_HUMAN = "https://sam.gov/search/";
 const SAM_EXCLUSIONS_HUMAN = "https://sam.gov/search/?index=ex";

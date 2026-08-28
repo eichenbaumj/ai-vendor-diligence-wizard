@@ -16,7 +16,7 @@ export function NextSteps({ steps }: { steps: string[] }) {
           <li key={s} className="flex items-baseline gap-3">
             <span
               aria-hidden="true"
-              className="font-serif text-lg font-black text-brand-cobalt"
+              className="font-serif text-lg font-bold text-brand-cobalt"
             >
               {i + 1}
             </span>

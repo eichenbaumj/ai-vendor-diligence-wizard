@@ -72,7 +72,10 @@ export default function Landing() {
       <Section tone="cobalt" className="relative overflow-hidden">
         <DotField className="pointer-events-none absolute inset-0 text-white" />
         <div className="relative max-w-4xl">
-          <h1 className="font-serif text-[clamp(2.75rem,6.5vw,5.5rem)] font-black leading-[1.02] tracking-tight">
+          <p className="font-sans text-sm font-bold tracking-[0.14em] [font-variant-caps:all-small-caps] text-white/85">
+            Free and open source · For public agencies
+          </p>
+          <h1 className="mt-4 font-serif text-[clamp(2.5rem,5vw,4.25rem)] font-bold leading-[1.06] tracking-tight">
             Got an AI vendor pitch? Check it before you spend an hour on it.
           </h1>
           <p className="mt-7 max-w-2xl font-sans text-lg leading-relaxed text-brand-cobalt-100 md:text-xl">
@@ -108,7 +111,11 @@ export default function Landing() {
 
       {/* 3. What happens: three serif-numeral steps on cream. */}
       <Section tone="cream">
-        <h2 className="max-w-2xl font-serif text-[clamp(2rem,4vw,3.25rem)] font-bold leading-tight">
+        <p className="flex items-baseline gap-3 font-sans text-sm font-bold tracking-[0.14em] [font-variant-caps:all-small-caps] text-brand-cobalt">
+          <span className="font-mono text-[13px] font-medium tracking-normal text-brand-steel">01</span>
+          How it works
+        </p>
+        <h2 className="mt-4 max-w-2xl font-serif text-[clamp(1.9rem,3.4vw,2.75rem)] font-bold leading-tight">
           What happens when you paste a pitch
         </h2>
         <div className="mt-12 grid gap-12 md:grid-cols-3 md:gap-8">
@@ -116,7 +123,7 @@ export default function Landing() {
             <div key={step.n}>
               <span
                 aria-hidden="true"
-                className="block font-serif text-7xl font-black leading-none text-brand-cobalt"
+                className="block font-serif text-6xl font-bold leading-none text-brand-cobalt"
               >
                 {step.n}
               </span>
@@ -138,7 +145,11 @@ export default function Landing() {
       {/* 5. The problem, stated plainly, on a pale cobalt tint field. */}
       <Section tone="tint">
         <div className="max-w-3xl">
-          <h2 className="font-serif text-[clamp(2rem,4vw,3.25rem)] font-bold leading-tight">
+          <p className="flex items-baseline gap-3 font-sans text-sm font-bold tracking-[0.14em] [font-variant-caps:all-small-caps] text-brand-cobalt">
+          <span className="font-mono text-[13px] font-medium tracking-normal text-brand-steel">02</span>
+          Why it exists
+        </p>
+        <h2 className="mt-4 font-serif text-[clamp(1.9rem,3.4vw,2.75rem)] font-bold leading-tight">
             Built for the flood
           </h2>
           <p className="mt-7 font-sans text-lg leading-relaxed md:text-xl">
@@ -160,7 +171,11 @@ export default function Landing() {
       <Section tone="white">
         <div className="flex flex-col items-start gap-8 md:flex-row md:items-end md:justify-between">
           <div className="max-w-2xl">
-            <h2 className="font-serif text-[clamp(2rem,4vw,3.25rem)] font-bold leading-tight">
+            <p className="flex items-baseline gap-3 font-sans text-sm font-bold tracking-[0.14em] [font-variant-caps:all-small-caps] text-brand-cobalt">
+          <span className="font-mono text-[13px] font-medium tracking-normal text-brand-steel">03</span>
+          The methodology
+        </p>
+        <h2 className="mt-4 font-serif text-[clamp(1.9rem,3.4vw,2.75rem)] font-bold leading-tight">
               Read exactly how it works
             </h2>
             <p className="mt-6 font-sans text-lg leading-relaxed">
@@ -178,7 +193,11 @@ export default function Landing() {
 
       {/* 7. FAQ on cream. */}
       <Section tone="cream">
-        <h2 className="font-serif text-[clamp(2rem,4vw,3.25rem)] font-bold leading-tight">
+        <p className="flex items-baseline gap-3 font-sans text-sm font-bold tracking-[0.14em] [font-variant-caps:all-small-caps] text-brand-cobalt">
+          <span className="font-mono text-[13px] font-medium tracking-normal text-brand-steel">04</span>
+          Questions
+        </p>
+        <h2 className="mt-4 font-serif text-[clamp(1.9rem,3.4vw,2.75rem)] font-bold leading-tight">
           Common questions
         </h2>
         <div className="mt-10 max-w-3xl divide-y divide-brand-ink/10 border-y border-brand-ink/10">

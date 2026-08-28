@@ -24,7 +24,7 @@ export default function DataSafety() {
         <p className="font-sans text-sm font-bold tracking-[0.14em] text-brand-cobalt [font-variant-caps:all-small-caps]">
           Your data
         </p>
-        <h1 className="mt-2 max-w-3xl font-serif text-[clamp(2.25rem,5vw,4rem)] font-black leading-tight">
+        <h1 className="mt-2 max-w-3xl font-serif text-[clamp(2rem,3.6vw,3rem)] font-bold leading-tight">
           What we keep, what we never do
         </h1>
         <p className="mt-5 max-w-2xl font-sans text-lg leading-relaxed">

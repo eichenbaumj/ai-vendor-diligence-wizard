@@ -25,7 +25,7 @@ export function SourcesList({ sources }: { sources: SourceRef[] }) {
             >
               {s.title ?? s.url}
             </a>{" "}
-            <span className="text-brand-steel">
+            <span className="font-mono text-xs tabular-nums text-brand-steel">
               (retrieved{" "}
               {new Date(s.retrieved_at).toLocaleDateString("en-US", {
                 month: "short",

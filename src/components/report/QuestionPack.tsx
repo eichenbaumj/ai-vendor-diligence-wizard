@@ -52,7 +52,7 @@ function QuestionCard({ q, index }: { q: ReportQuestion; index: number }) {
         <div className="flex items-baseline gap-3">
           <span
             aria-hidden="true"
-            className="font-serif text-xl font-black text-brand-cobalt"
+            className="font-serif text-xl font-bold text-brand-cobalt"
           >
             {index + 1}
           </span>

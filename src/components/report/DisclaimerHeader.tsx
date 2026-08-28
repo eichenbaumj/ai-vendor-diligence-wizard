@@ -21,14 +21,17 @@ export function DisclaimerHeader({ report }: { report: Report }) {
     <div className="bg-brand-vellum border-b border-brand-silver">
       <div className="mx-auto max-w-5xl px-5 py-3 text-[13px] leading-relaxed text-brand-charcoal-soft sm:px-8">
         <p>
-          <span className="font-bold text-brand-charcoal">
+          <span className="font-mono text-xs font-medium tracking-tight text-brand-charcoal">
             Generated {formatDate(report.meta.generated_at)} · expires{" "}
             {formatDate(report.meta.expires_at)}.
           </span>{" "}
           This is a point-in-time triage of public evidence about a vendor
           pitch. It is not a purchase recommendation, and it is not a finding
           of wrongdoing. Records change: re-run this check before relying on
-          it. Methodology v{report.meta.methodology_version}.
+          it.{" "}
+          <span className="font-mono text-xs tracking-tight">
+            Methodology v{report.meta.methodology_version}.
+          </span>
         </p>
       </div>
     </div>

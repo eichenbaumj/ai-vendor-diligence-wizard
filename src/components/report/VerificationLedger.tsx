@@ -56,7 +56,7 @@ export function EvidenceTierBadge({ tier }: { tier: EvidenceTier }) {
   return (
     <span
       title={TIER_TITLES[tier]}
-      className="inline-flex cursor-help items-center rounded-pill border border-brand-silver px-2 py-0.5 text-[11px] font-bold text-brand-charcoal-soft"
+      className="inline-flex cursor-help items-center rounded-pill border border-brand-silver px-2 py-0.5 font-mono text-[11px] font-bold tabular-nums text-brand-charcoal-soft"
     >
       {tier}
     </span>
@@ -77,7 +77,7 @@ function SourceLinks({ sources }: { sources: SourceRef[] }) {
           >
             {s.title ?? s.url}
           </a>{" "}
-          <span className="text-brand-steel">
+          <span className="font-mono text-xs tabular-nums text-brand-steel">
             (retrieved{" "}
             {new Date(s.retrieved_at).toLocaleDateString("en-US", {
               month: "short",
@@ -123,7 +123,7 @@ function RowHeader({ row }: { row: LedgerRow }) {
     <div className="flex flex-wrap items-center gap-2.5">
       <ResultChip result={row.result} />
       <EvidenceTierBadge tier={row.evidence_tier} />
-      <span className="text-xs font-bold uppercase tracking-wide text-brand-steel">
+      <span className="font-mono text-xs font-bold tabular-nums text-brand-steel">
         {row.dimension}
       </span>
     </div>

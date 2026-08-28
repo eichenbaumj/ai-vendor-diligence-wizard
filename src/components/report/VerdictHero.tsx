@@ -32,7 +32,7 @@ export function VerdictHero({
           {report.meta.vendor_display_name}
         </p>
 
-        <h1 className="mt-3 max-w-3xl font-serif text-4xl font-black leading-[1.08] sm:text-5xl md:text-6xl">
+        <h1 className="mt-3 max-w-3xl font-serif text-3xl font-bold leading-[1.12] sm:text-4xl md:text-5xl">
           {report.verdict.label}
         </h1>
 

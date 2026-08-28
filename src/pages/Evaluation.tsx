@@ -60,7 +60,7 @@ function ProgressView({ state }: { state: EvaluationState }) {
       <Section tone="cobalt">
         <DotField className="text-white/10">
           <div>
-            <h1 className="font-serif text-3xl font-black text-white sm:text-4xl">
+            <h1 className="font-serif text-3xl font-bold text-white sm:text-4xl">
               Checking this vendor now
             </h1>
             <p className="mt-3 max-w-xl text-[15px] leading-relaxed text-white/80">
@@ -160,7 +160,7 @@ function InsufficientView({ reason }: { reason?: string | null }) {
           <span className="rounded-pill bg-tier-nr-soft px-4 py-1.5 text-xs font-bold uppercase tracking-wide text-tier-nr">
             Not enough to evaluate
           </span>
-          <h1 className="mt-5 font-serif text-4xl font-black leading-tight sm:text-5xl">
+          <h1 className="mt-5 font-serif text-4xl font-bold leading-tight sm:text-5xl">
             We could not complete an evaluation.
           </h1>
           {reason ? (
@@ -205,7 +205,7 @@ function ErrorView({ message }: { message: string | null }) {
     <div>
       <Section tone="cream">
         <div className="max-w-3xl">
-          <h1 className="font-serif text-4xl font-black leading-tight sm:text-5xl">
+          <h1 className="font-serif text-4xl font-bold leading-tight sm:text-5xl">
             Something went wrong.
           </h1>
           <p className="mt-4 max-w-xl text-lg leading-relaxed">

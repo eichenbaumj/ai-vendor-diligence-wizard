@@ -42,7 +42,7 @@ function textOf(node: ReactNode): string {
 }
 
 const HEADING_STYLES: Record<"h1" | "h2" | "h3" | "h4", string> = {
-  h1: "mt-2 font-serif text-4xl font-black leading-tight md:text-5xl",
+  h1: "mt-2 font-serif text-4xl font-bold leading-tight md:text-5xl",
   h2: "mt-12 font-serif text-3xl font-bold leading-tight",
   h3: "mt-9 font-serif text-2xl font-bold leading-snug",
   h4: "mt-7 font-serif text-xl font-bold leading-snug",
@@ -189,7 +189,7 @@ export default function Methodology() {
         <p className="font-sans text-sm font-bold tracking-[0.14em] text-brand-cobalt [font-variant-caps:all-small-caps]">
           How it works
         </p>
-        <h1 className="mt-2 max-w-3xl font-serif text-[clamp(2.25rem,5vw,4rem)] font-black leading-tight">
+        <h1 className="mt-2 max-w-3xl font-serif text-[clamp(2rem,3.6vw,3rem)] font-bold leading-tight">
           The methodology, in full
         </h1>
         <p className="mt-5 max-w-2xl font-sans text-lg leading-relaxed">

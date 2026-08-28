@@ -4,8 +4,22 @@
     {
       "name": "wizard-dev",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
-      "port": 8080
+      "runtimeArgs": [
+        "run",
+        "dev"
+      ],
+      "port": 8080,
+      "autoPort": true
+    },
+    {
+      "name": "wizard-dev-b",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "dev"
+      ],
+      "port": 8091,
+      "autoPort": true
     }
   ]
 }

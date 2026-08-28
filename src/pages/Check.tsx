@@ -116,7 +116,8 @@ export default function Check() {
     <div>
       <Section tone="cream">
         <div className="max-w-3xl">
-            <h1 className="font-serif text-5xl font-black leading-[1.05] sm:text-6xl">
+            <p className="font-sans text-sm font-bold tracking-[0.14em] [font-variant-caps:all-small-caps] text-brand-cobalt">Run a check</p>
+            <h1 className="mt-3 font-serif text-4xl font-bold leading-[1.08] sm:text-5xl">
               Paste the pitch.
             </h1>
             <p className="mt-4 max-w-xl text-lg leading-relaxed text-brand-charcoal">

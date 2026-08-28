@@ -36,7 +36,7 @@ export function Section({
   id,
 }: SectionProps) {
   return (
-    <section id={id} className={`w-full py-16 md:py-24 ${TONES[tone]} ${className}`}>
+    <section id={id} className={`w-full py-16 md:py-28 ${TONES[tone]} ${className}`}>
       <div className="mx-auto w-full max-w-6xl px-5 md:px-8">{children}</div>
     </section>
   );

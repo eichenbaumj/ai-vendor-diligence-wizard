@@ -147,6 +147,153 @@ export function parseStructured<T>(result: AnthropicResult): T | null {
   }
 }
 
+/*
+  Streaming variant for long agentic turns (the research pass): a 15-25
+  search server-side loop can run minutes in one turn, and a non-streaming
+  request gives no signal until it completes. Streaming replaces the hard
+  total timeout with an idle timeout (abort only when no bytes arrive), and
+  the content blocks are reconstructed faithfully from SSE events — including
+  encrypted search-result blocks — so pause_turn continuations still work.
+*/
+export async function streamAnthropic(
+  body: AnthropicRequestBody,
+  opts: CallOpts & { idleTimeoutMs?: number; deadlineMs?: number },
+): Promise<AnthropicResult> {
+  const f = opts.fetchFn ?? globalThis.fetch;
+  const idleMs = opts.idleTimeoutMs ?? 60_000;
+  const started = Date.now();
+  const controller = new AbortController();
+  let idleTimer = setTimeout(() => controller.abort(), idleMs);
+  const bump = () => {
+    clearTimeout(idleTimer);
+    const remaining =
+      opts.deadlineMs != null ? opts.deadlineMs - (Date.now() - started) : Infinity;
+    if (remaining <= 0) {
+      controller.abort();
+      return;
+    }
+    idleTimer = setTimeout(() => controller.abort(), Math.min(idleMs, remaining));
+  };
+
+  const content: ContentBlock[] = [];
+  const partialJson: Record<number, string> = {};
+  let stopReason: string | undefined;
+  let usage: Usage = { ...ZERO_USAGE };
+
+  try {
+    const res = await f(API_URL, {
+      method: "POST",
+      signal: controller.signal,
+      headers: {
+        "x-api-key": opts.apiKey,
+        "anthropic-version": API_VERSION,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({ ...body, stream: true }),
+    });
+    if (!res.ok || !res.body) {
+      const detail = (await res.text().catch(() => "")).slice(0, 800);
+      console.error(`anthropic stream upstream ${res.status}: ${detail}`);
+      return { ok: false, status: res.status, usage, error: detail };
+    }
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      bump();
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() ?? "";
+      for (const line of lines) {
+        if (!line.startsWith("data:")) continue;
+        const payload = line.slice(5).trim();
+        if (!payload || payload === "[DONE]") continue;
+        let ev: Record<string, unknown>;
+        try {
+          ev = JSON.parse(payload);
+        } catch {
+          continue;
+        }
+        const type = ev.type as string;
+        if (type === "message_start") {
+          const msg = ev.message as { usage?: unknown } | undefined;
+          if (msg?.usage) usage = addUsage(usage, parseUsage(msg.usage));
+        } else if (type === "content_block_start") {
+          const index = ev.index as number;
+          content[index] = { ...(ev.content_block as ContentBlock) };
+          if (content[index].type === "text" && content[index].text == null) {
+            content[index].text = "";
+          }
+        } else if (type === "content_block_delta") {
+          const index = ev.index as number;
+          const block = content[index];
+          const delta = ev.delta as Record<string, unknown>;
+          if (!block || !delta) continue;
+          if (delta.type === "text_delta") {
+            block.text = (block.text ?? "") + String(delta.text ?? "");
+          } else if (delta.type === "input_json_delta") {
+            partialJson[index] =
+              (partialJson[index] ?? "") + String(delta.partial_json ?? "");
+          } else if (delta.type === "citations_delta") {
+            const citation = delta.citation as NonNullable<
+              ContentBlock["citations"]
+            >[number];
+            block.citations = [...(block.citations ?? []), citation];
+          }
+        } else if (type === "content_block_stop") {
+          const index = ev.index as number;
+          if (partialJson[index] !== undefined && content[index]) {
+            try {
+              content[index].input = JSON.parse(partialJson[index] || "{}");
+            } catch {
+              /* leave raw */
+            }
+            delete partialJson[index];
+          }
+        } else if (type === "message_delta") {
+          const delta = ev.delta as { stop_reason?: string } | undefined;
+          if (delta?.stop_reason) stopReason = delta.stop_reason;
+          if (ev.usage) usage = addUsage(usage, parseUsage(ev.usage));
+        }
+      }
+    }
+
+    console.log(
+      `anthropic stream usage model=${body.model} in=${usage.input_tokens} out=${usage.output_tokens} cache_write=${usage.cache_creation_input_tokens} cache_read=${usage.cache_read_input_tokens} searches=${usage.web_search_requests} elapsed=${Date.now() - started}ms`,
+    );
+    if (stopReason === "refusal") {
+      return { ok: false, status: 200, usage, error: "refusal", stop_reason: stopReason };
+    }
+    return {
+      ok: true,
+      status: 200,
+      stop_reason: stopReason,
+      content: content.filter(Boolean),
+      usage,
+    };
+  } catch (err) {
+    const detail = err instanceof Error ? err.message : String(err);
+    console.error(
+      `anthropic stream aborted after ${Date.now() - started}ms with ${content.filter(Boolean).length} blocks collected: ${detail}`,
+    );
+    /* A deadline abort mid-turn still carries real streamed findings; hand
+       them back so the pipeline degrades to a partial report instead of an
+       empty one. */
+    return {
+      ok: false,
+      status: 0,
+      usage,
+      error: detail,
+      content: content.filter(Boolean),
+    };
+  } finally {
+    clearTimeout(idleTimer);
+  }
+}
+
 export interface ResearchRunResult {
   narrative: string;
   citations: { url: string; title: string | null; cited_text: string | null }[];
@@ -174,14 +321,20 @@ export async function runResearchLoop(
     if (remaining < 10_000) {
       return { ...collect(content), partial: true, usage, continuations };
     }
-    const res = await callAnthropic(req, {
+    /* Streaming: no total-time ceiling on the turn itself — only an idle
+       timeout (bytes flow every few seconds during a healthy search loop)
+       and the overall stage deadline. */
+    const res = await streamAnthropic(req, {
       ...opts,
-      timeoutMs: Math.min(opts.timeoutMs, remaining),
+      idleTimeoutMs: Math.min(90_000, remaining),
+      deadlineMs: remaining,
     });
     usage = addUsage(usage, res.usage);
     if (!res.ok) {
-      /* Research failure is survivable: the report degrades to registry-only
-         with research_partial = true. */
+      /* Research failure is survivable, and a deadline abort mid-stream still
+         carries salvaged findings: degrade to a partial report, never an
+         empty one. */
+      if (res.content && res.content.length > 0) content = res.content;
       return { ...collect(content), partial: true, usage, continuations };
     }
     content = res.content ?? [];

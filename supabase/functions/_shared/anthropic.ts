@@ -213,15 +213,15 @@ export function researchTools(): unknown[] {
     {
       type: "web_search_20260318",
       name: "web_search",
-      max_uses: 20,
+      max_uses: 12,
       blocked_domains: BLOCKED_SEARCH_DOMAINS,
     },
     {
       type: "web_fetch_20260318",
       name: "web_fetch",
-      max_uses: 10,
+      max_uses: 6,
       citations: { enabled: true },
-      max_content_tokens: 30000,
+      max_content_tokens: 15000,
     },
   ];
 }

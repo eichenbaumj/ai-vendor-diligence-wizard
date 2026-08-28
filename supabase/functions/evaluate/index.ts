@@ -58,7 +58,8 @@ const RESULT_CACHE_DAYS = 30;
 const STAGE_TIMEOUTS = {
   extract: 25_000,
   registryPerEndpoint: 8_000,
-  research: 200_000,
+  /* Ceiling for the dynamic research deadline (see runPipeline). */
+  research: 260_000,
   classify: 12_000,
   structure: 50_000,
   review: 40_000,
@@ -245,6 +246,7 @@ async function runPipeline(
   forensicAdv: AdvFinding[],
   userState: string | null,
 ): Promise<void> {
+  const pipelineStart = Date.now();
   const emitter = makeEmitter(supabase, env.supabaseUrl, env.serviceKey, evaluationId);
   const emit = (e: Partial<EvalEvent> & { stage: EvalEvent["stage"]; kind: EvalEvent["kind"]; label: string }) =>
     emitter.emit({
@@ -461,20 +463,50 @@ async function runPipeline(
       user_state: userState,
     }),
     {
+      /* Research streams (idle timeout, not total). Its deadline is dynamic:
+         whatever remains of the 400s function wall clock after the stages
+         already run, minus a reserve for synthesis and review. */
       apiKey: env.anthropicKey,
       timeoutMs: 90_000,
-      deadlineMs: STAGE_TIMEOUTS.research,
+      deadlineMs: Math.max(
+        120_000,
+        Math.min(
+          STAGE_TIMEOUTS.research,
+          390_000 - (Date.now() - pipelineStart) - 115_000,
+        ),
+      ),
     },
   );
   usage = addUsage(usage, research.usage);
   stageUsage.s3 = research.usage;
-  const citations: Citation[] = research.citations.map((c) => ({
-    url: c.url,
-    title: c.title,
-    cited_text: c.cited_text,
-    retrieved_at: new Date().toISOString(),
-    domain_class: classifyDomain(c.url, extract.domains),
-  }));
+  /* Sources come from two channels: API citation objects on text blocks, and
+     the inline URLs the research prompt instructs the model to write. Harvest
+     both, dedupe, classify in code. */
+  const seenUrls = new Set<string>();
+  const citations: Citation[] = [];
+  for (const c of research.citations) {
+    if (seenUrls.has(c.url)) continue;
+    seenUrls.add(c.url);
+    citations.push({
+      url: c.url,
+      title: c.title,
+      cited_text: c.cited_text,
+      retrieved_at: new Date().toISOString(),
+      domain_class: classifyDomain(c.url, extract.domains),
+    });
+  }
+  for (const m of research.narrative.matchAll(/https?:\/\/[^\s)\]"'<>]+/g)) {
+    const url = m[0].replace(/[.,;:]+$/, "").slice(0, 600);
+    if (seenUrls.has(url) || citations.length >= 40) continue;
+    seenUrls.add(url);
+    citations.push({
+      url,
+      title: null,
+      cited_text: null,
+      retrieved_at: new Date().toISOString(),
+      domain_class: classifyDomain(url, extract.domains),
+    });
+  }
   await emit({
     stage: "research",
     kind: "micro_finding",

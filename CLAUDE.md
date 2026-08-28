@@ -19,7 +19,8 @@ world-readable.
   GitHub, press) is never adverse on its own.
 
 ## Architecture
-- Frontend: Vite/React/TS/Tailwind 4 → Cloudflare Pages (auto-deploy from main).
+- Frontend: Vite/React/TS/Tailwind 4 → Cloudflare Pages (manual wrangler
+  deploys; a git push does NOT publish).
 - Backend: Supabase Pro edge functions (`supabase/functions/`), Postgres with
   deny-all RLS (functions are the only data path). Progress = event replay +
   Realtime Broadcast + polling fallback.
@@ -35,6 +36,8 @@ world-readable.
 - User-facing copy: plain language, 9th-grade level, no em dashes, no AI-tell
   vocabulary. Verify on rendered output.
 - Model IDs are pinned in `_shared/anthropic.ts` MODELS — single migration point.
-- Deploy: push to main → Cloudflare Pages builds the frontend;
+- Deploy: frontend via `npx wrangler pages deploy dist --project-name
+  ai-vendor-diligence-wizard --branch main` after `vite build` (verify the
+  live URL afterward — pushing to GitHub does not publish);
   `supabase functions deploy <fn> --no-verify-jwt` for backend changes;
   migrations via `supabase db push`.

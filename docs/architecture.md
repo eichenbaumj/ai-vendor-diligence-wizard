@@ -8,7 +8,7 @@ A concise technical map for contributors. For what the tool checks and why, read
 |---|---|---|
 | Frontend | React 18 + TypeScript + Vite + Tailwind 4, deployed to Cloudflare Pages | Static SPA; renders reports, streams pipeline progress, renders this documentation at `/methodology` |
 | Backend | Supabase Edge Functions (Deno) | `evaluate` (the pipeline), `get-evaluation`, `chat` (grounded Q&A over a finished report), `dispute` (correction channel) |
-| Database | Supabase Postgres | Evaluations, cached registry results, source snapshots (litigation-hold-ready logging), disputes |
+| Database | Supabase Postgres | Evaluations (with a 30-day per-vendor result cache, skipped whenever adversarial-content findings are present), cached registry results, source snapshots (litigation-hold-ready logging), disputes |
 | AI | Anthropic API | Claude Haiku 4.5 and Claude Sonnet 5; server-side `web_search` and `web_fetch` tools in the research stage |
 | Abuse controls | Cloudflare Turnstile, per-IP limits, workspace spend caps | The tool is free and unauthenticated, so all three matter |
 
@@ -22,7 +22,7 @@ Six stages, orchestrated by the `evaluate` edge function, with progress streamed
 |---|---|---|---|
 | **1. parse** | Deterministic ingest forensics first (`forensics.ts`: invisible-Unicode strip, instruction-pattern screen, PII backstop), then a quarantined extraction call turns the pitch into typed claims | Claude Haiku 4.5, no tools, strict JSON schema output | `PitchExtract` |
 | **2. registry** | Deterministic fan-out against public registries: EDGAR, the five open-data state registries, RDAP, Wayback CDX, crt.sh, SAM entity + exclusions, USAspending, FedRAMP feed, GovRAMP list, TX-RAMP (when Texas), Sourcewell, GitHub org, DNS/MX. Each check logs query, timestamp, status, and evidence URL | None (plain code) | `RegistryLedger` |
-| **3. research** | Agentic web research: customer traces on .gov sites, leadership corroboration, case-study cross-existence, AI-inventory presence. Citations required on everything; application code classifies each cited domain (`domain-classes.ts`) | Claude Sonnet 5 with `web_search_20260318` (max 20 uses) and `web_fetch_20260318` (max 10 uses, citations on, content capped), content-farm domains blocked | `ResearchOutput` |
+| **3. research** | Agentic web research: customer traces on .gov sites, leadership corroboration, case-study cross-existence, AI-inventory presence. Citations required on everything; application code classifies each cited domain (`domain-classes.ts`) | Claude Sonnet 5 with `web_search_20260318` (max 12 uses) and `web_fetch_20260318` (max 6 uses, citations on, content capped at 15k tokens), content-farm domains blocked; the request streams, with salvage of partial findings on a deadline abort | `ResearchOutput` |
 | **4. packs** | Use-case classification, high-impact escalation, state-obligation mapping; selects the sector question pack | Heuristic tables, Claude Haiku 4.5 as classification fallback | `SectorContext` |
 | **5. synthesis** | Composes ledger rows and narrative; computes the verdict tier in plain code (`tier.ts`) from typed inputs; generates the question pack; runs the language lint (`lint.ts`), regenerating once on violation, falling back to neutral templates | Claude Haiku 4.5 with strict JSON schema output, plus non-LLM validators | `Report` |
 | **6. review** | Optional quality pass over the assembled report JSON: wording adjustments only, each one logged in `report.review.adjustments`. It cannot touch the tier, the ledger results, or the deterministic findings | Recorded per-report in `report.review.model` | `Report.review` |
@@ -49,7 +49,7 @@ The invariant, stated once: **no vendor-authored text can change which checks ru
 
 ## Cost envelope
 
-From the [cost model](./research/gap-no-per-evaluation-cost-model-an-explicit.md) (all rates verified August 2026): most evaluations cost **$0.20 to $0.70** in API spend. Typical is about $0.42 (research-heavy evaluations reach about $1.17; the all-caps-exhausted ceiling is about $2.30). Composition at typical: the Sonnet 5 research stage is about $0.34 (a third of that is the $0.01-per-search fee), synthesis and extraction are a few cents each, registry checks are effectively free.
+From the [cost model](./research/gap-no-per-evaluation-cost-model-an-explicit.md) (all rates verified August 2026), scaled to the current tool caps (12 searches, 6 fetches, 15k content tokens): observed evaluations run **$0.30 to $0.45** in API spend; the all-caps-exhausted ceiling is roughly $1.50. The cost model's original figures assumed the larger launch caps. Composition at typical: the Sonnet 5 research stage is about $0.34 (a third of that is the $0.01-per-search fee), synthesis and extraction are a few cents each, registry checks are effectively free.
 
 Two operational notes that matter more than the totals:
 

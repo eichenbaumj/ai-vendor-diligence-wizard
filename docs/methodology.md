@@ -590,7 +590,7 @@ The tool's output language is constrained by rules that are enforced by an autom
 - At least two matching identifiers are required before any record is attributed to a person. Below that bar, the tool either says "records matching this name (identity not confirmed)" or, for adverse records, shows nothing at all.
 - Common names are automatically held to a stricter matching standard.
 - Unadjudicated matters are always labeled as allegations, and case outcomes are always stated.
-- The tool keeps no dossiers. Reports expire and are regenerated from sources on demand.
+- The tool keeps no dossiers. Reports expire and are regenerated from sources on demand. To avoid repeat spend on the same vendor, a completed report may be reused for up to 30 days when someone checks the same vendor again; a submission that raises an adversarial-content finding always runs fresh.
 
 ---
 

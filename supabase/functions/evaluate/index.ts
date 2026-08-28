@@ -44,6 +44,7 @@ import { computeTier } from "../_shared/tier.ts";
 import { assemble } from "../_shared/assemble.ts";
 import { lintObject, lintText } from "../_shared/lint.ts";
 import { harvestCitations } from "../_shared/harvest.ts";
+import { detectPlantedCorroboration } from "../_shared/adv-corroboration.ts";
 import { PACKS, PACK_RELEASE } from "../_shared/packs.gen.ts";
 import { STATE_ITEMS } from "../_shared/state-items.ts";
 import type { S5UserInput } from "../_shared/prompts/s5-structure.ts";
@@ -488,6 +489,18 @@ async function runPipeline(
     kind: "micro_finding",
     label: `Web research finished: ${citations.length} sources collected (${research.usage.web_search_requests} searches)`,
   });
+
+  /* ADV-04: deterministic planted-corroboration scan over the retrieved
+     citations. Like every ADV path this only ADDS a finding. */
+  const planted = detectPlantedCorroboration(citations, extract.domains);
+  if (planted && !adv.some((a) => a.code === "ADV-04")) {
+    adv.push(planted);
+    await emit({
+      stage: "research",
+      kind: "micro_finding",
+      label: "Repeated identical phrasing found across unrelated sites",
+    });
+  }
 
   /* --------------------------------------------------------- S4 packs */
   await setStatus("research");

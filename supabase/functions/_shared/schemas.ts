@@ -126,7 +126,7 @@ export const AdvCode = z.enum([
   "ADV-01", // hidden text present in the submitted artifact
   "ADV-02", // text addressed to AI evaluation systems
   "ADV-03", // invisible Unicode (tags, zero-width, bidi controls)
-  "ADV-04", // planted-corroboration network (repeated phrasing on low-authority domains)
+  "ADV-04", // planted-corroboration network (detected in adv-corroboration.ts)
 ]);
 export type AdvCode = z.infer<typeof AdvCode>;
 

@@ -37,7 +37,7 @@ When a report shows an ADV finding, this is what it means. Each one quotes or li
 | **ADV-01** | The submitted material contains substantive text hidden from human readers | Deterministic checks for invisible styling in web pages (hidden elements, zero-size or background-colored text, oversized comments). PDF text-layer analysis is planned; see limits below |
 | **ADV-02** | The material contains text addressed to AI evaluation systems ("ignore previous instructions," "note to AI reviewers") | A fixed pattern list in code, plus an AI screen that can only add detections, never clear them |
 | **ADV-03** | The material contains invisible Unicode characters (zero-width, directional, or tag characters), a known carrier for concealed content | Deterministic character-class scan; the characters are stripped before analysis, counted, and logged |
-| **ADV-04** | The same marketing phrasing recurs across multiple low-authority websites, consistent with content planted to be found by AI research tools | Citation analysis in code, using the public domain-authority classes |
+| **ADV-04** | The same marketing phrasing recurs across multiple low-authority websites, consistent with content planted to be found by AI research tools | Code compares retrieved passages across citations: an eight-word run recurring on two or more unrelated sites that present as independent fires the finding. Press-wire syndication and the vendor's own properties never count |
 
 The report language for these findings follows the same rules as everything else the tool says: it reports the observation ("this document contains text invisible to human readers, quoted here"), never a characterization of intent.
 

@@ -25,7 +25,7 @@ import {
   lexiconFallbackPackIds,
 } from "./sector-lexicon.ts";
 import { computeTier } from "./tier.ts";
-import { assemble } from "./assemble.ts";
+import { assemble, IDENTITY_WHAT_CHECKED } from "./assemble.ts";
 import { lintObject, lintText, tidyProse } from "./lint.ts";
 import {
   MODELS,
@@ -356,9 +356,15 @@ export async function runPipelineTail(
     if (
       r.id === "identity" &&
       r.result === "COULD_NOT_VERIFY" &&
-      r.what_checked === "Whether a registered legal entity stands behind this pitch"
+      r.what_checked === IDENTITY_WHAT_CHECKED
     ) {
-      return { ...r, note: identityMissNote(r.sources[0]?.retrieved_at ?? generatedAt) };
+      /* EDGAR ran exactly when assemble put an EDGAR check in the row's
+         sources; the note's EDGAR clause must match that. */
+      const searchedEdgar = r.sources.some((s) => /edgar/i.test(s.title ?? ""));
+      return {
+        ...r,
+        note: identityMissNote(r.sources[0]?.retrieved_at ?? generatedAt, searchedEdgar),
+      };
     }
     const modelNote = narrative.value?.row_notes.find((n) => n.id === r.id)?.note;
     return {
@@ -560,15 +566,26 @@ export async function runPipelineTail(
 
 /* ------------------------------------------------------------- helpers */
 
-/* Deterministic note for the identity clean-miss row. The searched
-   registries are the ones that offer free automated search (the sources
-   listed under the row name them, with dates); this sentence must state
-   that coverage fact correctly every time, so no model writes it. */
-export function identityMissNote(retrievedAt: string): string {
+/* Deterministic note for the identity clean-miss row. It describes the
+   tool's own coverage, and model phrasing has inverted that fact live, so
+   no model writes it. It leads with SEC EDGAR because that search is
+   national for venture-funded companies; the state registries are the
+   free-automated frontier, not the whole net. The EDGAR clause appears
+   only when EDGAR actually ran (its check is then in the row's sources);
+   claiming an EDGAR search that did not happen is the same class of
+   coverage lie the template exists to prevent. */
+export function identityMissNote(retrievedAt: string, searchedEdgar: boolean): string {
   const date = retrievedAt.slice(0, 10);
+  if (searchedEdgar) {
+    return (
+      `We checked SEC EDGAR, the federal filing database that covers venture-funded companies in every state, plus the five state business registries that offer free automated search, on ${date}, and did not find a registered entity under any name the pitch uses. ` +
+      "Companies that have raised venture money usually appear in EDGAR no matter where they operate. Even so, absence here is not proof the company does not exist: many firms never file with the SEC, and most states do not offer automated registry search. " +
+      "Ask the vendor for its state of registration and search that state's official registry directly; it takes about a minute."
+    );
+  }
   return (
-    `We searched the state business registries that offer free automated search, plus SEC EDGAR, on ${date} and did not find a registered entity under any name the pitch uses. ` +
-    "Most states do not offer automated registry search, so absence here is not proof the company does not exist. " +
+    `We searched the five state business registries that offer free automated search on ${date} and did not find a registered entity under any name the pitch uses. ` +
+    "We could not reach SEC EDGAR, the federal filing database, for this report; the honesty panel says so. Absence here is not proof the company does not exist: most states do not offer automated registry search. " +
     "Ask the vendor for its state of registration and search that state's official registry directly; it takes about a minute."
   );
 }

@@ -233,6 +233,62 @@ describe("TX-RAMP report assembly (methodology D3.3)", () => {
   });
 });
 
+describe("identity miss row: EDGAR joins the evidence list only when it ran", () => {
+  const check = (check_id: string, source: string, status: string) => ({
+    check_id,
+    source,
+    status: status as "definitive_miss",
+    summary: `${source} summary for tests.`,
+    evidence_url: `https://example.gov/${check_id}`,
+    confidence: null,
+    retrieved_at: AT,
+    data: null,
+  });
+
+  const missInput = (checks: ReturnType<typeof check>[]): AssembleInput => {
+    const base = input([], []);
+    base.identity = { identity_resolved: false, identifiers_found: [] };
+    base.checks = checks;
+    return base;
+  };
+
+  const identityRow = (out: ReturnType<typeof assemble>) =>
+    out.ledger.find((r) => r.id === "identity");
+
+  it("a definitive EDGAR miss appears among the row's sources, inside the cap", () => {
+    const out = assemble(
+      missInput([
+        check("sos_ny", "New York Department of State", "definitive_miss"),
+        check("sos_tx", "Texas Comptroller", "definitive_miss"),
+        check("edgar_fts", "SEC EDGAR full-text search", "definitive_miss"),
+      ]),
+    );
+    const row = identityRow(out);
+    expect(row?.result).toBe("COULD_NOT_VERIFY");
+    expect(row?.sources.some((s) => /edgar/i.test(s.title ?? ""))).toBe(true);
+    expect(row?.sources.length).toBeLessThanOrEqual(8);
+  });
+
+  it("an unreachable EDGAR stays out of the sources", () => {
+    const out = assemble(
+      missInput([
+        check("sos_ny", "New York Department of State", "definitive_miss"),
+        check("edgar_fts", "SEC EDGAR full-text search", "coverage_limited"),
+      ]),
+    );
+    const row = identityRow(out);
+    expect(row?.sources.some((s) => /edgar/i.test(s.title ?? ""))).toBe(false);
+  });
+
+  it("the EDGAR honesty item explains its national coverage", () => {
+    const out = assemble(
+      missInput([check("edgar_fts", "SEC EDGAR full-text search", "definitive_miss")]),
+    );
+    const item = out.honesty.find((h) => h.check_id === "edgar_fts");
+    expect(item?.reason).toContain("national");
+  });
+});
+
 describe("registry ledger rows (methodology 1.3): every registry check leaves a row", () => {
   const registryCheck = (
     check_id: string,

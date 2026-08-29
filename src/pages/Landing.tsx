@@ -71,7 +71,7 @@ const STEPS: { n: string; title: string; body: string }[] = [
   {
     n: "2",
     title: "We check public sources",
-    body: "The tool looks the company up in state business registries, SAM.gov, USAspending, the FedRAMP marketplace, and news archives, among others. Every check is logged with a source link and a date.",
+    body: "The tool looks the company up in SEC EDGAR, which covers venture-funded companies in every state, plus state business registries, SAM.gov, USAspending, the FedRAMP marketplace, and news archives, among others. Every check is logged with a source link and a date.",
   },
   {
     n: "3",
@@ -104,6 +104,14 @@ const FAQS: { q: string; a: string }[] = [
   {
     q: "Does it punish small vendors?",
     a: "No. A missing certification or a short track record is never counted against a vendor on its own. Young companies are held to a bar sized for young companies, and the report says which bar it applied. What raises a flag is contradiction, like a claim of a decade of government work from a company whose website is four months old.",
+  },
+  {
+    q: "How much of the country can it search?",
+    a: "More than it may look like at first. SEC EDGAR is a national net: nearly every venture-funded company files a Form D there, naming its state of incorporation, wherever it operates. Federal sources like SAM.gov and USAspending are national too. Five state registries offer free automated search today (New York, Colorado, Connecticut, Oregon, and Texas); for every other state the report gives you a direct link to the official registry and a one-minute manual check.",
+  },
+  {
+    q: "Does a high tier mean the vendor is good?",
+    a: "No. A high tier means the company's claims match public records. It says nothing about whether the product works well or the team delivers. A fully verifiable vendor can still be the wrong choice, and a young vendor with a thin public record can still be excellent. The report measures what can be verified, and the question pack helps you judge the rest.",
   },
 ];
 

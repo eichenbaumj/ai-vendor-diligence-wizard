@@ -18,9 +18,21 @@ while the list is unreachable can gain one consolidated document-request
 question, and a contradiction row flips the matching honesty panel item to
 flagged.
 
+**Also in 1.3: coverage made legible in the results.** Real identity
+coverage is national for venture-funded companies, because SEC EDGAR's
+full-text search runs nationwide, and the results now say so where people
+actually read: the identity clean-miss note leads with EDGAR's national
+coverage and now names EDGAR only when that search actually ran; the EDGAR
+check joins the identity miss row's own source list; the honesty panel
+explains that the EDGAR search is national; the EDGAR progress line says
+nationwide; and the landing page answers which parts of the country the
+tool can search. Copy consistently says five automated state registries,
+with Florida described as a manual check until its bulk-data mirror ships.
+
 **Expected effect on verdicts: none.** Tier logic is untouched. The same
 contradictions that moved verdicts before still move them; the new rows make
-them visible in the ledger.
+them visible in the ledger, and the coverage copy changes how results read,
+not how they are decided.
 
 ## Version 1.2 (August 29, 2026)
 

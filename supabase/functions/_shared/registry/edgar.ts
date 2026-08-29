@@ -250,7 +250,7 @@ export async function checkEdgarFts(
       check_id: FTS_CHECK_ID,
       source: FTS_SOURCE,
       status: "definitive_miss",
-      summary: "We searched SEC filings and found no Form D under this company's name. Many small companies never file one, so this is informational only.",
+      summary: "We searched SEC filings nationwide and found no Form D under this company's name. This search covers venture-funded companies in every state, but many small companies never file one, so this is informational only.",
       evidence_url: humanUrl(names[0]),
       confidence: null,
       retrieved_at,

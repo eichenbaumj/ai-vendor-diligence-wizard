@@ -207,7 +207,9 @@ export const LedgerRow = z.object({
   result: LedgerResult,
   evidence_tier: EvidenceTier,
   severity: Severity.nullable(), // only for adverse results
-  sources: z.array(SourceRef).max(6),
+  /* 8 = the six SOS lanes plus up to two EDGAR checks on the identity
+     miss row; every other row stays well under. */
+  sources: z.array(SourceRef).max(8),
   note: z.string().max(700), // legal-safe sentence(s); linted
   methodology_ref: z.string().max(40), // anchor into /methodology, e.g. "d1-1-4"
 });

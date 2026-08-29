@@ -38,6 +38,13 @@ import {
   urlMentions,
 } from "./text-match.ts";
 
+/* The identity row's what_checked doubles as the join key pipeline-tail
+   uses to apply the code-templated clean-miss note. The partial-hit
+   variant of the row shares the same id and result, so this exact string
+   is load-bearing: import it, never retype it. */
+export const IDENTITY_WHAT_CHECKED =
+  "Whether a registered legal entity stands behind this pitch";
+
 export interface AssembleInput {
   extract: PitchExtract;
   checks: RegistryCheck[];
@@ -136,7 +143,7 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
       id: uniqueRowId("identity"),
       dimension: "D1",
       claim_quote: null,
-      what_checked: "Whether a registered legal entity stands behind this pitch",
+      what_checked: IDENTITY_WHAT_CHECKED,
       result: "VERIFIED",
       evidence_tier: "T1",
       severity: null,
@@ -206,17 +213,24 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
       claim_quote: null,
       what_checked: partialHit
         ? `Whether a second independent identifier corroborates the registration found in ${partialHit.source}`
-        : "Whether a registered legal entity stands behind this pitch",
+        : IDENTITY_WHAT_CHECKED,
       result: limited && sosHits.length === 0 ? "COVERAGE_LIMITED" : "COULD_NOT_VERIFY",
       evidence_tier: "T4",
       severity: "MEDIUM",
-      /* All searched states, hit first, capped at the schema's 6-source
-         limit (LedgerRow.sources max 6; there are exactly 6 SOS lanes
-         today). Slicing lower made the verdict claim only three states
-         were searched. */
-      sources: [...sosHits, ...sosChecks.filter((c) => c.status !== "hit")]
-        .slice(0, 6)
-        .flatMap(src),
+      /* All searched states, hit first (6 SOS lanes), then the EDGAR
+         checks that actually ran: the clean-miss note names SEC EDGAR, so
+         the row's own evidence list must name it too. Slicing the states
+         lower made the verdict claim only three states were searched;
+         the schema's sources cap is 8 to fit the EDGAR entries. */
+      sources: [
+        ...[...sosHits, ...sosChecks.filter((c) => c.status !== "hit")].slice(0, 6),
+        ...["edgar_fts", "edgar_company"]
+          .map((id) => find(checks, id))
+          .filter(
+            (c): c is NonNullable<typeof c> =>
+              c?.status === "definitive_miss" || c?.status === "hit",
+          ),
+      ].flatMap(src),
       note: "",
       methodology_ref: "d1-1",
     });
@@ -1003,6 +1017,13 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
     reason:
       c.status === "coverage_limited" || c.status === "error" ? c.summary : null,
   }));
+  /* Coverage legibility: EDGAR's full-text search is national, and readers
+     should not have to open the methodology to learn that. */
+  const edgarFtsItem = honesty.find((h) => h.check_id === "edgar_fts");
+  if (edgarFtsItem && edgarFtsItem.reason === null) {
+    edgarFtsItem.reason =
+      "This search is national. A venture-funded company's Form D filing shows it exists and names its state of incorporation, whatever state it operates in.";
+  }
   /* Inferred-domain caveat: when the site checks ran against a domain we
      inferred from research citations (name-only submissions), say so, and
      say what the inference did not do. */

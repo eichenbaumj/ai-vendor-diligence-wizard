@@ -94,28 +94,49 @@ export function runForensics(raw: string): ForensicsResult {
 }
 
 /*
-  HTML-specific forensics for URL-submitted pitches (v1): detects content
-  hidden from human readers but visible to machines. Works on raw HTML before
-  text extraction; returns ADV-01 when hidden blocks contain substantive text.
+  HTML-specific forensics for URL-submitted pitches: detects content hidden
+  from human readers but visible to machines. Works on raw HTML before text
+  extraction; returns ADV-01 when hidden blocks contain substantive text,
+  quoting the hidden span (the methodology promises the finding quotes what
+  was hidden), and hands back every captured span so the caller can store
+  the evidence.
 */
 const HIDDEN_HTML_PATTERNS: RegExp[] = [
-  /style\s*=\s*["'][^"']*display\s*:\s*none[^"']*["'][^>]*>([^<]{40,})/gi,
-  /style\s*=\s*["'][^"']*visibility\s*:\s*hidden[^"']*["'][^>]*>([^<]{40,})/gi,
-  /style\s*=\s*["'][^"']*font-size\s*:\s*0[^"']*["'][^>]*>([^<]{40,})/gi,
-  /style\s*=\s*["'][^"']*color\s*:\s*(#fff(fff)?|white)[^"']*["'][^>]*>([^<]{40,})/gi,
-  /<!--([^>]{80,})-->/g,
+  /style\s*=\s*["'][^"']*display\s*:\s*none[^"']*["'][^>]*>(?<hidden>[^<]{40,})/gi,
+  /style\s*=\s*["'][^"']*visibility\s*:\s*hidden[^"']*["'][^>]*>(?<hidden>[^<]{40,})/gi,
+  /style\s*=\s*["'][^"']*font-size\s*:\s*0[^"']*["'][^>]*>(?<hidden>[^<]{40,})/gi,
+  /style\s*=\s*["'][^"']*color\s*:\s*(?:#fff(?:fff)?|white)[^"']*["'][^>]*>(?<hidden>[^<]{40,})/gi,
+  /<!--(?<hidden>[^>]{80,})-->/g,
 ];
 
-export function detectHiddenHtml(html: string): AdvFinding | null {
+export interface HiddenHtmlResult {
+  finding: AdvFinding | null;
+  spans: string[];
+}
+
+export function detectHiddenHtml(html: string): HiddenHtmlResult {
+  const spans: string[] = [];
   for (const re of HIDDEN_HTML_PATTERNS) {
     re.lastIndex = 0;
-    if (re.test(html)) {
-      return {
-        code: "ADV-01",
-        detail:
-          "The submitted page contains substantive text that is hidden from human readers (invisible styling or oversized comments). Hidden text is a known channel for content aimed at automated systems, and its presence is surfaced as a finding.",
-      };
+    for (const m of html.matchAll(re)) {
+      const span = (m.groups?.hidden ?? "")
+        .replace(INVISIBLE_RE, "")
+        .replace(/\s+/g, " ")
+        .trim();
+      if (span) spans.push(span);
     }
   }
-  return null;
+  if (spans.length === 0) return { finding: null, spans };
+  const quoted = spans[0].slice(0, 180);
+  return {
+    finding: {
+      code: "ADV-01",
+      detail:
+        `The submitted page contains text that is hidden from human readers (invisible styling or oversized comments). The first hidden passage reads: "${quoted}". Hidden text is a known channel for content aimed at automated systems, and its presence is surfaced as a finding.`.slice(
+          0,
+          500,
+        ),
+    },
+    spans,
+  };
 }

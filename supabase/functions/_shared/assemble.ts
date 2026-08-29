@@ -48,6 +48,13 @@ export interface AssembleInput {
      the D5 aggregate finding: leadership corroboration is research objective
      3, so a partial run cannot support "the whole team left no trace". */
   research_partial: boolean;
+  /* How many leading entries of extract.people / extract.named_customers
+     came from the PITCH (the rest were mined from the vendor's site). The
+     zero-verified aggregate findings count pitch-origin entries only: a
+     vendor must never be worse off because its marketing site named more
+     people or customers. Defaults to the full lengths. */
+  pitch_person_count?: number;
+  pitch_customer_count?: number;
   generated_at: string; // ISO
 }
 
@@ -386,7 +393,15 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
       }
     }
   }
-  if (namedCustomers.length > 0 && verifiedCustomers === 0) {
+  /* The zero-verified aggregate counts PITCH-origin customers only (the
+     leading entries; site-derived customers get rows and research but can
+     never make the report harsher), and any verified customer suppresses
+     it. */
+  const pitchCustomerCount = Math.min(
+    input.pitch_customer_count ?? extract.named_customers.length,
+    namedCustomers.length,
+  );
+  if (pitchCustomerCount > 0 && verifiedCustomers === 0) {
     findings.push({
       id: "customers",
       dimension: "D2",
@@ -394,8 +409,8 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
       resolved: false,
       detail:
         leadCards.length > 0
-          ? `None of the ${namedCustomers.length} named government customers could be verified in retrieved public records. Candidate pages on official sites are linked under manual checks for confirmation.`
-          : `None of the ${namedCustomers.length} named government customers left a public trace we could find.`,
+          ? `None of the ${pitchCustomerCount} named government customers could be verified in retrieved public records. Candidate pages on official sites are linked under manual checks for confirmation.`
+          : `None of the ${pitchCustomerCount} named government customers left a public trace we could find.`,
     });
   }
 
@@ -671,13 +686,20 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
       }
     }
   }
-  if (!input.research_partial && corroboratedPeople === 0 && people.length >= 2) {
+  /* Threshold on PITCH-origin people only; any corroborated person
+     (pitch- or site-origin — it is the same team) suppresses the
+     aggregate. */
+  const pitchPeopleCount = Math.min(
+    input.pitch_person_count ?? extract.people.length,
+    people.length,
+  );
+  if (!input.research_partial && corroboratedPeople === 0 && pitchPeopleCount >= 2) {
     findings.push({
       id: "leadership",
       dimension: "D5",
-      severity: people.length >= 3 ? "HIGH" : "MEDIUM",
+      severity: pitchPeopleCount >= 3 ? "HIGH" : "MEDIUM",
       resolved: false,
-      detail: `None of the ${people.length} people the pitch presents as leadership could be corroborated in retrieved public sources independent of the vendor's site.`,
+      detail: `None of the ${pitchPeopleCount} people the pitch presents as leadership could be corroborated in retrieved public sources independent of the vendor's site.`,
     });
   }
 

@@ -102,3 +102,37 @@ describe("checkFedramp", () => {
     }
   });
 });
+
+describe("cached-feed fallback", () => {
+  it("uses a fresh cached copy when the live fetch fails", async () => {
+    const check = await checkFedramp(
+      {
+        companyNames: ["GovAssist AI"],
+        claimedFedramp: false,
+        cachedFeed: async () => ({
+          payload: feed,
+          fetched_at: "2026-08-27T09:17:00.000Z",
+        }),
+      },
+      ctxWith(failingFetch),
+    );
+    expect(check.status).not.toBe("error");
+    expect(check.summary).toContain("saved copy");
+    expect(check.summary).toContain("2026-08-27");
+  });
+
+  it("falls through to the error check when the cache is stale", async () => {
+    const check = await checkFedramp(
+      {
+        companyNames: ["GovAssist AI"],
+        claimedFedramp: false,
+        cachedFeed: async () => ({
+          payload: feed,
+          fetched_at: "2026-08-01T09:17:00.000Z",
+        }),
+      },
+      ctxWith(failingFetch),
+    );
+    expect(check.status).toBe("error");
+  });
+});

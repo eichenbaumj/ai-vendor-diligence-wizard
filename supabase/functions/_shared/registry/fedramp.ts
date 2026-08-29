@@ -26,6 +26,7 @@ import {
   nowIso,
 } from "./sam.ts";
 import type { RegistryCtx } from "./sam.ts";
+import { isFeedStale } from "./feeds.ts";
 
 const FEED_URL =
   "https://raw.githubusercontent.com/FedRAMP/marketplace-fedramp-gov-data/main/data.json";
@@ -101,27 +102,22 @@ export async function checkFedramp(
   {
     companyNames,
     claimedFedramp,
-  }: { companyNames: string[]; claimedFedramp: boolean },
+    cachedFeed,
+  }: {
+    companyNames: string[];
+    claimedFedramp: boolean;
+    /* Lazily fetched registry_cache row (the daily cron stores the raw feed).
+       Used only when the live fetch fails: datacenter egress fetches of the
+       feed host can be blocked or flaky, and a fresh cached copy beats an
+       error check for a tier-1-capable lane. */
+    cachedFeed?: () => Promise<{ payload: unknown; fetched_at: string } | null>;
+  },
   ctx: RegistryCtx,
 ): Promise<RegistryCheck> {
   const check_id = "fedramp_marketplace";
   const source = "FedRAMP Marketplace";
-  try {
-    const names = dedupeNames(companyNames);
-    if (names.length === 0) {
-      return {
-        check_id,
-        source,
-        status: "not_applicable",
-        summary:
-          "No company name was available to check against the FedRAMP Marketplace.",
-        evidence_url: HUMAN_MARKETPLACE,
-        confidence: null,
-        retrieved_at: nowIso(ctx),
-        data: null,
-      };
-    }
-    const payload = await getJson(FEED_URL, ctx);
+  const names = dedupeNames(companyNames);
+  const report = (payload: unknown): RegistryCheck => {
     const entries = collectFeedEntries(payload);
     const matches: (FeedEntry & { confidence: "exact" | "name_similarity" })[] =
       [];
@@ -179,7 +175,39 @@ export async function checkFedramp(
       retrieved_at: nowIso(ctx),
       data: { claimed_but_absent: false, entries_scanned: entries.length },
     };
+  };
+
+  if (names.length === 0) {
+    return {
+      check_id,
+      source,
+      status: "not_applicable",
+      summary:
+        "No company name was available to check against the FedRAMP Marketplace.",
+      evidence_url: HUMAN_MARKETPLACE,
+      confidence: null,
+      retrieved_at: nowIso(ctx),
+      data: null,
+    };
+  }
+  try {
+    const payload = await getJson(FEED_URL, ctx);
+    return report(payload);
   } catch {
+    if (cachedFeed) {
+      try {
+        const row = await cachedFeed();
+        if (row && !isFeedStale(row.fetched_at, nowIso(ctx))) {
+          const fromCache = report(row.payload);
+          return {
+            ...fromCache,
+            summary: `${fromCache.summary} This result used our saved copy of the feed, refreshed ${row.fetched_at.slice(0, 10)}.`,
+          };
+        }
+      } catch {
+        /* fall through to the error check */
+      }
+    }
     return errorCheck(check_id, source, HUMAN_MARKETPLACE, ctx);
   }
 }

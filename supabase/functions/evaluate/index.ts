@@ -437,7 +437,19 @@ async function runPipeline(
       ),
     ),
     track(registry.checkFederalAwards({ companyNames }, ctx())),
-    track(registry.checkFedramp({ companyNames, claimedFedramp }, ctx(12_000))),
+    track(registry.checkFedramp({
+      companyNames,
+      claimedFedramp,
+      cachedFeed: async () => {
+        const { data } = await supabase
+          .from("registry_cache")
+          .select("payload, fetched_at")
+          .eq("source", "fedramp")
+          .eq("key", "all")
+          .maybeSingle();
+        return data ? { payload: data.payload, fetched_at: String(data.fetched_at) } : null;
+      },
+    }, ctx(12_000))),
     track(Promise.resolve(registry.checkGovRamp({ companyNames, claimed: claimedGovramp }, feeds.govramp, ctx()))),
     track(Promise.resolve(registry.checkTxRamp({ companyNames, claimed: claimedTxramp, sellingIntoTexas: userState === "TX" }, feeds.txramp, ctx()))),
     track(Promise.resolve(registry.checkSourcewell({ companyNames, claimed: claimedSourcewell }, feeds.sourcewell, ctx()))),

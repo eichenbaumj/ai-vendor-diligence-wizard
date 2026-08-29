@@ -25,8 +25,13 @@ export {
 } from "./sam.ts";
 export { checkFederalAwards } from "./usaspending.ts";
 export { checkFedramp } from "./fedramp.ts";
-export type { RampFeedRow, SourcewellFeedRow } from "./feeds.ts";
-export { checkGovRamp, checkSourcewell, checkTxRamp } from "./feeds.ts";
+export type { FeedInput, RampFeedRow, SourcewellFeedRow } from "./feeds.ts";
+export {
+  checkGovRamp,
+  checkSourcewell,
+  checkTxRamp,
+  isFeedStale,
+} from "./feeds.ts";
 export { checkSosSweep, resolveIdentity } from "./sos-sweep.ts";
 
 /* One row per check the pipeline can run, for the honesty panel. Labels are

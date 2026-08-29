@@ -3,10 +3,12 @@
   GovRAMP program participants, TX-RAMP certified cloud products, and
   Sourcewell cooperative contract holders.
 
-  These registries publish XLSX files. A GitHub Actions cron parses them into
-  plain JSON rows; the edge function only ever receives the parsed rows, so
-  these checks take the feed as an argument and do no fetching. A null feed
-  means the cron has not populated it yet: coverage_limited, never adverse.
+  A GitHub Actions cron parses the published lists (HTML or XLSX) into plain
+  JSON rows; the edge function only ever receives the parsed rows, so these
+  checks take the feed as an argument and do no fetching. A null feed means
+  the cron has not populated it yet, and a stale feed (older than
+  FEED_MAX_AGE_DAYS) is treated the same way: coverage_limited, never
+  adverse, with the age stated honestly.
 
   Contradiction rules:
   - GovRAMP claimed + absent = registry contradiction (like FedRAMP).
@@ -30,6 +32,28 @@ export interface RampFeedRow {
 export interface SourcewellFeedRow {
   supplier: string;
   contract?: string;
+}
+
+/* Daily cron plus visible workflow failures means a week of consecutive
+   failures before reports degrade; the upstream lists move on a roughly
+   weekly cadence, so a week-old copy is the honesty boundary. */
+export const FEED_MAX_AGE_DAYS = 7;
+
+export function isFeedStale(fetchedAtIso: string, nowIso: string): boolean {
+  const fetched = Date.parse(fetchedAtIso);
+  const now = Date.parse(nowIso);
+  if (Number.isNaN(fetched) || Number.isNaN(now)) return true;
+  return now - fetched > FEED_MAX_AGE_DAYS * 24 * 60 * 60 * 1000;
+}
+
+/* What loadFeeds hands each check: parsed rows, a stale marker carrying the
+   last refresh time, or null when the feed was never loaded. */
+export type FeedInput<Row> = Row[] | { stale: true; fetched_at: string } | null;
+
+function isStaleMarker<Row>(
+  feed: FeedInput<Row>,
+): feed is { stale: true; fetched_at: string } {
+  return feed !== null && !Array.isArray(feed);
 }
 
 const GOVRAMP_URL = "https://govramp.org/program-participants/";
@@ -81,17 +105,40 @@ function feedNotLoaded(
   };
 }
 
+function feedStale(
+  check_id: string,
+  source: string,
+  evidence_url: string,
+  fetched_at: string,
+  ctx: RegistryCtx,
+): RegistryCheck {
+  const day = fetched_at.slice(0, 10);
+  return {
+    check_id,
+    source,
+    status: "coverage_limited",
+    summary: `Our copy of the ${source} list was last refreshed on ${day}, which is more than ${FEED_MAX_AGE_DAYS} days old, so this check did not run. You can search the registry yourself at the link.`,
+    evidence_url,
+    confidence: null,
+    retrieved_at: nowIso(ctx),
+    data: { reason: "feed_stale", fetched_at },
+  };
+}
+
 /* ---------------------------------------------------------------- GovRAMP */
 
 export async function checkGovRamp(
   { companyNames, claimed }: { companyNames: string[]; claimed: boolean },
-  feed: RampFeedRow[] | null,
+  feed: FeedInput<RampFeedRow>,
   ctx: RegistryCtx,
 ): Promise<RegistryCheck> {
   const check_id = "govramp";
   const source = "GovRAMP";
   if (feed === null) {
     return feedNotLoaded(check_id, source, GOVRAMP_URL, ctx);
+  }
+  if (isStaleMarker(feed)) {
+    return feedStale(check_id, source, GOVRAMP_URL, feed.fetched_at, ctx);
   }
   const names = dedupeNames(companyNames);
   const { matches, rejected } = matchRampRows(feed, names);
@@ -150,14 +197,37 @@ export async function checkGovRamp(
 /* ---------------------------------------------------------------- TX-RAMP */
 
 export async function checkTxRamp(
-  { companyNames, claimed }: { companyNames: string[]; claimed: boolean },
-  feed: RampFeedRow[] | null,
+  {
+    companyNames,
+    claimed,
+    sellingIntoTexas,
+  }: { companyNames: string[]; claimed: boolean; sellingIntoTexas: boolean },
+  feed: FeedInput<RampFeedRow>,
   ctx: RegistryCtx,
 ): Promise<RegistryCheck> {
   const check_id = "txramp";
   const source = "TX-RAMP";
+  /* TX-RAMP is a Texas program (methodology D3.3: it applies when the vendor
+     sells cloud services to Texas state agencies). Run it when the buyer is
+     in Texas or the pitch claims TX-RAMP; otherwise it does not apply. */
+  if (!claimed && !sellingIntoTexas) {
+    return {
+      check_id,
+      source,
+      status: "not_applicable",
+      summary:
+        "TX-RAMP applies to vendors selling cloud services to Texas state agencies. This evaluation did not indicate a Texas buyer, and the pitch does not claim TX-RAMP, so this check did not apply.",
+      evidence_url: TXRAMP_URL,
+      confidence: null,
+      retrieved_at: nowIso(ctx),
+      data: null,
+    };
+  }
   if (feed === null) {
     return feedNotLoaded(check_id, source, TXRAMP_URL, ctx);
+  }
+  if (isStaleMarker(feed)) {
+    return feedStale(check_id, source, TXRAMP_URL, feed.fetched_at, ctx);
   }
   const names = dedupeNames(companyNames);
   const { matches, rejected } = matchRampRows(feed, names);
@@ -220,13 +290,16 @@ export async function checkTxRamp(
 
 export async function checkSourcewell(
   { companyNames, claimed }: { companyNames: string[]; claimed: boolean },
-  feed: SourcewellFeedRow[] | null,
+  feed: FeedInput<SourcewellFeedRow>,
   ctx: RegistryCtx,
 ): Promise<RegistryCheck> {
   const check_id = "sourcewell";
   const source = "Sourcewell";
   if (feed === null) {
     return feedNotLoaded(check_id, source, SOURCEWELL_URL, ctx);
+  }
+  if (isStaleMarker(feed)) {
+    return feedStale(check_id, source, SOURCEWELL_URL, feed.fetched_at, ctx);
   }
   const names = dedupeNames(companyNames);
   const matches: (SourcewellFeedRow & {

@@ -391,6 +391,7 @@ async function runPipeline(
   const claimsText = extract.claims.map((c) => c.quote).join(" \n ");
   const claimedFedramp = /fedramp/i.test(claimsText);
   const claimedGovramp = /govramp|stateramp/i.test(claimsText);
+  const claimedTxramp = /tx-?ramp/i.test(claimsText);
   const claimedSourcewell = /sourcewell|naspo|omnia|cooperative (purchasing|contract)/i.test(claimsText);
   const senderDomain = extract.sender_email?.split("@")[1] ?? null;
   const companyNames = extract.vendor_name_candidates.length
@@ -438,7 +439,7 @@ async function runPipeline(
     track(registry.checkFederalAwards({ companyNames }, ctx())),
     track(registry.checkFedramp({ companyNames, claimedFedramp }, ctx(12_000))),
     track(Promise.resolve(registry.checkGovRamp({ companyNames, claimed: claimedGovramp }, feeds.govramp, ctx()))),
-    track(Promise.resolve(registry.checkTxRamp({ companyNames, claimed: false }, feeds.txramp, ctx()))),
+    track(Promise.resolve(registry.checkTxRamp({ companyNames, claimed: claimedTxramp, sellingIntoTexas: userState === "TX" }, feeds.txramp, ctx()))),
     track(Promise.resolve(registry.checkSourcewell({ companyNames, claimed: claimedSourcewell }, feeds.sourcewell, ctx()))),
   ];
   if (primaryDomain) {
@@ -807,20 +808,32 @@ function extractFoundingYear(extract: PitchExtract): number | null {
 }
 
 async function loadFeeds(supabase: SupabaseClient): Promise<{
-  govramp: { provider: string; product?: string; status: string }[] | null;
-  txramp: { provider: string; product?: string; status: string }[] | null;
-  sourcewell: { supplier: string; contract?: string }[] | null;
+  govramp: registry.FeedInput<{ provider: string; product?: string; status: string }>;
+  txramp: registry.FeedInput<{ provider: string; product?: string; status: string }>;
+  sourcewell: registry.FeedInput<{ supplier: string; contract?: string }>;
 }> {
   const { data } = await supabase
     .from("registry_cache")
-    .select("source, payload")
+    .select("source, payload, fetched_at")
     .in("source", ["govramp", "txramp", "sourcewell"])
     .eq("key", "all");
-  const bySource = new Map((data ?? []).map((r) => [r.source, r.payload]));
+  const nowIso = new Date().toISOString();
+  const bySource = new Map((data ?? []).map((r) => [r.source, r]));
+  /* Rows must be a bare array (the refresh job guarantees it); anything else
+     degrades to "not loaded". Stale rows degrade to a dated stale marker so
+     the checks can say honestly why they did not run. */
+  const resolve = (source: string) => {
+    const row = bySource.get(source);
+    if (!row || !Array.isArray(row.payload)) return null;
+    if (registry.isFeedStale(String(row.fetched_at), nowIso)) {
+      return { stale: true as const, fetched_at: String(row.fetched_at) };
+    }
+    return row.payload;
+  };
   return {
-    govramp: (bySource.get("govramp") as never) ?? null,
-    txramp: (bySource.get("txramp") as never) ?? null,
-    sourcewell: (bySource.get("sourcewell") as never) ?? null,
+    govramp: resolve("govramp") as never,
+    txramp: resolve("txramp") as never,
+    sourcewell: resolve("sourcewell") as never,
   };
 }
 

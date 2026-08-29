@@ -5,6 +5,7 @@ import {
   checkGovRamp,
   checkSourcewell,
   checkTxRamp,
+  isFeedStale,
 } from "../../../supabase/functions/_shared/registry/feeds.ts";
 import type {
   RampFeedRow,
@@ -86,8 +87,7 @@ describe("checkGovRamp", () => {
 
 describe("checkTxRamp", () => {
   it("keeps the publishing-lag caveat on claimed-but-absent", async () => {
-    const check = await checkTxRamp(
-      { companyNames: ["Phantom Vendor"], claimed: true },
+    const check = await checkTxRamp({ companyNames: ["Phantom Vendor"], claimed: true, sellingIntoTexas: true },
       rampFeed,
       ctx,
     );
@@ -105,8 +105,7 @@ describe("checkTxRamp", () => {
     const txFeed: RampFeedRow[] = [
       { provider: "CloudCourt Inc", product: "CloudCourt Gov", status: "Provisional" },
     ];
-    const check = await checkTxRamp(
-      { companyNames: ["CloudCourt"], claimed: true },
+    const check = await checkTxRamp({ companyNames: ["CloudCourt"], claimed: true, sellingIntoTexas: true },
       txFeed,
       ctx,
     );
@@ -116,8 +115,7 @@ describe("checkTxRamp", () => {
   });
 
   it("does not add the provisional caution to a certified listing", async () => {
-    const check = await checkTxRamp(
-      { companyNames: ["CloudCourt"], claimed: true },
+    const check = await checkTxRamp({ companyNames: ["CloudCourt"], claimed: true, sellingIntoTexas: true },
       rampFeed,
       ctx,
     );
@@ -127,8 +125,7 @@ describe("checkTxRamp", () => {
   });
 
   it("returns coverage_limited when the feed is not loaded", async () => {
-    const check = await checkTxRamp(
-      { companyNames: ["CloudCourt"], claimed: false },
+    const check = await checkTxRamp({ companyNames: ["CloudCourt"], claimed: false, sellingIntoTexas: true },
       null,
       ctx,
     );
@@ -181,8 +178,8 @@ describe("copy safety", () => {
       checkGovRamp({ companyNames: ["Phantom Vendor"], claimed: true }, rampFeed, ctx),
       checkGovRamp({ companyNames: ["Phantom Vendor"], claimed: false }, rampFeed, ctx),
       checkGovRamp({ companyNames: ["GovAssist AI"], claimed: true }, null, ctx),
-      checkTxRamp({ companyNames: ["Phantom Vendor"], claimed: true }, rampFeed, ctx),
-      checkTxRamp({ companyNames: ["CloudCourt"], claimed: true }, rampFeed, ctx),
+      checkTxRamp({ companyNames: ["Phantom Vendor"], claimed: true, sellingIntoTexas: true }, rampFeed, ctx),
+      checkTxRamp({ companyNames: ["CloudCourt"], claimed: true, sellingIntoTexas: true }, rampFeed, ctx),
       checkSourcewell(
         { companyNames: ["GovAssist AI, Inc."], claimed: true },
         sourcewellFeed,
@@ -197,5 +194,62 @@ describe("copy safety", () => {
     for (const check of checks) {
       expect(lintText(check.summary)).toEqual([]);
     }
+  });
+});
+
+describe("feed staleness", () => {
+  const NOW = "2026-08-28T12:00:00.000Z";
+
+  it("isFeedStale boundaries", () => {
+    expect(isFeedStale("2026-08-27T12:00:00.000Z", NOW)).toBe(false);
+    expect(isFeedStale("2026-08-21T12:00:00.001Z", NOW)).toBe(false);
+    expect(isFeedStale("2026-08-21T11:59:59.000Z", NOW)).toBe(true);
+    expect(isFeedStale("not a date", NOW)).toBe(true);
+  });
+
+  const staleMarker = { stale: true as const, fetched_at: "2026-08-01T09:17:00.000Z" };
+
+  it("all three checks degrade honestly on a stale feed", async () => {
+    const gov = await checkGovRamp({ companyNames: ["GovAssist AI Inc"], claimed: true }, staleMarker, ctx);
+    const tx = await checkTxRamp({ companyNames: ["GovAssist AI Inc"], claimed: true, sellingIntoTexas: true }, staleMarker, ctx);
+    const sw = await checkSourcewell({ companyNames: ["GovAssist AI Inc"], claimed: true }, staleMarker, ctx);
+    for (const check of [gov, tx, sw]) {
+      expect(check.status).toBe("coverage_limited");
+      expect((check.data as { reason: string }).reason).toBe("feed_stale");
+      expect(check.summary).toContain("2026-08-01");
+      expect(lintText(check.summary)).toEqual([]);
+    }
+  });
+});
+
+describe("checkTxRamp gating (methodology D3.3: Texas buyers)", () => {
+  it("does not apply when neither claimed nor a Texas buyer", async () => {
+    const check = await checkTxRamp(
+      { companyNames: ["GovAssist AI Inc"], claimed: false, sellingIntoTexas: false },
+      rampFeed,
+      ctx,
+    );
+    expect(check.status).toBe("not_applicable");
+    expect(check.summary).toContain("Texas");
+    expect(lintText(check.summary)).toEqual([]);
+  });
+
+  it("runs for a Texas buyer even without a claim", async () => {
+    const check = await checkTxRamp(
+      { companyNames: ["GovAssist AI Inc"], claimed: false, sellingIntoTexas: true },
+      rampFeed,
+      ctx,
+    );
+    expect(check.status).not.toBe("not_applicable");
+  });
+
+  it("runs on a claim regardless of buyer state", async () => {
+    const check = await checkTxRamp(
+      { companyNames: ["Nowhere Vendor"], claimed: true, sellingIntoTexas: false },
+      rampFeed,
+      ctx,
+    );
+    expect(check.status).toBe("definitive_miss");
+    expect((check.data as { claimed_but_absent: boolean }).claimed_but_absent).toBe(true);
   });
 });

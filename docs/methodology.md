@@ -185,7 +185,7 @@ Compliance claims come in different kinds: some can be checked against official 
 
 **What we look at.** Claimed TX-RAMP certification, when the vendor is selling into Texas.
 **Public source.** [Texas DIR TX-RAMP certified products list](https://dir.texas.gov/resource-library-item/tx-ramp-certified-cloud-products).
-**How it runs.** Automatic lookup.
+**How it runs.** Automatic lookup, when the buyer is in Texas or the pitch claims TX-RAMP. For everyone else the check does not apply, and the report says so.
 **If adverse.** A claim absent from the list is weighted High rather than Critical, because the published list is known to lag actual certifications; the report says so and gives the DIR contact for confirmation. "Provisional" presented as "certified" is noted.
 
 ### D3.4 ISO 27001 certificates
@@ -509,7 +509,7 @@ The tier is computed by plain code from typed, logged inputs. No AI model assign
 
 ## 5. The source registry
 
-Every external source the tool consults, with its refresh cadence. This table is the complete list; the tool queries nothing else.
+Every external source the tool consults, with its refresh cadence. This table is the complete list; the tool queries nothing else. Copied lists (GovRAMP, TX-RAMP, Sourcewell) refresh daily; if our copy is more than 7 days old, the affected check reports that it did not run rather than using old data.
 
 | Source | What it provides | URL | Cadence | Status |
 |---|---|---|---|---|

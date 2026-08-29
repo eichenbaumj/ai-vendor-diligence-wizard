@@ -98,7 +98,7 @@ describe("PanelFile schema", () => {
 describe("panelProblems", () => {
   it("rejects a real-vendor category in a public file", () => {
     const parsed = PanelFile.parse(
-      panel([entry({ category: "legit-established" })]),
+      panel([entry({ category: "established" })]),
     );
     const problems = panelProblems(parsed, { isPublicFile: true });
     expect(

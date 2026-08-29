@@ -26,10 +26,17 @@ export const LEVEL_BODIES: Record<LevelName, Record<string, unknown>> = {
   DEEP: { deep: true },
 };
 
+/* Real-vendor maturity buckets (established / growth / startup) carve the
+   private panels by company stage: established = 10+ years operating with a
+   deep registry and procurement footprint; growth = institutionally funded,
+   roughly 4-10 years old, real deployments, partial registry footprint;
+   startup = under ~4 years, where a thin public footprint is the norm and
+   fairness floors matter most. real-flagged is a different axis entirely
+   (whether research reaches a public enforcement or dissolution record). */
 export const PanelCategory = z.enum([
-  "legit-established",
-  "legit-emerging",
-  "honest-gaps",
+  "established",
+  "growth",
+  "startup",
   "synthetic-control",
   "adversarial",
   "real-flagged",

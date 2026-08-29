@@ -236,3 +236,40 @@ export async function streamChat(
     turnsRemaining: Number.isNaN(turnsRemaining) ? null : turnsRemaining,
   };
 }
+
+/* ------------------------------------------------------------------ dispute */
+
+export interface DisputeParams {
+  vendor_key: string;
+  evaluation_id?: string | null;
+  contact_email: string;
+  disputed_item: string;
+  vendor_statement: string;
+  evidence_url?: string | null;
+  turnstile_token: string | null;
+}
+
+export async function submitDispute(params: DisputeParams): Promise<{ message: string }> {
+  /* The preview build has no backend; behave like the live success path so
+     the form is demonstrable. */
+  if (IS_MOCK) {
+    return {
+      message:
+        "Received. We review disputes within 5 business days. While a dispute is open, affected reports show a disputed notice.",
+    };
+  }
+
+  const res = await fetch(`${FUNCTIONS_BASE}/dispute`, {
+    method: "POST",
+    headers: baseHeaders(),
+    body: JSON.stringify(params),
+  });
+
+  if (!res.ok) await throwMapped(res, "dispute");
+  const data = (await res.json()) as { message?: string };
+  return {
+    message:
+      data.message ??
+      "Received. We review disputes within 5 business days.",
+  };
+}

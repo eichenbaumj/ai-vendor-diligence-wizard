@@ -108,3 +108,34 @@ describe("mapApiError", () => {
     expect(out.headline).toBe("Something went wrong on our side.");
   });
 });
+
+describe("dispute surface", () => {
+  it("maps the validation sentence to its friendly copy", () => {
+    const out = mapApiError({
+      status: 400,
+      code: "vendor, work email, the disputed item, and your statement are required",
+      surface: "dispute",
+    });
+    expect(out.headline).toBe("The dispute is missing something.");
+    expect(out.hint).toContain("work email");
+  });
+
+  it("maps verification failure to browser-confirm copy", () => {
+    const out = mapApiError({ status: 403, code: "verification failed", surface: "dispute" });
+    expect(out.headline).toBe("We could not confirm your browser.");
+  });
+
+  it("rate limit and storage point at the email fallback", () => {
+    expect(
+      mapApiError({ status: 429, code: "rate_limited", surface: "dispute" }).hint,
+    ).toContain("disputes@group17a.com");
+    expect(
+      mapApiError({ status: 500, code: "storage", surface: "dispute" }).hint,
+    ).toContain("disputes@group17a.com");
+  });
+
+  it("unknown short tokens fall back to the dispute generic", () => {
+    const out = mapApiError({ status: 400, code: "zorp", surface: "dispute" });
+    expect(out.headline).toBe("The dispute could not be sent.");
+  });
+});

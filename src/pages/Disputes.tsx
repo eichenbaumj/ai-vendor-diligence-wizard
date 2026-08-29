@@ -1,4 +1,193 @@
+import { useRef, useState } from "react";
 import { Section, PillButton } from "@/components/brand";
+import {
+  TurnstileWidget,
+  type TurnstileHandle,
+} from "@/components/input/TurnstileWidget";
+import { ApiError, submitDispute } from "@/lib/api";
+
+/* Accepts a report link or a bare id; returns the UUID or null. */
+function extractEvaluationId(value: string): string | null {
+  const m = value.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i);
+  return m ? m[0] : null;
+}
+
+const FIELD_CLASS =
+  "w-full rounded-2xl border border-brand-silver bg-white px-5 py-4 text-[16px] outline-none focus:border-brand-cobalt";
+
+function DisputeForm() {
+  const [company, setCompany] = useState("");
+  const [email, setEmail] = useState("");
+  const [reportLink, setReportLink] = useState("");
+  const [disputedItem, setDisputedItem] = useState("");
+  const [statement, setStatement] = useState("");
+  const [evidenceUrl, setEvidenceUrl] = useState("");
+  const turnstileTokenRef = useRef<string | null>(null);
+  const turnstileRef = useRef<TurnstileHandle>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<{ message: string; hint: string | null } | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  const submit = async () => {
+    if (!company.trim() || !email.trim() || !disputedItem.trim() || !statement.trim()) {
+      setError({
+        message: "The dispute is missing something.",
+        hint: "Fill in your company, a work email, the item you dispute, and your statement.",
+      });
+      return;
+    }
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.trim())) {
+      setError({
+        message: "That email address does not look right.",
+        hint: "Use a work email address we can reply to.",
+      });
+      return;
+    }
+    setError(null);
+    setSubmitting(true);
+    try {
+      const res = await submitDispute({
+        vendor_key: company.trim().slice(0, 260),
+        evaluation_id: extractEvaluationId(reportLink),
+        contact_email: email.trim().slice(0, 254),
+        disputed_item: disputedItem.trim().slice(0, 2000),
+        vendor_statement: statement.trim().slice(0, 8000),
+        evidence_url: evidenceUrl.trim() || null,
+        turnstile_token: turnstileTokenRef.current,
+      });
+      setSuccessMessage(res.message);
+    } catch (e) {
+      /* Turnstile tokens are single-use; reset for a fresh one before retry. */
+      turnstileRef.current?.reset();
+      if (e instanceof ApiError) {
+        setError({ message: e.message, hint: e.retryHint });
+      } else {
+        setError({
+          message: "The dispute could not be sent.",
+          hint: "Please try again in a moment, or email disputes@group17a.com.",
+        });
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (successMessage) {
+    return (
+      <div className="mt-6 rounded-2xl bg-status-good-soft px-6 py-5" role="status">
+        <p className="font-sans text-[15px] font-bold text-status-good">
+          Your dispute was received.
+        </p>
+        <p className="mt-1 font-sans text-sm text-brand-charcoal">{successMessage}</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-6 space-y-4">
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div>
+          <label htmlFor="dispute-company" className="font-sans text-sm font-bold">
+            Your company's name
+          </label>
+          <input
+            id="dispute-company"
+            type="text"
+            value={company}
+            onChange={(e) => setCompany(e.target.value)}
+            placeholder="The name the report used"
+            className={`mt-1 ${FIELD_CLASS}`}
+          />
+        </div>
+        <div>
+          <label htmlFor="dispute-email" className="font-sans text-sm font-bold">
+            Work email
+          </label>
+          <input
+            id="dispute-email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="you@company.com"
+            className={`mt-1 ${FIELD_CLASS}`}
+          />
+        </div>
+      </div>
+      <div>
+        <label htmlFor="dispute-report" className="font-sans text-sm font-bold">
+          Report link <span className="font-normal text-brand-charcoal-soft">(if you have it)</span>
+        </label>
+        <input
+          id="dispute-report"
+          type="text"
+          value={reportLink}
+          onChange={(e) => setReportLink(e.target.value)}
+          placeholder="Paste the report's web address"
+          className={`mt-1 ${FIELD_CLASS}`}
+        />
+      </div>
+      <div>
+        <label htmlFor="dispute-item" className="font-sans text-sm font-bold">
+          The finding you are disputing
+        </label>
+        <textarea
+          id="dispute-item"
+          value={disputedItem}
+          onChange={(e) => setDisputedItem(e.target.value)}
+          maxLength={2000}
+          placeholder="Quote or clearly describe the specific finding."
+          className={`mt-1 min-h-24 resize-y ${FIELD_CLASS}`}
+        />
+      </div>
+      <div>
+        <label htmlFor="dispute-statement" className="font-sans text-sm font-bold">
+          Your statement and evidence
+        </label>
+        <textarea
+          id="dispute-statement"
+          value={statement}
+          onChange={(e) => setStatement(e.target.value)}
+          maxLength={8000}
+          placeholder="Why the finding is wrong, with the record, letter, or contract that shows it."
+          className={`mt-1 min-h-36 resize-y ${FIELD_CLASS}`}
+        />
+      </div>
+      <div>
+        <label htmlFor="dispute-evidence" className="font-sans text-sm font-bold">
+          Evidence link <span className="font-normal text-brand-charcoal-soft">(optional)</span>
+        </label>
+        <input
+          id="dispute-evidence"
+          type="url"
+          value={evidenceUrl}
+          onChange={(e) => setEvidenceUrl(e.target.value)}
+          placeholder="https://an-official-source.example.gov/record"
+          className={`mt-1 ${FIELD_CLASS}`}
+        />
+      </div>
+
+      {error && (
+        <div role="alert" className="rounded-2xl bg-status-bad-soft px-5 py-4">
+          <p className="text-[15px] font-bold text-status-bad">{error.message}</p>
+          {error.hint && <p className="mt-1 text-sm text-brand-charcoal">{error.hint}</p>}
+        </div>
+      )}
+
+      <div>
+        <PillButton variant="primary" size="lg" onClick={() => void submit()} disabled={submitting}>
+          {submitting ? "Sending…" : "Send the dispute"}
+        </PillButton>
+      </div>
+
+      <TurnstileWidget
+        ref={turnstileRef}
+        onToken={(t) => {
+          turnstileTokenRef.current = t;
+        }}
+      />
+    </div>
+  );
+}
 
 export default function Disputes() {
   return (
@@ -51,16 +240,22 @@ export default function Disputes() {
           </p>
 
           <h2 className="mt-10 font-serif text-2xl font-bold">
-            How to reach us
+            Send a dispute
           </h2>
           <p className="mt-4 font-sans text-base leading-relaxed md:text-lg">
-            Email is the channel for now. An in-app dispute form is coming.
+            Use the form below. We reply to the email you give here.
           </p>
-          <div className="mt-6">
-            <PillButton href="mailto:disputes@group17a.com" variant="primary">
-              Email disputes@group17a.com
-            </PillButton>
-          </div>
+          <DisputeForm />
+          <p className="mt-6 font-sans text-sm text-brand-charcoal-soft">
+            Prefer email? Write to{" "}
+            <a
+              href="mailto:disputes@group17a.com"
+              className="text-brand-cobalt underline underline-offset-2 hover:text-brand-cobalt-deep"
+            >
+              disputes@group17a.com
+            </a>{" "}
+            with the same details.
+          </p>
 
           <p className="mt-10 border-t border-brand-ink/10 pt-6 font-sans text-base leading-relaxed text-brand-charcoal-soft">
             A note on what reports say: when the tool cannot confirm a claim,

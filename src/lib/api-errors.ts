@@ -11,7 +11,7 @@ export interface FriendlyError {
   hint: string | null;
 }
 
-export type ApiSurface = "evaluate" | "chat" | "get-evaluation";
+export type ApiSurface = "evaluate" | "chat" | "get-evaluation" | "dispute";
 
 const EVALUATE_MAP: Record<string, FriendlyError> = {
   method: {
@@ -92,6 +92,29 @@ const EVALUATE_MAP: Record<string, FriendlyError> = {
   },
 };
 
+const DISPUTE_MAP: Record<string, FriendlyError> = {
+  "vendor, work email, the disputed item, and your statement are required": {
+    headline: "The dispute is missing something.",
+    hint: "Fill in your company, a work email, the item you dispute, and your statement.",
+  },
+  "verification failed": {
+    headline: "We could not confirm your browser.",
+    hint: "A new security check just started. Wait a moment, then send again.",
+  },
+  rate_limited: {
+    headline: "You have reached the dispute limit for today.",
+    hint: "Please try again tomorrow, or email disputes@group17a.com.",
+  },
+  storage: {
+    headline: "We could not save your dispute.",
+    hint: "Please try again in a moment, or email disputes@group17a.com.",
+  },
+  "not configured": {
+    headline: "The dispute channel is not fully set up yet.",
+    hint: "Please email disputes@group17a.com.",
+  },
+};
+
 const CHAT_MAP: Record<string, FriendlyError> = {
   session_limit: {
     headline: "This report has used all its questions.",
@@ -130,16 +153,20 @@ function statusFallback(status: number, surface: ApiSurface): FriendlyError {
       hint: "Reload the page to try again.",
     };
   }
-  if (status === 429) return EVALUATE_MAP.rate_limited;
+  if (status === 429) {
+    return surface === "dispute" ? DISPUTE_MAP.rate_limited : EVALUATE_MAP.rate_limited;
+  }
   if (status >= 500) {
     return {
       headline: "Something went wrong on our side.",
       hint: "Please try again in a moment.",
     };
   }
-  return surface === "chat"
-    ? CHAT_MAP.session
-    : { headline: "The check could not start.", hint: "Please try again." };
+  if (surface === "chat") return CHAT_MAP.session;
+  if (surface === "dispute") {
+    return { headline: "The dispute could not be sent.", hint: "Please try again." };
+  }
+  return { headline: "The check could not start.", hint: "Please try again." };
 }
 
 export function mapApiError(input: {
@@ -150,7 +177,8 @@ export function mapApiError(input: {
 }): FriendlyError {
   const { status, surface } = input;
   const code = input.code?.trim() || null;
-  const table = surface === "chat" ? CHAT_MAP : EVALUATE_MAP;
+  const table =
+    surface === "chat" ? CHAT_MAP : surface === "dispute" ? DISPUTE_MAP : EVALUATE_MAP;
 
   let base: FriendlyError | null = null;
   if (code && surface !== "get-evaluation" && table[code]) {

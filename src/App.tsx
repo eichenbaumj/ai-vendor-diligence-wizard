@@ -7,6 +7,8 @@ import EvaluationPage from "@/pages/Evaluation";
 import Methodology from "@/pages/Methodology";
 import DataSafety from "@/pages/DataSafety";
 import Disputes from "@/pages/Disputes";
+import { PasswordGate, useGateSession } from "@/components/input/PasswordGate";
+import { GATE_ENABLED } from "@/lib/config";
 
 /** Reset scroll on route change (browser default only handles history nav). */
 function ScrollToTop() {
@@ -33,6 +35,9 @@ function NotFound() {
 }
 
 export default function App() {
+  const gate = useGateSession(GATE_ENABLED);
+  if (!gate.ready) return null;
+  if (!gate.unlocked) return <PasswordGate />;
   return (
     <div className="flex min-h-screen flex-col">
       <a

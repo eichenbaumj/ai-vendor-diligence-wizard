@@ -165,6 +165,17 @@ Deno.serve(async (req) => {
   const supabase = createClient(env.supabaseUrl, env.serviceKey);
   const ip = clientIp(req);
 
+  /* Temporary pre-launch gate: when the GATE_ENABLED secret is set, the
+     request must carry a valid Supabase Auth session token from the shared
+     preview account. Built for deletion: unset the secret to open the
+     tool; the frontend flag lives in src/lib/config.ts. */
+  if (Deno.env.get("GATE_ENABLED")) {
+    const gateToken = req.headers.get("x-gate-token") ?? "";
+    if (!gateToken) return json({ error: "locked" }, 403);
+    const { data: gateData, error: gateErr } = await supabase.auth.getUser(gateToken);
+    if (gateErr || !gateData?.user) return json({ error: "locked" }, 403);
+  }
+
   const turnstileOk = await verifyTurnstile(
     body?.turnstile_token ?? null,
     env.turnstileSecret,

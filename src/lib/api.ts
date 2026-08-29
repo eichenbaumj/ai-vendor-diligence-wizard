@@ -15,6 +15,7 @@ import {
   isMockEvaluationId,
   startMockEvaluation,
 } from "@/lib/mock";
+import { supabase } from "@/lib/supabase";
 import type { SampleId } from "@/lib/sample-pitches";
 
 /* ------------------------------------------------------------ client token */
@@ -113,9 +114,17 @@ export async function evaluate(params: {
     client_token: getClientToken(),
   };
 
+  /* Pre-launch gate: ride the shared preview session's token when present
+     (the evaluate function requires it while GATE_ENABLED is set). */
+  const gateToken = supabase
+    ? (await supabase.auth.getSession()).data.session?.access_token ?? null
+    : null;
   const res = await fetch(`${FUNCTIONS_BASE}/evaluate`, {
     method: "POST",
-    headers: baseHeaders(),
+    headers: {
+      ...baseHeaders(),
+      ...(gateToken ? { "x-gate-token": gateToken } : {}),
+    },
     body: JSON.stringify(body),
   });
 

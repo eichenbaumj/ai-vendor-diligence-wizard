@@ -3,7 +3,7 @@
 export const CORS_HEADERS: Record<string, string> = {
   "access-control-allow-origin": "*",
   "access-control-allow-headers":
-    "authorization, x-client-info, apikey, content-type",
+    "authorization, x-client-info, apikey, content-type, x-gate-token, x-eval-token",
   "access-control-allow-methods": "GET, POST, OPTIONS",
 };
 

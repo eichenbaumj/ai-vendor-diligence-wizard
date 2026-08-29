@@ -26,4 +26,9 @@ export const TURNSTILE_SITE_KEY: string =
 
 export const IS_MOCK: boolean = import.meta.env.VITE_MOCK === "1";
 
+/* Temporary pre-launch access gate (shared password via Supabase Auth).
+   Flip to false at launch and delete PasswordGate + the GATE_ENABLED check
+   in the evaluate function. Mock builds skip the gate. */
+export const GATE_ENABLED: boolean = !IS_MOCK;
+
 export const FUNCTIONS_BASE = `${SUPABASE_URL}/functions/v1`;

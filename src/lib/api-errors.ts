@@ -74,6 +74,10 @@ const EVALUATE_MAP: Record<string, FriendlyError> = {
     headline: "Your browser blocked part of the check.",
     hint: "Turn off strict privacy blocking for this site, then try again.",
   },
+  locked: {
+    headline: "This preview is password protected.",
+    hint: "Reload the page and enter the preview password, then try again.",
+  },
   "verification failed, reload and retry": {
     headline: "We could not confirm your browser.",
     hint: "A new security check just started. Wait a moment, then try again.",

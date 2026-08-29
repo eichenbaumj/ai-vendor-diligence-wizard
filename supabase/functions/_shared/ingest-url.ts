@@ -111,7 +111,15 @@ export async function fetchSubmittedUrl(
       const res = await fetchFn(current, {
         redirect: "manual",
         signal: controller.signal,
-        headers: { accept: "text/html,application/xhtml+xml" },
+        /* Browser-shaped headers: several CDN bot filters return an instant
+           403 to a UA-less datacenter fetch (the TX-RAMP feed taught this
+           lesson first, and the first live Govra site fetch repeated it). */
+        headers: {
+          accept: "text/html,application/xhtml+xml",
+          "accept-language": "en-US,en;q=0.9",
+          "user-agent":
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
+        },
       });
       if (res.status >= 300 && res.status < 400) {
         const location = res.headers.get("location");

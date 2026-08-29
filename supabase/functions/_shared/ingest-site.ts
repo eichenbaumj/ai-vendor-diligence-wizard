@@ -122,11 +122,14 @@ export async function fetchVendorSite(
   let seed;
   try {
     seed = await fetchSubmittedUrl(seedUrl, fetchFn, deadline);
-  } catch {
+  } catch (apexErr) {
     try {
       seedUrl = normalizeSubmittedUrl(`https://www.${domain}/`);
       seed = await fetchSubmittedUrl(seedUrl, fetchFn, deadline);
-    } catch {
+    } catch (wwwErr) {
+      console.log(
+        `site fetch failed for ${domain}: apex=${String((apexErr as Error).message)} www=${String((wwwErr as Error).message)}`,
+      );
       return null;
     }
   }

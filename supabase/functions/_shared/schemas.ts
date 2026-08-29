@@ -198,7 +198,9 @@ export const SourceRef = z.object({
 export type SourceRef = z.infer<typeof SourceRef>;
 
 export const LedgerRow = z.object({
-  id: z.string().max(24),
+  /* Stable semantic ids ("fedramp_marketplace", "cust-<slug>") sized for
+     slugged subjects; QA expectations and drift reports key on them. */
+  id: z.string().max(40),
   dimension: Dimension,
   claim_quote: z.string().max(400).nullable(), // the pitch language being tested
   what_checked: z.string().max(300),

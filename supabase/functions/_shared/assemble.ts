@@ -84,14 +84,32 @@ function src(c: RegistryCheck) {
     : [];
 }
 
-let rowSeq = 0;
-function rowId(): string {
-  rowSeq += 1;
-  return `row-${String(rowSeq).padStart(2, "0")}`;
+/* Ledger row ids are stable and semantic so QA expectations and drift
+   reports can key on them across runs. Loop-generated rows carry a slug
+   of their subject; collisions get a numeric suffix. */
+const usedRowIds = new Set<string>();
+function uniqueRowId(base: string): string {
+  let id = base.slice(0, 36) || "row";
+  let n = 2;
+  while (usedRowIds.has(id)) {
+    id = `${base.slice(0, 32)}-${n}`;
+    n += 1;
+  }
+  usedRowIds.add(id);
+  return id;
+}
+function slugPart(name: string): string {
+  return (
+    name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "")
+      .slice(0, 28) || "unnamed"
+  );
 }
 
 export function assemble(input: AssembleInput): AssembledSkeleton {
-  rowSeq = 0;
+  usedRowIds.clear();
   const { extract, checks, identity, citations, adv_findings, sector } = input;
   const ledger: LedgerRow[] = [];
   const findings: Finding[] = [];
@@ -114,7 +132,7 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
     const basis = identity.identifiers_found.slice(0, 3).join("; ");
     const best = sosHits[0] ?? (edgar?.status === "hit" ? edgar : sam);
     ledger.push({
-      id: rowId(),
+      id: uniqueRowId("identity"),
       dimension: "D1",
       claim_quote: null,
       what_checked: "Whether a registered legal entity stands behind this pitch",
@@ -182,7 +200,7 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
        searched Texas and found nothing" over a Texas hit. */
     const partialHit = sosHits[0] ?? null;
     ledger.push({
-      id: rowId(),
+      id: uniqueRowId("identity"),
       dimension: "D1",
       claim_quote: null,
       what_checked: partialHit
@@ -213,7 +231,7 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
       evidence_url: excl.evidence_url,
     });
     ledger.push({
-      id: rowId(),
+      id: uniqueRowId("excl"),
       dimension: "D1",
       claim_quote: null,
       what_checked: "Federal exclusion and debarment records (SAM.gov)",
@@ -241,7 +259,7 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
   if (rdap && rdap.status === "hit") {
     const identityClaim = extract.claims.find((c) => c.type === "identity");
     ledger.push({
-      id: rowId(),
+      id: uniqueRowId("domain-age"),
       dimension: "D1",
       claim_quote: rdapContradiction ? (identityClaim?.quote ?? null) : null,
       what_checked: "Domain registration date against the pitch's history claims",
@@ -273,7 +291,7 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
   };
   if (dns && (dnsData.free_mail_sender || dnsData.mx_present === false)) {
     ledger.push({
-      id: rowId(),
+      id: uniqueRowId("email"),
       dimension: "D1",
       claim_quote: null,
       what_checked: "Whether the pitch was sent from working corporate email infrastructure",
@@ -306,7 +324,7 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
       date: dateOf(usasp),
     });
     ledger.push({
-      id: rowId(),
+      id: uniqueRowId("usaspending"),
       dimension: "D2",
       claim_quote: null,
       what_checked: "Federal award records (USAspending.gov)",
@@ -350,7 +368,7 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
       verifiedCustomers += 1;
       greenDims.add("D2");
       ledger.push({
-        id: rowId(),
+        id: uniqueRowId(`cust-${slugPart(customer)}`),
         dimension: "D2",
         claim_quote: claim?.quote ?? null,
         what_checked: `Public traces of the claimed customer relationship with ${customer}`,
@@ -372,7 +390,7 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
         (c) => canVerify(c.domain_class) && urlMentions(c.url, customer),
       );
       ledger.push({
-        id: rowId(),
+        id: uniqueRowId(`cust-${slugPart(customer)}`),
         dimension: "D2",
         claim_quote: claim?.quote ?? null,
         what_checked: `Public traces of the claimed customer relationship with ${customer}`,
@@ -444,7 +462,7 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
         (c) => c.type === "compliance" && /fedramp/i.test(c.quote),
       );
       ledger.push({
-        id: rowId(),
+        id: uniqueRowId("fedramp_marketplace"),
         dimension: "D3",
         claim_quote: claim?.quote ?? null,
         what_checked: "The FedRAMP Marketplace authorization feed",
@@ -470,7 +488,7 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
         date: dateOf(fedramp),
       });
       ledger.push({
-        id: rowId(),
+        id: uniqueRowId("fedramp_marketplace"),
         dimension: "D3",
         claim_quote: null,
         what_checked: "The FedRAMP Marketplace authorization feed",
@@ -483,7 +501,7 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
       });
     } else if (claimsFedramp) {
       ledger.push({
-        id: rowId(),
+        id: uniqueRowId("fedramp_marketplace"),
         dimension: "D3",
         claim_quote: extract.claims.find((c) => /fedramp/i.test(c.quote))?.quote ?? null,
         what_checked: "The FedRAMP Marketplace authorization feed",
@@ -558,7 +576,7 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
       (c) => c.type === "compliance" && /sourcewell|cooperative/i.test(c.quote),
     );
     ledger.push({
-      id: rowId(),
+      id: uniqueRowId("sourcewell"),
       dimension: "D3",
       claim_quote: claim?.quote ?? null,
       what_checked: "The Sourcewell cooperative contract holder list",
@@ -593,7 +611,7 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
   );
   if (fakeCert) {
     ledger.push({
-      id: rowId(),
+      id: uniqueRowId("cert-vocab"),
       dimension: "D3",
       claim_quote: fakeCert.quote,
       what_checked: "Whether this certification exists under the named regime",
@@ -666,7 +684,7 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
         c.type === "team" && c.subject && norm(c.subject) === norm(person.name),
     );
     ledger.push({
-      id: rowId(),
+      id: uniqueRowId(`person-${slugPart(person.name)}`),
       dimension: "D5",
       claim_quote: claim?.quote ?? null,
       what_checked: `Whether ${person.name} appears in public sources independent of the vendor's site`,
@@ -721,7 +739,7 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
       claim.quote,
     );
     ledger.push({
-      id: rowId(),
+      id: uniqueRowId(`perf-${claim.id}`),
       dimension: "D6",
       claim_quote: claim.quote,
       what_checked: "Whether a published methodology or independent evaluation supports this number",
@@ -745,7 +763,7 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
 
   if (extract.urgency_language.length > 0) {
     ledger.push({
-      id: rowId(),
+      id: uniqueRowId("urgency"),
       dimension: "D6",
       claim_quote: extract.urgency_language[0],
       what_checked: "Pressure tactics in the pitch",

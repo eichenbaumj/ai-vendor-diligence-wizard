@@ -50,6 +50,7 @@ export default function Check() {
   const [tab, setTab] = useState<Tab>(IS_MOCK ? "paste" : "url");
   const [content, setContent] = useState("");
   const [vendorName, setVendorName] = useState("");
+  const [vendorSite, setVendorSite] = useState("");
   const [stateCode, setStateCode] = useState("");
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [siteUrl, setSiteUrl] = useState("");
@@ -94,11 +95,22 @@ export default function Check() {
   const submit = async () => {
     let value = "";
     let filename: string | undefined;
+    let effectiveKind: Tab = tab;
     if (tab === "name") {
       value = vendorName.trim();
       if (!value) {
         setError({ message: "Type the vendor's name first.", hint: null });
         return;
+      }
+      /* A known website is the stronger submission: the pipeline reads the
+         site either way, but submitting it directly skips discovery. */
+      let site = vendorSite.trim();
+      if (site) {
+        if (!/^[a-z]+:\/\//i.test(site)) site = `https://${site}`;
+        if (/^https:\/\/.+\..+/i.test(site)) {
+          effectiveKind = "url";
+          value = site;
+        }
       }
     } else if (tab === "pdf") {
       if (!pdfFile) {
@@ -133,7 +145,7 @@ export default function Check() {
         filename = pdfFile.name;
       }
       const res = await evaluate({
-        input_kind: tab,
+        input_kind: effectiveKind,
         content: value,
         filename,
         state: stateCode || null,
@@ -217,9 +229,21 @@ export default function Check() {
                     placeholder="Type the company's name, e.g. Acme GovTech"
                     className="w-full rounded-2xl border border-transparent bg-white px-5 py-4 text-[16px] shadow-soft outline-none focus:border-brand-cobalt"
                   />
+                  <label htmlFor="vendor-site" className="sr-only">
+                    The vendor's website, if you know it
+                  </label>
+                  <input
+                    id="vendor-site"
+                    type="url"
+                    value={vendorSite}
+                    onChange={(e) => setVendorSite(e.target.value)}
+                    placeholder="Their website, if you know it (optional)"
+                    className="mt-3 w-full rounded-2xl border border-transparent bg-white px-5 py-4 font-mono text-[15px] shadow-soft outline-none focus:border-brand-cobalt"
+                  />
                   <p className="mt-2 text-sm text-brand-charcoal-soft">
-                    With only a name we can still run the registry checks, but
-                    pasting the full email gives the claims we can test.
+                    With only a name we will search for the company's website
+                    and read it. If you already know the website, adding it
+                    here makes the report stronger.
                   </p>
                 </div>
               ) : tab === "pdf" ? (

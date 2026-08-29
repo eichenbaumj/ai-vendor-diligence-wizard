@@ -55,6 +55,9 @@ export interface S3UserInput {
   claims: { id: string; type: string; quote: string; subject: string | null }[];
   registry_summary: { check_id: string; status: string; summary: string }[];
   user_state: string | null;
+  /* Search budget for this run (rides the user turn; the system prompt
+     stays byte-stable for caching). */
+  search_budget?: number;
 }
 
 export function buildS3UserMessage(input: S3UserInput): string {

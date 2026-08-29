@@ -206,6 +206,24 @@ export function buildExtractRequest(
   };
 }
 
+/* Research budget, quantized to exactly two buckets so the cross-run prompt
+   cache splits at most once (the cache renders tools -> system -> messages,
+   so a tool-array byte change is a full-rebuild event; within-run pause_turn
+   caching is untouched because continuations reuse the same request object).
+   The extended bucket exists for pitches naming many customers: the
+   standard budget spread across all research objectives cannot individually
+   search 4+ customers. */
+export interface ResearchBudget {
+  searches: number;
+  fetches: number;
+}
+
+export function researchBudget(input: S3UserInput): ResearchBudget {
+  return input.named_customers.length >= 4
+    ? { searches: 20, fetches: 8 }
+    : { searches: 12, fetches: 6 };
+}
+
 /* The S3 tool array — constructed once per request and reused byte-identical
    across pause_turn continuations.
 
@@ -215,18 +233,18 @@ export function buildExtractRequest(
    400s function wall clock (7+ minutes of tool blocks, narrative never
    written). The basic variants keep each search a simple search, which is
    what a hard-deadlined pipeline can actually afford. */
-export function researchTools(): unknown[] {
+export function researchTools(budget: ResearchBudget): unknown[] {
   return [
     {
       type: "web_search_20250305",
       name: "web_search",
-      max_uses: 12,
+      max_uses: budget.searches,
       blocked_domains: BLOCKED_SEARCH_DOMAINS,
     },
     {
       type: "web_fetch_20250910",
       name: "web_fetch",
-      max_uses: 6,
+      max_uses: budget.fetches,
       citations: { enabled: true },
       max_content_tokens: 15000,
     },
@@ -234,6 +252,7 @@ export function researchTools(): unknown[] {
 }
 
 export function buildResearchRequest(input: S3UserInput): AnthropicRequestBody {
+  const budget = researchBudget(input);
   return {
     model: MODELS.research,
     max_tokens: 8192,
@@ -250,8 +269,15 @@ export function buildResearchRequest(input: S3UserInput): AnthropicRequestBody {
         cache_control: { type: "ephemeral" },
       },
     ],
-    tools: researchTools(),
-    messages: [{ role: "user", content: buildS3UserMessage(input) }],
+    tools: researchTools(budget),
+    messages: [
+      {
+        role: "user",
+        /* The budget rides the user turn (cache-safe: S3_SYSTEM stays
+           byte-identical) so the model can pace its searches. */
+        content: buildS3UserMessage({ ...input, search_budget: budget.searches }),
+      },
+    ],
   };
 }
 

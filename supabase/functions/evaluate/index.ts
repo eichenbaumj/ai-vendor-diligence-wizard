@@ -23,6 +23,7 @@ import {
   buildReviewRequest,
   buildStructureRequest,
   MODELS,
+  researchBudget,
 } from "../_shared/anthropic.ts";
 import {
   addUsage,
@@ -638,10 +639,22 @@ async function runPipeline(
     extract.domains,
     new Date().toISOString(),
   );
+  const budget = researchBudget({
+    vendor_name_candidates: extract.vendor_name_candidates,
+    domains: extract.domains,
+    people: extract.people,
+    named_customers: extract.named_customers,
+    claims: extract.claims,
+    registry_summary: [],
+    user_state: userState,
+  });
+  console.log(
+    `s3 budget bucket: ${budget.searches}/${budget.fetches}, used ${research.usage.web_search_requests} searches, partial=${research.partial}`,
+  );
   await emit({
     stage: "research",
     kind: "micro_finding",
-    label: `Web research finished: ${citations.length} sources collected (${research.usage.web_search_requests} searches)`,
+    label: `Web research finished: ${citations.length} sources collected (${research.usage.web_search_requests} of up to ${budget.searches} searches)`,
   });
 
   /* ADV-04: deterministic planted-corroboration scan over the retrieved

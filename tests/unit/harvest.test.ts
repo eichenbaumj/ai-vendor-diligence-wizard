@@ -165,3 +165,22 @@ describe("empty inputs", () => {
     expect(run([], "no links here at all")).toEqual([]);
   });
 });
+
+describe("channel A field clamps", () => {
+  it("clamps over-long API titles, cited_text, and URLs to the schema caps", () => {
+    const research = {
+      citations: [
+        {
+          url: "https://example-press.com/story?" + "u".repeat(700),
+          title: "T".repeat(400),
+          cited_text: "c".repeat(600),
+        },
+      ],
+      narrative: "",
+    };
+    const [c] = harvestCitations(research, [], "2026-08-28T00:00:00.000Z");
+    expect(c.url.length).toBe(600);
+    expect(c.title!.length).toBe(300);
+    expect(c.cited_text!.length).toBe(400);
+  });
+});

@@ -36,10 +36,14 @@ export function harvestCitations(
   for (const c of research.citations) {
     if (seenUrls.has(c.url)) continue;
     seenUrls.add(c.url);
+    /* Clamp API-supplied fields to the Citation schema caps here at the
+       origin: these objects flow into ledger row sources and the report's
+       source list, and an over-long search-result title or tracking-heavy
+       URL would fail the final Report schema parse. */
     citations.push({
-      url: c.url,
-      title: c.title,
-      cited_text: c.cited_text,
+      url: c.url.slice(0, 600),
+      title: c.title ? c.title.slice(0, 300) : null,
+      cited_text: c.cited_text ? c.cited_text.slice(0, 400) : null,
       retrieved_at: retrievedAt,
       domain_class: classifyDomain(c.url, vendorDomains),
     });

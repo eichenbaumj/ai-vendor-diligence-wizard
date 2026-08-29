@@ -941,6 +941,23 @@ async function runPipeline(
   const validated = Report.safeParse(report);
   if (!validated.success) {
     console.error(`report schema invalid: ${validated.error.message.slice(0, 500)}`);
+    /* Persist the zod detail into the forensics jsonb (never exposed by
+       get-evaluation) so a production failure is diagnosable without
+       platform log access. */
+    const { data: fRow } = await supabase
+      .from("evaluations")
+      .select("forensics")
+      .eq("id", evaluationId)
+      .maybeSingle();
+    await supabase
+      .from("evaluations")
+      .update({
+        forensics: {
+          ...((fRow?.forensics as Record<string, unknown>) ?? {}),
+          assembly_schema_error: validated.error.message.slice(0, 1600),
+        },
+      })
+      .eq("id", evaluationId);
     await finishInsufficient(supabase, evaluationId, emit, "Report assembly failed. Please re-run.");
     return;
   }

@@ -21,11 +21,13 @@ import {
 type Tab = "paste" | "name" | "pdf" | "url";
 
 /* pdf/url need the live backend; the preview build has no ingestion path. */
+/* Ordered by how people actually arrive: with a website address first,
+   then a pasted email, then an attachment, then just a name. */
 const TABS: { id: Tab; label: string; enabled: boolean }[] = [
-  { id: "paste", label: "Paste text", enabled: true },
-  { id: "name", label: "Vendor name only", enabled: true },
-  { id: "pdf", label: "Upload PDF", enabled: !IS_MOCK },
   { id: "url", label: "Website URL", enabled: !IS_MOCK },
+  { id: "paste", label: "Paste text", enabled: true },
+  { id: "pdf", label: "Upload PDF", enabled: !IS_MOCK },
+  { id: "name", label: "Vendor name only", enabled: true },
 ];
 
 function fileToBase64(file: File): Promise<string> {
@@ -44,7 +46,8 @@ export default function Check() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
-  const [tab, setTab] = useState<Tab>("paste");
+  /* Default to the first ENABLED tab (url needs the live backend). */
+  const [tab, setTab] = useState<Tab>(IS_MOCK ? "paste" : "url");
   const [content, setContent] = useState("");
   const [vendorName, setVendorName] = useState("");
   const [stateCode, setStateCode] = useState("");
@@ -162,11 +165,12 @@ export default function Check() {
         <div className="max-w-3xl">
             <p className="font-sans text-sm font-bold tracking-[0.14em] [font-variant-caps:all-small-caps] text-brand-cobalt">Run a check</p>
             <h1 className="mt-3 font-serif text-4xl font-bold leading-[1.08] sm:text-5xl">
-              Paste the pitch.
+              Start with what you have.
             </h1>
             <p className="mt-4 max-w-xl text-lg leading-relaxed text-brand-charcoal">
-              We check what the vendor claims against public records and hand
-              you the evidence, plus the questions to send back. About a
+              A website address, a pasted email, a PDF, or just the company's
+              name. We check what the vendor claims against public records and
+              hand you the evidence, plus the questions to send back. About a
               minute.
             </p>
 

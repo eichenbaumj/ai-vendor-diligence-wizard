@@ -9,7 +9,12 @@ import { mapApiError } from "../../src/lib/api-errors";
 const EVALUATE_CODES: [number, string][] = [
   [405, "method"],
   [503, "not configured"],
-  [400, "input_kind must be paste or name in this release"],
+  [400, "input_kind must be paste, name, pdf, or url"],
+  [400, "upload a PDF smaller than 6 MB"],
+  [400, "this PDF has no selectable text, paste the pitch text instead"],
+  [400, "submit a full https web address"],
+  [400, "that address is not one we can fetch"],
+  [400, "that page could not be fetched"],
   [400, "paste between 40 and 40,000 characters"],
   [400, "vendor name between 2 and 160 characters"],
   [400, "client_token required"],

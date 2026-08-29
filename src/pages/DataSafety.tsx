@@ -41,7 +41,7 @@ export default function DataSafety() {
               <li className="flex gap-3">
                 <Check className="text-brand-cobalt" />
                 <span>
-                  The pitch text you paste and the report we generate. Both
+                  The pitch text you share (pasted, or extracted from a PDF or web page you submit) and the report we generate. Both
                   are kept for about 90 days, then deleted.
                 </span>
               </li>
@@ -91,7 +91,7 @@ export default function DataSafety() {
 
       <Section tone="vellum">
         <div className="mx-auto max-w-3xl">
-          <h2 className="font-serif text-2xl font-bold">Before you paste</h2>
+          <h2 className="font-serif text-2xl font-bold">Before you share</h2>
           <p className="mt-4 font-sans text-base leading-relaxed md:text-lg">
             Pitches are vendor marketing, so they rarely contain sensitive
             information. Still, remove anything about a resident or a case

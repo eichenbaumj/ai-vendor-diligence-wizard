@@ -11,6 +11,7 @@ import {
 } from "@/components/input/TurnstileWidget";
 import { ApiError, evaluate } from "@/lib/api";
 import { IS_MOCK } from "@/lib/config";
+import { FilePicker } from "@/components/input/FilePicker";
 import {
   SAMPLE_PITCHES,
   getSamplePitch,
@@ -19,12 +20,25 @@ import {
 
 type Tab = "paste" | "name" | "pdf" | "url";
 
+/* pdf/url need the live backend; the preview build has no ingestion path. */
 const TABS: { id: Tab; label: string; enabled: boolean }[] = [
   { id: "paste", label: "Paste text", enabled: true },
   { id: "name", label: "Vendor name only", enabled: true },
-  { id: "pdf", label: "Upload PDF", enabled: false },
-  { id: "url", label: "Website URL", enabled: false },
+  { id: "pdf", label: "Upload PDF", enabled: !IS_MOCK },
+  { id: "url", label: "Website URL", enabled: !IS_MOCK },
 ];
+
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(reader.error);
+    reader.onload = () => {
+      const dataUrl = String(reader.result ?? "");
+      resolve(dataUrl.slice(dataUrl.indexOf(",") + 1));
+    };
+    reader.readAsDataURL(file);
+  });
+}
 
 export default function Check() {
   const navigate = useNavigate();
@@ -34,6 +48,8 @@ export default function Check() {
   const [content, setContent] = useState("");
   const [vendorName, setVendorName] = useState("");
   const [stateCode, setStateCode] = useState("");
+  const [pdfFile, setPdfFile] = useState<File | null>(null);
+  const [siteUrl, setSiteUrl] = useState("");
   const [sampleId, setSampleId] = useState<SampleId | undefined>(undefined);
   /* The token lives in a ref, not state: nothing renders from it, and the
      completion callback arriving seconds after load must not re-render the
@@ -73,26 +89,54 @@ export default function Check() {
   };
 
   const submit = async () => {
-    const isName = tab === "name";
-    const value = (isName ? vendorName : content).trim();
-    if (!value) {
-      setError({
-        message: isName
-          ? "Type the vendor's name first."
-          : "Paste the vendor's email first, or try one of the samples below.",
-        hint: null,
-      });
-      return;
+    let value = "";
+    let filename: string | undefined;
+    if (tab === "name") {
+      value = vendorName.trim();
+      if (!value) {
+        setError({ message: "Type the vendor's name first.", hint: null });
+        return;
+      }
+    } else if (tab === "pdf") {
+      if (!pdfFile) {
+        setError({ message: "Choose the vendor's PDF first.", hint: null });
+        return;
+      }
+    } else if (tab === "url") {
+      value = siteUrl.trim();
+      if (value && !/^[a-z]+:\/\//i.test(value)) value = `https://${value}`;
+      if (!value || !/^https:\/\/.+\..+/i.test(value)) {
+        setError({
+          message: "Enter the vendor's web address first.",
+          hint: "A full https address, like https://vendor.example.com.",
+        });
+        return;
+      }
+    } else {
+      value = content.trim();
+      if (!value) {
+        setError({
+          message: "Paste the vendor's email first, or try one of the samples below.",
+          hint: null,
+        });
+        return;
+      }
     }
     setError(null);
     setSubmitting(true);
     try {
+      if (tab === "pdf" && pdfFile) {
+        value = await fileToBase64(pdfFile);
+        filename = pdfFile.name;
+      }
       const res = await evaluate({
-        input_kind: isName ? "name" : "paste",
+        input_kind: tab,
         content: value,
+        filename,
         state: stateCode || null,
         turnstile_token: turnstileTokenRef.current,
-        sampleId,
+        /* Samples only ride along on the paste tab (they replay fixtures). */
+        sampleId: tab === "paste" ? sampleId : undefined,
       });
       navigate(`/r/${res.evaluation_id}`);
     } catch (e) {
@@ -172,6 +216,32 @@ export default function Check() {
                   <p className="mt-2 text-sm text-brand-charcoal-soft">
                     With only a name we can still run the registry checks, but
                     pasting the full email gives the claims we can test.
+                  </p>
+                </div>
+              ) : tab === "pdf" ? (
+                <div>
+                  <FilePicker file={pdfFile} onChange={setPdfFile} />
+                  <p className="mt-2 text-sm text-brand-charcoal-soft">
+                    We read the text inside the PDF and check it like a pasted
+                    pitch. The file itself is not stored.
+                  </p>
+                </div>
+              ) : tab === "url" ? (
+                <div>
+                  <label htmlFor="site-url" className="sr-only">
+                    The vendor's web address
+                  </label>
+                  <input
+                    id="site-url"
+                    type="url"
+                    value={siteUrl}
+                    onChange={(e) => setSiteUrl(e.target.value)}
+                    placeholder="https://vendor.example.com"
+                    className="w-full rounded-2xl border border-transparent bg-white px-5 py-4 font-mono text-[15px] shadow-soft outline-none focus:border-brand-cobalt"
+                  />
+                  <p className="mt-2 text-sm text-brand-charcoal-soft">
+                    We fetch this page once and read its text. Anything after a
+                    question mark in the address is removed first.
                   </p>
                 </div>
               ) : (

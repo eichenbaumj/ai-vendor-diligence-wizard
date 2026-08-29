@@ -66,11 +66,13 @@ export interface EvaluateResponse {
   cached: boolean;
 }
 
-export type InputKind = "paste" | "name";
+export type InputKind = "paste" | "name" | "pdf" | "url";
 
 export interface EvaluateRequest {
   input_kind: InputKind;
   content: string;
+  /* pdf submissions only: original filename, display metadata. */
+  filename?: string;
   state: string | null;
   turnstile_token: string | null;
   client_token: string;

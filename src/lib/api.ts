@@ -87,6 +87,7 @@ function baseHeaders(): Record<string, string> {
 export async function evaluate(params: {
   input_kind: InputKind;
   content: string;
+  filename?: string;
   state: string | null;
   turnstile_token: string | null;
   sampleId?: SampleId;
@@ -106,6 +107,7 @@ export async function evaluate(params: {
   const body: EvaluateRequest = {
     input_kind: params.input_kind,
     content: params.content,
+    ...(params.filename ? { filename: params.filename } : {}),
     state: params.state,
     turnstile_token: params.turnstile_token,
     client_token: getClientToken(),

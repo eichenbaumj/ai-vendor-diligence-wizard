@@ -44,8 +44,8 @@ const FAQS: { q: string; a: string }[] = [
     a: "No. The tool never says buy or don't buy, and it never gives a score. It tells you what public records show about the company, what it could not verify, and what to ask next. What you do with that is your call.",
   },
   {
-    q: "Who sees what I paste?",
-    a: "The pitch you paste and the report are stored for about 90 days, then deleted. There is no account, no tracking, no ads, and no public list of what anyone checked. See the Your data page for details.",
+    q: "Who sees what I share?",
+    a: "The pitch text (pasted, or extracted from a PDF or web page you submit) and the report are stored for about 90 days, then deleted. PDF files themselves are not stored. There is no account, no tracking, no ads, and no public list of what anyone checked. See the Your data page for details.",
   },
   {
     q: "What does it cost?",

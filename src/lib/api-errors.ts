@@ -22,9 +22,45 @@ const EVALUATE_MAP: Record<string, FriendlyError> = {
     headline: "The service is not fully set up yet.",
     hint: "Please try again later.",
   },
-  "input_kind must be paste or name in this release": {
-    headline: "That input type is not ready yet.",
-    hint: "Paste the pitch text, or use the vendor name tab.",
+  "input_kind must be paste, name, pdf, or url": {
+    headline: "That input type is not recognized.",
+    hint: "Reload the page and try again.",
+  },
+  "upload a PDF smaller than 6 MB": {
+    headline: "That PDF is too large.",
+    hint: "Upload a PDF smaller than 6 MB, or paste the pitch text.",
+  },
+  "that file does not look like a PDF": {
+    headline: "That file does not look like a PDF.",
+    hint: "Choose a .pdf file, or paste the pitch text.",
+  },
+  "that file does not look like a readable PDF": {
+    headline: "We could not read that PDF.",
+    hint: "Try a different copy, or paste the pitch text.",
+  },
+  "this PDF has no selectable text, paste the pitch text instead": {
+    headline: "This PDF has no selectable text.",
+    hint: "It may be a scanned image. Paste the pitch text instead.",
+  },
+  "this PDF is longer than 25 pages, paste the pitch text instead": {
+    headline: "That PDF is longer than 25 pages.",
+    hint: "Share the pitch itself, or paste the key pages as text.",
+  },
+  "submit a full https web address": {
+    headline: "That address does not look right.",
+    hint: "Submit a full https web address, like https://vendor.example.com.",
+  },
+  "that address is not one we can fetch": {
+    headline: "That address is not one we can fetch.",
+    hint: "Use the vendor's public website address.",
+  },
+  "that page could not be fetched": {
+    headline: "That page could not be fetched.",
+    hint: "Check the address, or paste the page text instead.",
+  },
+  "that address did not return a readable web page": {
+    headline: "That address did not return a readable web page.",
+    hint: "Point it at the vendor's marketing page, or paste the text instead.",
   },
   "paste between 40 and 40,000 characters": {
     headline: "That paste is too short or too long.",

@@ -25,6 +25,7 @@ import {
   buildReviewRequest,
   buildStructureRequest,
   MODELS,
+  type ResearchBudget,
   researchBudget,
 } from "../_shared/anthropic.ts";
 import {
@@ -76,6 +77,8 @@ import type { S5UserInput } from "../_shared/prompts/s5-structure.ts";
 import * as registry from "../_shared/registry/index.ts";
 
 const IP_DAILY_CAP = 3;
+const DEEP_IP_DAILY_CAP = 1;
+const DEEP_GLOBAL_DAILY_CAP = 10;
 const GLOBAL_DAILY_CAP = 400;
 const RESULT_CACHE_DAYS = 30;
 
@@ -133,6 +136,8 @@ Deno.serve(async (req) => {
     state?: string | null;
     turnstile_token?: string | null;
     client_token?: string;
+    deep?: boolean;
+    power?: { searches?: number; fetches?: number };
   } | null;
 
   const inputKind = body?.input_kind;
@@ -169,26 +174,41 @@ Deno.serve(async (req) => {
   const supabase = createClient(env.supabaseUrl, env.serviceKey);
   const ip = clientIp(req);
 
+  /* Eval-harness bypass: one header, checked against a secret that is only
+     set during evaluation windows (unset = this path is dead). Compared by
+     hash so the check is constant-time. When valid: Turnstile, the gate,
+     the per-IP cap, and the result cache are skipped, and the power/deep
+     fields are honored. The GLOBAL daily cap still applies. */
+  const evalSecret = Deno.env.get("EVAL_BYPASS_TOKEN") ?? "";
+  const evalHeader = req.headers.get("x-eval-token") ?? "";
+  const evalBypass = Boolean(
+    evalSecret &&
+      evalHeader &&
+      (await sha256Hex(evalHeader)) === (await sha256Hex(evalSecret)),
+  );
+
   /* Temporary pre-launch gate: when the GATE_ENABLED secret is set, the
      request must carry a valid Supabase Auth session token from the shared
      preview account. Built for deletion: unset the secret to open the
      tool; the frontend flag lives in src/lib/config.ts. */
-  if (Deno.env.get("GATE_ENABLED")) {
+  if (Deno.env.get("GATE_ENABLED") && !evalBypass) {
     const gateToken = req.headers.get("x-gate-token") ?? "";
     if (!gateToken) return json({ error: "locked" }, 403);
     const { data: gateData, error: gateErr } = await supabase.auth.getUser(gateToken);
     if (gateErr || !gateData?.user) return json({ error: "locked" }, 403);
   }
 
-  const turnstileOk = await verifyTurnstile(
-    body?.turnstile_token ?? null,
-    env.turnstileSecret,
-    ip === "unknown" ? null : ip,
-  );
+  const turnstileOk =
+    evalBypass ||
+    (await verifyTurnstile(
+      body?.turnstile_token ?? null,
+      env.turnstileSecret,
+      ip === "unknown" ? null : ip,
+    ));
   if (!turnstileOk) return json({ error: "verification failed, reload and retry" }, 403);
 
   const ipHash = (await sha256Hex(ip)).slice(0, 24);
-  if (!(await allow(supabase, dayKey("ip", ipHash), IP_DAILY_CAP))) {
+  if (!evalBypass && !(await allow(supabase, dayKey("ip", ipHash), IP_DAILY_CAP))) {
     return json(
       { error: "rate_limited", retry_hint: "Daily limit reached for this connection. Try again tomorrow." },
       429,
@@ -197,6 +217,29 @@ Deno.serve(async (req) => {
   if (!(await allow(supabase, dayKey("global", "all"), GLOBAL_DAILY_CAP))) {
     return json({ error: "capacity" }, 503);
   }
+
+  /* Deep mode: user-facing while the DEEP_MODE_ENABLED secret is set
+     (unset it to remove the feature without a deploy); harness runs may
+     use it via the bypass regardless. Deep runs carry their own caps. */
+  const deepRequested = body?.deep === true;
+  if (deepRequested && !Deno.env.get("DEEP_MODE_ENABLED") && !evalBypass) {
+    return json({ error: "deep checks are not available right now" }, 400);
+  }
+  if (deepRequested && !evalBypass) {
+    if (!(await allow(supabase, dayKey("deepip", ipHash), DEEP_IP_DAILY_CAP))) {
+      return json(
+        { error: "rate_limited", retry_hint: "One deep check per day per connection. Run a standard check, or try tomorrow." },
+        429,
+      );
+    }
+    if (!(await allow(supabase, dayKey("deepglobal", "all"), DEEP_GLOBAL_DAILY_CAP))) {
+      return json({ error: "capacity" }, 503);
+    }
+  }
+  const budgetOverride =
+    evalBypass && body?.power && typeof body.power.searches === "number" && typeof body.power.fetches === "number"
+      ? { searches: Math.min(64, body.power.searches), fetches: Math.min(24, body.power.fetches) }
+      : undefined;
 
   /* Ingestion + forensics in the foreground (after Turnstile and the caps:
      no decoding or network I/O for unverified or capped requests). The
@@ -289,8 +332,9 @@ Deno.serve(async (req) => {
   forensics.adv_findings.push(...ingestAdv);
 
   /* Name-only inputs have a known vendor key now — check the result cache
-     before spending anything. */
-  if (inputKind === "name") {
+     before spending anything. Deep and harness runs are deliberate spend
+     and never serve from cache. */
+  if (inputKind === "name" && !deepRequested && !evalBypass) {
     const key = vendorKeyFromName(content);
     const cached = await findCached(supabase, key);
     if (cached) return json({ evaluation_id: cached, cached: true }, 202);
@@ -333,6 +377,7 @@ Deno.serve(async (req) => {
     userState,
     ingestNotes,
     inputKind === "url" && typeof sourceMeta.url === "string" ? sourceMeta.url : null,
+    { deep: deepRequested, budgetOverride, skipCache: deepRequested || evalBypass },
   ).catch(async (err) => {
     console.error(`pipeline fatal for ${evaluationId}: ${String(err)}`);
     await supabase
@@ -368,6 +413,7 @@ async function findCached(
     .select("id")
     .eq("vendor_key", vendorKey)
     .eq("status", "complete")
+    .eq("methodology_version", METHODOLOGY_VERSION)
     .gt("created_at", cutoff)
     .order("created_at", { ascending: false })
     .limit(1)
@@ -397,6 +443,7 @@ async function runPipeline(
   /* The normalized submitted URL for url-kind runs (the site pass fetches
      more pages of that host). */
   sourceUrl: string | null = null,
+  opts: { deep?: boolean; budgetOverride?: ResearchBudget; skipCache?: boolean } = {},
 ): Promise<void> {
   const pipelineStart = Date.now();
   const emitter = makeEmitter(supabase, env.supabaseUrl, env.serviceKey, evaluationId);
@@ -514,8 +561,9 @@ async function runPipeline(
     });
   }
 
-  /* Result cache for pasted pitches (vendor key only known after parse). */
-  const cachedId = await findCached(supabase, vendorKey);
+  /* Result cache for pasted pitches (vendor key only known after parse).
+     Deep and harness runs never serve from cache. */
+  const cachedId = opts.skipCache ? null : await findCached(supabase, vendorKey);
   if (cachedId && cachedId !== evaluationId && adv.length === 0) {
     const { data: cachedRow } = await supabase
       .from("evaluations")
@@ -872,6 +920,69 @@ async function runPipeline(
   markStage("s2_registry");
   const identity = registry.resolveIdentity(checks);
 
+  /* Research and citation classification should know the vendor's site
+     even when the pitch did not state it (context only — never identity). */
+  const researchDomains = [
+    ...extract.domains,
+    ...(discoveredDomain ? [discoveredDomain] : []),
+  ];
+
+  /* --------------------------------------------- deep-mode hand-off */
+  if (opts.deep) {
+    const nonce = crypto.randomUUID() + crypto.randomUUID();
+    await supabase
+      .from("evaluations")
+      .update({
+        checkpoint: {
+          nonce,
+          inputKind,
+          userState,
+          vendorName,
+          vendorKey,
+          resolvable,
+          extract,
+          checks,
+          identity,
+          adv,
+          primaryDomain,
+          discoveredDomain,
+          feedNames,
+          foundingYear,
+          senderDomain,
+          pitchPersonCount,
+          pitchCustomerCount,
+          siteClaimQuotes,
+          researchDomains,
+          usage: usageBox.value,
+          stageUsage,
+          stageMs,
+        },
+      })
+      .eq("id", evaluationId);
+    await setStatus("research");
+    await emit({
+      stage: "research",
+      kind: "stage_start",
+      label: "Deep check: extended research starting (about 8 minutes total)",
+    });
+    const handoff = await fetch(`${env.supabaseUrl}/functions/v1/deep-research`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        apikey: env.serviceKey,
+        authorization: `Bearer ${env.serviceKey}`,
+      },
+      body: JSON.stringify({ evaluation_id: evaluationId, nonce }),
+    }).catch(() => null);
+    if (handoff?.ok) return; /* deep-research owns the rest of the run */
+    console.error(`deep hand-off failed: HTTP ${handoff?.status ?? "network"}`);
+    await emit({
+      stage: "research",
+      kind: "micro_finding",
+      label: "The deep engine did not answer, so this run continues as a standard check.",
+    });
+  }
+
   /* --------------------------------------------------------- S3 research */
   await setStatus("research");
   await emit({
@@ -880,12 +991,6 @@ async function runPipeline(
     label: "Searching for delivery evidence on the open web",
   });
 
-  /* Research and citation classification should know the vendor's site
-     even when the pitch did not state it (context only — never identity). */
-  const researchDomains = [
-    ...extract.domains,
-    ...(discoveredDomain ? [discoveredDomain] : []),
-  ];
   const research = await runResearchLoop(
     buildResearchRequest({
       vendor_name_candidates: extract.vendor_name_candidates,
@@ -899,7 +1004,7 @@ async function runPipeline(
         summary: c.summary,
       })),
       user_state: userState,
-    }),
+    }, opts.budgetOverride),
     {
       /* Research streams (idle timeout, not total). Its deadline is dynamic:
          whatever remains of the 400s function wall clock after the stages
@@ -926,15 +1031,17 @@ async function runPipeline(
     researchDomains,
     new Date().toISOString(),
   );
-  const budget = researchBudget({
-    vendor_name_candidates: extract.vendor_name_candidates,
-    domains: extract.domains,
-    people: extract.people,
-    named_customers: extract.named_customers,
-    claims: extract.claims,
-    registry_summary: [],
-    user_state: userState,
-  });
+  const budget =
+    opts.budgetOverride ??
+    researchBudget({
+      vendor_name_candidates: extract.vendor_name_candidates,
+      domains: extract.domains,
+      people: extract.people,
+      named_customers: extract.named_customers,
+      claims: extract.claims,
+      registry_summary: [],
+      user_state: userState,
+    });
   console.log(
     `s3 budget bucket: ${budget.searches}/${budget.fetches}, used ${research.usage.web_search_requests} searches, partial=${research.partial}`,
   );

@@ -251,8 +251,48 @@ export function researchTools(budget: ResearchBudget): unknown[] {
   ];
 }
 
-export function buildResearchRequest(input: S3UserInput): AnthropicRequestBody {
-  const budget = researchBudget(input);
+/* ------------------------------------------------------------- deep mode */
+
+/* THE deep-mode dial. One object; adjust here to change how much a deep
+   check spends. Four objective-scoped research lanes run in parallel on a
+   fresh function clock, each its own pause_turn loop. At current Sonnet-5
+   rates the defaults land a deep check around $2.50-3.50 all-in. */
+export const DEEP_MODE = {
+  lanes: [
+    {
+      key: "customers",
+      focus:
+        "Objective 1 ONLY (customer traces): search each claimed government customer individually for agency-site mentions, council agendas and minutes, procurement awards, budget documents, and local press. Skip every other objective.",
+    },
+    {
+      key: "claims",
+      focus:
+        "Objectives 2 and 5 ONLY (case-study cross-existence and claim substantiation): quoted searches for headline case-study claims, published methodologies, benchmarks, trust-center and compliance evidence. Skip every other objective.",
+    },
+    {
+      key: "leadership",
+      focus:
+        "Objective 3 ONLY (leadership corroboration): each named person, business capacity only, in press, conference programs, papers, and patents. Skip every other objective.",
+    },
+    {
+      key: "footprint",
+      focus:
+        "Objectives 4 and 6 ONLY (company footprint and boilerplate networks): independent press, funding, engineering artifacts, official legal records from courts and regulators, and quoted-phrase checks for templated marketing. Skip every other objective.",
+    },
+  ],
+  perLane: { searches: 15, fetches: 6 } satisfies ResearchBudget,
+  laneDeadlineMs: 300_000,
+  laneIdleTimeoutMs: 90_000,
+} as const;
+
+export function buildResearchRequest(
+  input: S3UserInput,
+  /* Optional budget override (deep-mode lanes, eval-harness power levels).
+     researchBudget() stays quantized to its two buckets for normal runs so
+     the cross-run prompt cache splits at most once. */
+  budgetOverride?: ResearchBudget,
+): AnthropicRequestBody {
+  const budget = budgetOverride ?? researchBudget(input);
   return {
     model: MODELS.research,
     max_tokens: 8192,

@@ -31,4 +31,8 @@ export const IS_MOCK: boolean = import.meta.env.VITE_MOCK === "1";
    in the evaluate function. Mock builds skip the gate. */
 export const GATE_ENABLED: boolean = !IS_MOCK;
 
+/* Deep-mode toggle visibility. The server independently refuses deep runs
+   unless its DEEP_MODE_ENABLED secret is set, so hiding this is cosmetic. */
+export const DEEP_MODE_UI: boolean = !IS_MOCK;
+
 export const FUNCTIONS_BASE = `${SUPABASE_URL}/functions/v1`;

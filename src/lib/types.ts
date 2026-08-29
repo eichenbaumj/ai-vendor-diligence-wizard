@@ -77,6 +77,8 @@ export interface EvaluateRequest {
   state: string | null;
   turnstile_token: string | null;
   client_token: string;
+  /* Deep mode: an extended multi-lane research pass (pre-launch option). */
+  deep?: boolean;
 }
 
 /* What useEvaluation hands to the page. */

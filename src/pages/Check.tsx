@@ -10,7 +10,7 @@ import {
   type TurnstileHandle,
 } from "@/components/input/TurnstileWidget";
 import { ApiError, evaluate } from "@/lib/api";
-import { IS_MOCK } from "@/lib/config";
+import { DEEP_MODE_UI, IS_MOCK } from "@/lib/config";
 import { FilePicker } from "@/components/input/FilePicker";
 import {
   SAMPLE_PITCHES,
@@ -60,6 +60,7 @@ export default function Check() {
      page mid-interaction. */
   const turnstileTokenRef = useRef<string | null>(null);
   const turnstileRef = useRef<TurnstileHandle>(null);
+  const [deep, setDeep] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<{ message: string; hint: string | null } | null>(null);
 
@@ -152,6 +153,7 @@ export default function Check() {
         turnstile_token: turnstileTokenRef.current,
         /* Samples only ride along on the paste tab (they replay fixtures). */
         sampleId: tab === "paste" ? sampleId : undefined,
+        deep: deep && !sampleId,
       });
       navigate(`/r/${res.evaluation_id}`);
     } catch (e) {
@@ -330,6 +332,25 @@ export default function Check() {
               </div>
             )}
 
+            {DEEP_MODE_UI && (
+              <label className="mt-6 flex max-w-xl cursor-pointer items-start gap-3 rounded-2xl border border-brand-silver-soft bg-white px-5 py-4 shadow-soft">
+                <input
+                  type="checkbox"
+                  checked={deep}
+                  onChange={(e) => setDeep(e.target.checked)}
+                  className="mt-1 h-4 w-4 accent-brand-cobalt"
+                />
+                <span>
+                  <span className="font-sans text-[15px] font-bold">Deep check</span>
+                  <span className="block text-sm text-brand-charcoal-soft">
+                    Runs four focused research passes instead of one. Digs much
+                    deeper into customers, claims, and leadership. Takes about 8
+                    minutes.
+                  </span>
+                </span>
+              </label>
+            )}
+
             <div className="mt-8">
               <PillButton
                 variant="primary"
@@ -337,7 +358,11 @@ export default function Check() {
                 onClick={() => void submit()}
                 disabled={submitting}
               >
-                {submitting ? "Starting the check…" : "Run the check"}
+                {submitting
+                  ? "Starting the check…"
+                  : deep
+                    ? "Run the deep check"
+                    : "Run the check"}
               </PillButton>
               {IS_MOCK && (
                 <p className="mt-3 max-w-xl text-sm text-brand-charcoal-soft">

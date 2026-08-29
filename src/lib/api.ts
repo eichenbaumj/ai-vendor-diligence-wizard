@@ -92,6 +92,7 @@ export async function evaluate(params: {
   state: string | null;
   turnstile_token: string | null;
   sampleId?: SampleId;
+  deep?: boolean;
 }): Promise<EvaluateResponse> {
   /* Sample pitches are fictional demos of the report format: they ALWAYS
      replay the pinned fixture, never the live engine (which would spend real
@@ -112,6 +113,7 @@ export async function evaluate(params: {
     state: params.state,
     turnstile_token: params.turnstile_token,
     client_token: getClientToken(),
+    ...(params.deep ? { deep: true } : {}),
   };
 
   /* Pre-launch gate: ride the shared preview session's token when present

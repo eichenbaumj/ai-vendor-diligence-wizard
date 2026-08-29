@@ -58,6 +58,9 @@ export interface S3UserInput {
   /* Search budget for this run (rides the user turn; the system prompt
      stays byte-stable for caching). */
   search_budget?: number;
+  /* Deep-mode lanes: restricts this run to one objective. Rides the user
+     turn — the system prompt stays byte-stable for caching. */
+  objective_focus?: string;
 }
 
 export function buildS3UserMessage(input: S3UserInput): string {

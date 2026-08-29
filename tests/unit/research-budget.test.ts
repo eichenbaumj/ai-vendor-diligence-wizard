@@ -73,3 +73,32 @@ describe("buildDiscoveryRequest", () => {
     expect(JSON.stringify(req.messages)).toContain("Govra");
   });
 });
+
+describe("budget override and deep-mode config", () => {
+  it("buildResearchRequest honors an override; two buckets absent one", async () => {
+    const { buildResearchRequest, DEEP_MODE } = await import("@shared/anthropic.ts");
+    const input = {
+      vendor_name_candidates: ["Acme"],
+      domains: [],
+      people: [],
+      named_customers: [],
+      claims: [],
+      registry_summary: [],
+      user_state: null,
+    };
+    const std = buildResearchRequest(input);
+    const stdTool = (std.tools as { max_uses: number }[])[0];
+    expect(stdTool.max_uses).toBe(12);
+    const over = buildResearchRequest(input, { searches: 32, fetches: 12 });
+    const overTool = (over.tools as { max_uses: number }[])[0];
+    expect(overTool.max_uses).toBe(32);
+    /* Deep lanes share one tool-array shape via perLane. */
+    expect(DEEP_MODE.lanes.length).toBe(4);
+    expect(DEEP_MODE.perLane.searches * DEEP_MODE.lanes.length).toBeGreaterThanOrEqual(40);
+    const lane = buildResearchRequest(
+      { ...input, objective_focus: DEEP_MODE.lanes[0].focus },
+      DEEP_MODE.perLane,
+    );
+    expect(JSON.stringify(lane.messages)).toContain("Objective 1 ONLY");
+  });
+});

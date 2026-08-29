@@ -1,6 +1,6 @@
 # How This Tool Evaluates AI Vendor Pitches
 
-**Methodology version 1.0** · Effective August 28, 2026 · Licensed [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)
+**Methodology version 1.1** · Effective August 29, 2026 · Licensed [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)
 
 This document describes every check the AI Vendor Diligence Wizard runs, every source it consults, how it grades evidence, and how it decides what to say. It is the complete basis for every report the tool produces. If a check is not described here, the tool does not run it. Checks marked **planned** are documented for transparency but do not run yet; no report relies on them.
 

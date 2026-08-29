@@ -172,7 +172,11 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
       result: limited && sosHits.length === 0 ? "COVERAGE_LIMITED" : "COULD_NOT_VERIFY",
       evidence_tier: "T4",
       severity: "MEDIUM",
-      sources: sosChecks.slice(0, 3).flatMap(src),
+      /* All searched states, capped at the schema's 6-source limit
+         (LedgerRow.sources max 6; there are exactly 6 SOS lanes today).
+         Slicing lower made the verdict claim only three states were
+         searched. */
+      sources: sosChecks.slice(0, 6).flatMap(src),
       note: "",
       methodology_ref: "d1-1",
     });

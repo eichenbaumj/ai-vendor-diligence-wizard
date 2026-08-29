@@ -53,6 +53,11 @@ import { inferPrimaryDomain } from "../_shared/domain-inference.ts";
 import { isNamedOrganization, splitNameCandidates } from "../_shared/text-match.ts";
 import { PROGRAMS, affirmsProgram } from "../_shared/claim-status.ts";
 import {
+  METHODOLOGY_VERSION,
+  finishInsufficient,
+  runPipelineTail,
+} from "../_shared/pipeline-tail.ts";
+import {
   UrlIngestError,
   fetchSubmittedUrl,
   htmlToText,
@@ -70,7 +75,6 @@ import { STATE_ITEMS } from "../_shared/state-items.ts";
 import type { S5UserInput } from "../_shared/prompts/s5-structure.ts";
 import * as registry from "../_shared/registry/index.ts";
 
-const METHODOLOGY_VERSION = "1.0";
 const IP_DAILY_CAP = 3;
 const GLOBAL_DAILY_CAP = 400;
 const RESULT_CACHE_DAYS = 30;
@@ -406,12 +410,14 @@ async function runPipeline(
   const setStatus = (status: string) =>
     supabase.from("evaluations").update({ status }).eq("id", evaluationId);
 
-  let usage: Usage = {
-    input_tokens: 0,
-    output_tokens: 0,
-    cache_creation_input_tokens: 0,
-    cache_read_input_tokens: 0,
-    web_search_requests: 0,
+  const usageBox: { value: Usage } = {
+    value: {
+      input_tokens: 0,
+      output_tokens: 0,
+      cache_creation_input_tokens: 0,
+      cache_read_input_tokens: 0,
+      web_search_requests: 0,
+    },
   };
   const stageUsage: Record<string, Usage> = {};
   /* Wall-clock elapsed per stage (ms). Persisted alongside usage as
@@ -453,7 +459,7 @@ async function runPipeline(
       buildExtractRequest(S1_SOURCE_LABELS[inputKind] ?? S1_SOURCE_LABELS.paste, pitchText),
       { apiKey: env.anthropicKey, timeoutMs: STAGE_TIMEOUTS.extract },
     );
-    usage = addUsage(usage, res.usage);
+    usageBox.value = addUsage(usageBox.value, res.usage);
     stageUsage.s1 = res.usage;
     markStage("s1_extract");
     const parsed = res.ok ? parseStructured<unknown>(res) : null;
@@ -604,7 +610,7 @@ async function runPipeline(
         deadlineMs: 30_000,
         maxContinuations: 1,
       });
-      usage = addUsage(usage, disc.usage);
+      usageBox.value = addUsage(usageBox.value, disc.usage);
       const discCitations = harvestCitations(
         { citations: disc.citations, narrative: disc.narrative },
         [],
@@ -638,7 +644,7 @@ async function runPipeline(
           buildExtractRequest(siteSourceLabel, siteForensics.normalized),
           { apiKey: env.anthropicKey, timeoutMs: STAGE_TIMEOUTS.extract },
         );
-        usage = addUsage(usage, res.usage);
+        usageBox.value = addUsage(usageBox.value, res.usage);
         stageUsage.s1b = res.usage;
         const parsed = res.ok ? parseStructured<unknown>(res) : null;
         const validated = parsed ? PitchExtract.safeParse(parsed) : null;
@@ -912,7 +918,7 @@ async function runPipeline(
       ),
     },
   );
-  usage = addUsage(usage, research.usage);
+  usageBox.value = addUsage(usageBox.value, research.usage);
   stageUsage.s3 = research.usage;
   markStage("s3_research");
   const citations = harvestCitations(
@@ -938,363 +944,45 @@ async function runPipeline(
     label: `Web research finished: ${citations.length} sources collected (${research.usage.web_search_requests} of up to ${budget.searches} searches)`,
   });
 
-  /* ADV-04: deterministic planted-corroboration scan over the retrieved
-     citations. Like every ADV path this only ADDS a finding. */
-  const planted = detectPlantedCorroboration(citations, extract.domains);
-  if (planted && !adv.some((a) => a.code === "ADV-04")) {
-    adv.push(planted);
-    await emit({
-      stage: "research",
-      kind: "micro_finding",
-      label: "Repeated identical phrasing found across unrelated sites",
-    });
-  }
-
-  /* ----------------------------------- S2b: inferred-domain checks (name-only) */
-
-  /* A name-only submission carries no domain, so the domain-hygiene lanes
-     were skipped above. If the research citations nominate the vendor's
-     website (see domain-inference.ts for the rules a vendor cannot game),
-     run those lanes now against the inferred domain. Identity stays
-     authoritative from the pre-research computation: do NOT recompute
-     resolveIdentity here — an inferred RDAP hit must never count toward
-     the two-identifier bar. The inferred domain feeds D1 hygiene rows and
-     D4 greens only, labeled as inferred in the honesty panel. */
-  if (inputKind === "name" && !primaryDomain && !discoveredDomain) {
-    const inferred = inferPrimaryDomain(citations, feedNames);
-    if (inferred) {
-      checks.push({
-        check_id: "domain_inference",
-        source: "Domain inference from research citations",
-        status: "hit",
-        confidence: "name_similarity",
-        summary: `Research citations point to ${inferred} as the vendor's website. The pitch did not state one, so the site checks below use this inferred address.`,
-        evidence_url: `https://${inferred}`,
-        retrieved_at: new Date().toISOString(),
-        data: { inferred: true, domain: inferred },
-      });
-      await emit({
-        stage: "registry",
-        kind: "micro_finding",
-        label: `Vendor website inferred from research citations: ${inferred}`,
-      });
-      await Promise.allSettled([
-        track(registry.checkDomainAge({ domain: inferred, claimedFoundingYear: foundingYear }, ctx())),
-        track(registry.checkEmailHygiene({ domain: inferred, senderDomain }, ctx())),
-        track(registry.checkWebHistory({ domain: inferred }, ctx())),
-        track(registry.checkSubdomains({ domain: inferred }, ctx(10_000))),
-        track(registry.checkGithubOrg({ candidates: companyNames, domain: inferred }, ctx())),
-      ]);
-    }
-  }
-
-  /* --------------------------------------------------------- S4 packs */
-  await setStatus("research");
-  await emit({ stage: "packs", kind: "stage_start", label: "Matching the product category" });
-
-  let sector: SectorContext = {
-    pack_ids: [],
-    elevated: false,
-    overlay_reason: null,
-    state_items: userState ? (STATE_ITEMS[userState] ?? []) : [],
-  };
-  if (extract.use_case_description || extract.claims.length > 0) {
-    const res = await callAnthropic(
-      buildClassifyRequest({
-        use_case_description: extract.use_case_description,
-        claims: extract.claims.map((c) => ({ type: c.type, quote: c.quote })),
-        packs: Object.values(PACKS).map((p) => ({
-          pack_id: p.pack_id,
-          pack_name: p.pack_name,
-          inclusion_test: p.inclusion_test,
-        })),
-      }),
-      { apiKey: env.anthropicKey, timeoutMs: STAGE_TIMEOUTS.classify },
-    );
-    usage = addUsage(usage, res.usage);
-    stageUsage.s4 = res.usage;
-    markStage("s4_classify");
-    const parsed = res.ok
-      ? parseStructured<{ pack_ids: string[]; overlay: boolean; overlay_reason: string | null }>(res)
-      : null;
-    if (parsed) {
-      const validIds = parsed.pack_ids.filter((id) => PACKS[id]).slice(0, 3);
-      const elevatedPack = validIds.some((id) => PACKS[id]?.scrutiny_tier === "elevated");
-      sector = {
-        ...sector,
-        pack_ids: validIds as SectorContext["pack_ids"],
-        elevated: elevatedPack || parsed.overlay,
-        overlay_reason: parsed.overlay ? (parsed.overlay_reason ?? "").slice(0, 300) || null : null,
-      };
-      if (validIds.length > 0) {
-        await emit({
-          stage: "packs",
-          kind: "micro_finding",
-          label: `Category: ${validIds.map((id) => PACKS[id].pack_name).join(", ")}${sector.elevated ? " (elevated scrutiny)" : ""}`,
-        });
-      }
-    }
-  }
-
-  /* --------------------------------------------------------- S5 synthesis */
-  await setStatus("synthesis");
-  await emit({ stage: "synthesis", kind: "stage_start", label: "Writing your report" });
-
-  const generatedAt = new Date().toISOString();
-  const skeleton = assemble({
-    extract,
-    checks,
-    identity,
-    citations,
-    adv_findings: adv,
-    sector,
-    packs: PACKS,
-    resolvable,
-    research_partial: research.partial,
-    pitch_person_count: pitchPersonCount,
-    pitch_customer_count: pitchCustomerCount,
-    generated_at: generatedAt,
-  });
-  const decision = computeTier(skeleton.tierInputs);
-
-  /* Narrative pass. */
-  const siteQuoteSet = new Set(siteClaimQuotes);
-  const s5Input: S5UserInput = {
-    tier: decision.tier,
-    tier_label: decision.label,
-    rationale: decision.rationale,
-    vendor_display_name: vendorName,
-    generated_date: generatedAt.slice(0, 10),
-    ledger_rows: skeleton.ledger.map((r) => ({
-      id: r.id,
-      dimension: r.dimension,
-      claim_quote: r.claim_quote,
-      what_checked: r.what_checked,
-      result: r.result,
-      evidence_tier: r.evidence_tier,
-      source_names: r.sources.map((s) => s.title ?? s.url),
-      source_dates: r.sources.map((s) => s.retrieved_at.slice(0, 10)),
-      fact_basis: `${r.what_checked}. Result: ${r.result}. ${
-        r.sources.map((s) => `${s.title ?? s.url} (${s.retrieved_at.slice(0, 10)})`).join("; ") || "No public source located."
-      }${r.claim_quote && siteQuoteSet.has(r.claim_quote) ? " The quoted claim comes from the vendor's public website." : ""}`,
-    })),
-    green_flag_facts: skeleton.greenFlagFacts,
-    sector: {
-      pack_names: sector.pack_ids.map((id) => PACKS[id]?.pack_name ?? id),
-      elevated: sector.elevated,
-      overlay_reason: sector.overlay_reason,
+  await runPipelineTail(
+    {
+      supabase,
+      anthropicKey: env.anthropicKey,
+      apiKeys: env.apiKeys,
+      evaluationId,
+      emit,
+      setStatus,
+      markStage,
+      usageBox,
+      stageUsage,
+      stageMs,
     },
-    research_partial: research.partial,
-  };
-
-  let narrative = await runStructurePass(env, s5Input);
-  usage = addUsage(usage, narrative.usage);
-  stageUsage.s5 = narrative.usage;
-  markStage("s5_structure");
-
-  /* Compose the report. */
-  const ledger = skeleton.ledger.map((r) => {
-    const modelNote = narrative.value?.row_notes.find((n) => n.id === r.id)?.note;
-    return {
-      ...r,
-      note: modelNote
-        ? tidyProse(modelNote, 700)
-        : fallbackNote(r.result, r.what_checked, r.sources[0]?.title ?? null),
-    };
-  });
-
-  const allowedUrls = new Set<string>([
-    ...checks.flatMap((c) => (c.evidence_url ? [c.evidence_url] : [])),
-    ...citations.map((c) => c.url),
-    "https://www.hhs.gov/hipaa/for-professionals/faq/2003/are-we-required-to-certify-our-organizations-compliance-with-the-standards/index.html",
-    "https://tineye.com",
-  ]);
-  const firewallSources = (srcs: { url: string; title: string | null; retrieved_at: string }[]) =>
-    srcs.filter((s) => allowedUrls.has(s.url));
-
-  let report: Report = {
-    verdict: {
-      tier: decision.tier,
-      label: decision.label,
-      summary:
-        tidyProse(narrative.value?.verdict_summary ?? "", 600) ||
-        defaultSummary(decision.tier),
-      checks_met: decision.checks_met,
-      rationale: decision.rationale.slice(0, 8).map((r) => r.slice(0, 400)),
+    {
+      inputKind,
+      userState,
+      vendorName,
+      vendorKey,
+      resolvable,
+      extract,
+      checks,
+      identity,
+      adv,
+      citations,
+      researchPartial: research.partial,
+      primaryDomain,
+      discoveredDomain,
+      feedNames,
+      foundingYear,
+      senderDomain,
+      pitchPersonCount,
+      pitchCustomerCount,
+      siteClaimQuotes,
     },
-    ledger: ledger.map((r) => ({ ...r, sources: firewallSources(r.sources) })),
-    green_flags: (narrative.value?.green_flags ?? skeleton.greenFlagFacts.map(
-      (g) => `${g.fact} (${g.source_name}, checked ${g.date})`,
-    ))
-      .slice(0, 15)
-      .map((g) => tidyProse(g, 400)),
-    adv_findings: adv.slice(0, 6),
-    honesty_panel: skeleton.honesty,
-    questions: skeleton.questions,
-    manual_checks: skeleton.manualChecks,
-    leads: skeleton.leads,
-    next_steps: (narrative.value?.next_steps ?? defaultNextSteps(decision.tier))
-      .slice(0, 8)
-      .map((s) => tidyProse(s, 500)),
-    sector,
-    sources: firewallSources(
-      citations.map((c) => ({ url: c.url, title: c.title, retrieved_at: c.retrieved_at })),
-    ),
-    review: null,
-    meta: {
-      generated_at: generatedAt,
-      expires_at: new Date(Date.now() + 90 * 86_400_000).toISOString(),
-      methodology_version: METHODOLOGY_VERSION,
-      pack_release: PACK_RELEASE,
-      vendor_key: vendorKey,
-      vendor_display_name: vendorName,
-      research_partial: research.partial,
-      input_kind: inputKind,
-    },
-  };
-
-  /* --------------------------------------------- S5.5 adversarial review */
-  const needsReview =
-    decision.tier <= 2 ||
-    ledger.some((r) => r.result === "CONTRADICTED") ||
-    adv.length > 0;
-  if (needsReview) {
-    await setStatus("synthesis");
-    await emit({ stage: "review", kind: "stage_start", label: "Reviewing the language before publication" });
-    const res = await callAnthropic(buildReviewRequest(JSON.stringify(report)), {
-      apiKey: env.anthropicKey,
-      timeoutMs: STAGE_TIMEOUTS.review,
-    });
-    usage = addUsage(usage, res.usage);
-    stageUsage.review = res.usage;
-    markStage("s5r_review");
-    const review = res.ok
-      ? parseStructured<{
-          approved: boolean;
-          issues: {
-            kind: string;
-            target_row_id: string | null;
-            explanation: string;
-            replacement_note: string | null;
-          }[];
-          verdict_summary_rewrite: string | null;
-        }>(res)
-      : null;
-    if (review) {
-      const adjustments: string[] = [];
-      for (const issue of review.issues.slice(0, 10)) {
-        if (issue.target_row_id && issue.replacement_note === null && issue.kind === "misread_evidence") {
-          report.ledger = report.ledger.filter((r) => r.id !== issue.target_row_id);
-          adjustments.push(`Removed an unsupported item (${issue.explanation.slice(0, 120)})`);
-        } else if (issue.target_row_id && issue.replacement_note) {
-          const row = report.ledger.find((r) => r.id === issue.target_row_id);
-          if (row && lintText(issue.replacement_note).filter((v) => v.kind === "banned").length === 0) {
-            row.note = tidyProse(issue.replacement_note, 700);
-            adjustments.push(`Tightened language (${issue.kind}): ${issue.explanation.slice(0, 120)}`);
-          }
-        }
-      }
-      if (
-        review.verdict_summary_rewrite &&
-        lintText(review.verdict_summary_rewrite).filter((v) => v.kind === "banned").length === 0
-      ) {
-        report.verdict.summary = tidyProse(review.verdict_summary_rewrite, 600);
-        adjustments.push("Rewrote the summary for accuracy");
-      }
-      report.review = { reviewed: true, model: MODELS.review, adjustments: adjustments.slice(0, 10) };
-    }
-  }
-
-  /* Final lint: banned-vocabulary violations anywhere fall back to templates. */
-  const violations = lintObject(report).filter((v) => v.kind === "banned");
-  if (violations.length > 0) {
-    console.error(`final lint violations: ${JSON.stringify(violations.slice(0, 5))}`);
-    for (const row of report.ledger) {
-      if (lintText(row.note).some((v) => v.kind === "banned")) {
-        row.note = fallbackNote(row.result, row.what_checked, row.sources[0]?.title ?? null);
-      }
-    }
-    if (lintText(report.verdict.summary).some((v) => v.kind === "banned")) {
-      report.verdict.summary = defaultSummary(report.verdict.tier);
-    }
-  }
-
-  const validated = Report.safeParse(report);
-  if (!validated.success) {
-    console.error(`report schema invalid: ${validated.error.message.slice(0, 500)}`);
-    /* Persist the zod detail into the forensics jsonb (never exposed by
-       get-evaluation) so a production failure is diagnosable without
-       platform log access. */
-    const { data: fRow } = await supabase
-      .from("evaluations")
-      .select("forensics")
-      .eq("id", evaluationId)
-      .maybeSingle();
-    await supabase
-      .from("evaluations")
-      .update({
-        forensics: {
-          ...((fRow?.forensics as Record<string, unknown>) ?? {}),
-          assembly_schema_error: validated.error.message.slice(0, 1600),
-        },
-      })
-      .eq("id", evaluationId);
-    await finishInsufficient(supabase, evaluationId, emit, "Report assembly failed. Please re-run.");
-    return;
-  }
-
-  await supabase
-    .from("evaluations")
-    .update({
-      report: validated.data,
-      status: "complete",
-      usage: { total: usage, stages: stageUsage, stages_ms: stageMs },
-    })
-    .eq("id", evaluationId);
-  await emit({ stage: "synthesis", kind: "done", label: "Report ready" });
+  );
 }
 
 /* ------------------------------------------------------------- helpers */
 
-async function runStructurePass(
-  env: Env,
-  input: S5UserInput,
-): Promise<{
-  value: {
-    verdict_summary: string;
-    row_notes: { id: string; note: string }[];
-    green_flags: string[];
-    next_steps: string[];
-  } | null;
-  usage: Usage;
-}> {
-  let usage: Usage = {
-    input_tokens: 0,
-    output_tokens: 0,
-    cache_creation_input_tokens: 0,
-    cache_read_input_tokens: 0,
-    web_search_requests: 0,
-  };
-  for (let attempt = 0; attempt < 2; attempt++) {
-    const res = await callAnthropic(buildStructureRequest(input), {
-      apiKey: env.anthropicKey,
-      timeoutMs: STAGE_TIMEOUTS.structure,
-    });
-    usage = addUsage(usage, res.usage);
-    if (!res.ok) break;
-    const parsed = parseStructured<{
-      verdict_summary: string;
-      row_notes: { id: string; note: string }[];
-      green_flags: string[];
-      next_steps: string[];
-    }>(res);
-    if (!parsed) continue;
-    const banned = lintObject(parsed).filter((v) => v.kind === "banned");
-    if (banned.length === 0) return { value: parsed, usage };
-    console.warn(`s5 lint retry: ${banned.map((b) => b.label).join(", ")}`);
-  }
-  return { value: null, usage };
-}
 
 function extractFoundingYear(extract: PitchExtract): number | null {
   for (const c of extract.claims.filter((x) => x.type === "identity")) {
@@ -1334,80 +1022,6 @@ async function loadFeeds(supabase: SupabaseClient): Promise<{
   };
 }
 
-async function finishInsufficient(
-  supabase: SupabaseClient,
-  evaluationId: string,
-  emit: (e: { stage: EvalEvent["stage"]; kind: EvalEvent["kind"]; label: string }) => Promise<void>,
-  reason: string,
-): Promise<void> {
-  await supabase
-    .from("evaluations")
-    .update({ status: "insufficient", error: reason })
-    .eq("id", evaluationId);
-  await emit({ stage: "synthesis", kind: "error", label: reason });
-}
 
-function fallbackNote(result: string, whatChecked: string, sourceName: string | null): string {
-  const src = sourceName ? ` Source: ${sourceName}.` : "";
-  switch (result) {
-    case "VERIFIED":
-      return `This checked out against public records.${src}`;
-    case "OFFICIAL_RECORD_FOUND":
-      return `An official record was found. Review the linked source and consult your procurement counsel before acting on it.${src}`;
-    case "CONTRADICTED":
-      return `The public record we checked does not match this claim. Ask the vendor for documentation.${src}`;
-    case "COVERAGE_LIMITED":
-      return `We could not run a definitive automated search here. A manual check card below gives you the official link.${src}`;
-    default:
-      return `We searched public sources and did not find support for this. Not finding a record is not proof the claim is false. The question pack asks the vendor for the document that would resolve it.${src}`;
-  }
-}
 
-function defaultSummary(tier: number): string {
-  switch (tier) {
-    case 0:
-      return "We could not complete an evaluation because the submission did not give us enough to research. This is not a negative finding. Ask the vendor for its legal entity name, state of registration, and website, then run the check again.";
-    case 1:
-      return "Public sources could not confirm the basic claims in this pitch, and at least two specific items did not match the official records we checked. The details and sources are in the ledger below. Our suggestion: do not invest staff time until the vendor provides the documents listed in the next steps.";
-    case 2:
-      return "The company behind this pitch exists, but key claims could not be corroborated in public sources. Resolve the items below in writing before you schedule a demo.";
-    case 3:
-      return "This looks like a young vendor whose claims are consistent with the public records we checked. Being early-stage is not a defect. The question pack below is calibrated to what a company this size should be able to produce.";
-    default:
-      return "Public records corroborate this vendor's core claims across several independent sources. The remaining diligence is substantive rather than existential: before a demo, ask the questions below. Note that verifying the company is not an evaluation of the product itself.";
-  }
-}
 
-function defaultNextSteps(tier: number): string[] {
-  switch (tier) {
-    case 0:
-      return [
-        "Reply to the vendor asking for: legal entity name, state of registration, and website.",
-        "Re-run this check when you have those details.",
-      ];
-    case 1:
-      return [
-        "Do not schedule a call yet. Send the document requests from the question pack in writing.",
-        "If the vendor responds with documentation, re-run this check with the new information.",
-        "The vendor can dispute any finding through the corrections page.",
-      ];
-    case 2:
-      return [
-        "Send the question pack by email before agreeing to a demo.",
-        "Complete the manual checks below. They take a few minutes total.",
-        "Ask the vendor to complete a GovAI Coalition AI FactSheet.",
-      ];
-    case 3:
-      return [
-        "A demo is reasonable. Send the question pack first so answers arrive in writing.",
-        "Complete the manual checks below.",
-        "If a pilot follows, put data ownership, no-training, and exit terms in writing from day one.",
-      ];
-    default:
-      return [
-        "Send the question pack before the demo so the conversation starts substantive.",
-        "Call at least two of the verified customers in the green flags.",
-        "Remember that an established company still needs the accuracy and contract questions answered.",
-      ];
-  }
-}

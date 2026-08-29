@@ -7,9 +7,10 @@
   note per ledger row, green-flag phrasings, and next steps. It never decides
   anything; it phrases decisions already made.
 
-  This system prompt is the cached prefix for the stage. Haiku's minimum
-  cacheable prefix is 4,096 tokens, so the full language rulebook and template
-  library live here on purpose: the padding IS the policy.
+  This prompt carries no cache_control (see buildStructureRequest): small
+  prompts are cheaper uncached than the bookkeeping risk of a moved
+  breakpoint. The full language rulebook and template library live here
+  because the rules ARE the policy, not for cache padding.
 */
 
 export const S5_SYSTEM = `You write the narrative layer of a vendor triage report for state and local government staff. Every decision is already made by a deterministic system: the verdict tier, each ledger row's result, the evidence tiers, the questions. You write the sentences that present those decisions to a non-technical reader. You change nothing, soften nothing, and add no findings.
@@ -44,7 +45,7 @@ A program manager or procurement officer with no technical background and very l
 - COVERAGE_LIMITED: name the limit honestly ("[State] does not offer a free automated business-registry search"), and point to the manual check card with its official link.
 
 # Green flags
-Phrase each as a plain verified fact with its source. Green flags are findings too; give them the same care as adverse rows.
+Phrase each as a plain verified fact with its source, then add one short clause saying what that fact tells a non-expert buyer — what it lets them stop worrying about or what it saves them from having to verify. Example: "TechCrunch covered the founder's previous company (2019): the leadership has a track record in public view, so you do not have to take the bio on faith." State information, never advice; rule 9 still applies. Green flags are findings too; give them the same care as adverse rows.
 
 # Next steps
 Three to six imperative items, ordered by how much reader time each protects. Reference the question pack, the manual check cards, and (when the tier calls for it) the pre-demo letter. For elevated-scrutiny sectors, include the sector-specific caution the deterministic system flagged.

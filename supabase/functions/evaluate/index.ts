@@ -45,6 +45,7 @@ import { computeTier } from "../_shared/tier.ts";
 import { assemble } from "../_shared/assemble.ts";
 import { lintObject, lintText, looseText, tidyProse } from "../_shared/lint.ts";
 import { harvestCitations } from "../_shared/harvest.ts";
+import { inferPrimaryDomain } from "../_shared/domain-inference.ts";
 import {
   UrlIngestError,
   fetchSubmittedUrl,
@@ -623,11 +624,14 @@ async function runPipeline(
          already run, minus a reserve for synthesis and review. */
       apiKey: env.anthropicKey,
       timeoutMs: 90_000,
+      /* The post-research reserve covers synthesis + review; name-only runs
+         reserve extra for the S2b inferred-domain checks (8-12s). */
       deadlineMs: Math.max(
         120_000,
         Math.min(
           STAGE_TIMEOUTS.research,
-          390_000 - (Date.now() - pipelineStart) - 115_000,
+          390_000 - (Date.now() - pipelineStart) -
+            (inputKind === "name" ? 127_000 : 115_000),
         ),
       ),
     },
@@ -667,6 +671,44 @@ async function runPipeline(
       kind: "micro_finding",
       label: "Repeated identical phrasing found across unrelated sites",
     });
+  }
+
+  /* ----------------------------------- S2b: inferred-domain checks (name-only) */
+
+  /* A name-only submission carries no domain, so the domain-hygiene lanes
+     were skipped above. If the research citations nominate the vendor's
+     website (see domain-inference.ts for the rules a vendor cannot game),
+     run those lanes now against the inferred domain. Identity stays
+     authoritative from the pre-research computation: do NOT recompute
+     resolveIdentity here — an inferred RDAP hit must never count toward
+     the two-identifier bar. The inferred domain feeds D1 hygiene rows and
+     D4 greens only, labeled as inferred in the honesty panel. */
+  if (inputKind === "name" && !primaryDomain) {
+    const inferred = inferPrimaryDomain(citations, extract.vendor_name_candidates);
+    if (inferred) {
+      checks.push({
+        check_id: "domain_inference",
+        source: "Domain inference from research citations",
+        status: "hit",
+        confidence: "name_similarity",
+        summary: `Research citations point to ${inferred} as the vendor's website. The pitch did not state one, so the site checks below use this inferred address.`,
+        evidence_url: `https://${inferred}`,
+        retrieved_at: new Date().toISOString(),
+        data: { inferred: true, domain: inferred },
+      });
+      await emit({
+        stage: "registry",
+        kind: "micro_finding",
+        label: `Vendor website inferred from research citations: ${inferred}`,
+      });
+      await Promise.allSettled([
+        track(registry.checkDomainAge({ domain: inferred, claimedFoundingYear: foundingYear }, ctx())),
+        track(registry.checkEmailHygiene({ domain: inferred, senderDomain }, ctx())),
+        track(registry.checkWebHistory({ domain: inferred }, ctx())),
+        track(registry.checkSubdomains({ domain: inferred }, ctx(10_000))),
+        track(registry.checkGithubOrg({ candidates: companyNames, domain: inferred }, ctx())),
+      ]);
+    }
   }
 
   /* --------------------------------------------------------- S4 packs */

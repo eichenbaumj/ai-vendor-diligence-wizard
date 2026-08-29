@@ -232,3 +232,45 @@ describe("TX-RAMP report assembly (methodology D3.3)", () => {
     expect(out.questions.some((q) => q.id === "gap-txramp")).toBe(true);
   });
 });
+
+describe("domain-inference honesty caveat (name-only submissions)", () => {
+  it("labels the inferred-domain check with its caveat in the honesty panel", () => {
+    const base = input([], []);
+    base.checks = [
+      {
+        check_id: "domain_inference",
+        source: "Domain inference from research citations",
+        status: "hit",
+        summary: "Research citations point to acmeai.com as the vendor's website.",
+        evidence_url: "https://acmeai.com",
+        confidence: "name_similarity",
+        retrieved_at: AT,
+        data: { inferred: true, domain: "acmeai.com" },
+      },
+    ];
+    const out = assemble(base);
+    const item = out.honesty.find((h) => h.check_id === "domain_inference");
+    expect(item?.status).toBe("pass");
+    expect(item?.reason).toContain("inferred from research citations");
+    expect(item?.reason).toContain("did not count toward identity verification");
+  });
+
+  it("identity inputs pass through untouched by the inference check", () => {
+    const base = input([], []);
+    base.identity = { identity_resolved: false, identifiers_found: [] };
+    base.checks = [
+      {
+        check_id: "domain_inference",
+        source: "Domain inference from research citations",
+        status: "hit",
+        summary: "Research citations point to acmeai.com as the vendor's website.",
+        evidence_url: "https://acmeai.com",
+        confidence: "name_similarity",
+        retrieved_at: AT,
+        data: { inferred: true, domain: "acmeai.com" },
+      },
+    ];
+    const out = assemble(base);
+    expect(out.tierInputs.identity_resolved).toBe(false);
+  });
+});

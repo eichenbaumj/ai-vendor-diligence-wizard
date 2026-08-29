@@ -847,6 +847,14 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
     reason:
       c.status === "coverage_limited" || c.status === "error" ? c.summary : null,
   }));
+  /* Inferred-domain caveat: when the site checks ran against a domain we
+     inferred from research citations (name-only submissions), say so, and
+     say what the inference did not do. */
+  const domainInference = honesty.find((h) => h.check_id === "domain_inference");
+  if (domainInference) {
+    domainInference.reason =
+      "The website was inferred from research citations, not stated by the vendor. It did not count toward identity verification.";
+  }
   /* Adverse ledger rows flip their check to "flag". */
   const flaggedChecks = new Set(
     ledger

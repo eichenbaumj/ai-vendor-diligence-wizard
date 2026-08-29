@@ -420,6 +420,10 @@ This dimension classifies the pitched use case against your regulatory reality a
 **How it runs.** AI-assisted web research.
 **Output.** A green flag plus a concrete next step: contact that agency.
 
+### Name-only submissions
+
+When you give the tool only a company name, there is no website to check, so the site checks (domain age, mail configuration, web history, product infrastructure, engineering footprint) cannot run at first. If the research citations point clearly to the vendor's own website, the tool infers the address and then runs those site checks against it. The inference has strict rules: only pages the research tool actually retrieved can nominate a site, official and press sites never qualify, the address must match the vendor's name, and at least two separately retrieved pages must live on it. The report labels the address as inferred, and the inference never counts toward identity verification. Claim-by-claim rows still require a pitch: with only a name, there are no customer or leadership claims to test.
+
 ### Adversarial-content checks (ADV)
 
 Vendor pitches are, by definition, written by the party being evaluated, and some documents now include text aimed at the AI tools that read them. The tool runs deterministic screens for this before any AI model sees the pitch. These findings can never be removed by any later stage, and any one of them caps the verdict tier (see Section 4). The full design is described in plain language in our [security document](./security.md).

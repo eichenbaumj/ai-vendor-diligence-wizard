@@ -52,6 +52,7 @@ import {
 import {
   LEVEL_BODIES,
   LevelName,
+  PanelCategory,
   PanelFile,
   panelProblems,
   type PanelEntry,
@@ -133,10 +134,18 @@ function parseArgs(argv: string[]): Args {
     const inline = eq >= 0 ? raw.slice(eq + 1) : undefined;
     let v: string;
     switch (flag) {
-      case "--category":
+      case "--category": {
         [v, i] = take(i, flag, inline);
-        args.category = v.split(",").map((s) => s.trim()).filter(Boolean);
+        const cats = v.split(",").map((s) => s.trim()).filter(Boolean);
+        for (const c of cats) {
+          const parsed = PanelCategory.safeParse(c);
+          if (!parsed.success) {
+            fail(`unknown category "${c}" (valid: ${PanelCategory.options.join(", ")})`);
+          }
+        }
+        args.category = cats;
         break;
+      }
       case "--vendor":
         [v, i] = take(i, flag, inline);
         args.vendor = v.split(",").map((s) => s.trim()).filter(Boolean);
@@ -733,6 +742,20 @@ async function main() {
   const driftItems = baseline ? computeDrift(runFile, baseline) : [];
   runFile.summary.drift_items = driftItems.length;
 
+  /* ---- per-entry calibration staleness: an entry calibrated against an
+     older methodology version reports its soft failures as calibration
+     data, not regressions; hard assertions still enforce (qa-protocol) ---- */
+  const liveVersion = runFile.methodology_version_live;
+  const staleEntries = new Map<string, string>();
+  if (liveVersion) {
+    for (const pc of planned) {
+      const cal = pc.ctx.entry.calibrated_against;
+      if (cal && cal.methodology_version !== liveVersion) {
+        staleEntries.set(pc.ctx.entry.id, cal.methodology_version);
+      }
+    }
+  }
+
   /* ---- report.md ---- */
   const infraCells = cells.filter((c) => !isAssertable(c.terminal_source));
   const md: string[] = [
@@ -743,6 +766,12 @@ async function main() {
     "Panels:",
     ...panels.map((p) => `- ${p.display} (${p.file.panel_version}, ${p.isPublicFile ? "public" : "private"})`),
     "",
+    ...(staleEntries.size > 0
+      ? [
+          `> **STALE CALIBRATION**: ${staleEntries.size} entr${staleEntries.size === 1 ? "y" : "ies"} calibrated against an older methodology version (live is ${liveVersion}): ${[...staleEntries].map(([id, ver]) => `${id} (${ver})`).join(", ")}. Their soft failures below are calibration data, not regressions; hard assertions still enforce. Recalibrate per qa-protocol.`,
+          "",
+        ]
+      : []),
     "## Manifest",
     "",
     "| Entry | Category | Input | Level | Auto-included |",
@@ -764,7 +793,12 @@ async function main() {
     "",
     `## Soft failures (${softFailures.length})`,
     "",
-    ...(softFailures.length > 0 ? softFailures.map((f) => failureLine(f.cell, f.a)) : ["None."]),
+    ...(softFailures.length > 0
+      ? softFailures.map(
+          (f) =>
+            `${failureLine(f.cell, f.a)}${staleEntries.has(f.cell.entry_id) ? " _(stale calibration)_" : ""}`,
+        )
+      : ["None."]),
     "",
     `## Infra (${infraCells.length + submitFailures.length})`,
     "",
@@ -828,7 +862,9 @@ async function main() {
       }
       const baseDir = join(resolve(panelDirEnv as string), "baselines");
       mkdirSync(baseDir, { recursive: true });
-      const dated = join(baseDir, `${stamp.slice(0, 10)}.json`);
+      /* Full stamp, not date-only: two promotions on the same day must not
+         silently overwrite each other's archive copy. */
+      const dated = join(baseDir, `${stamp}.json`);
       copyFileSync(resultsPath, dated);
       copyFileSync(resultsPath, join(baseDir, "latest.json"));
       console.log(`promoted baseline: ${dated} and ${join(baseDir, "latest.json")}`);
@@ -848,6 +884,11 @@ async function main() {
   console.log(
     `\nSummary: ${hardFailures.length} hard, ${softFailures.length} soft, ${infraCount} infra, ${driftItems.length} drift item(s), measured ${usd(runFile.summary.est_cost_usd)}`,
   );
+  if (staleEntries.size > 0) {
+    console.log(
+      `STALE CALIBRATION: ${[...staleEntries.keys()].join(", ")} — calibrated against an older methodology version than live (${liveVersion}); recalibrate per qa-protocol.`,
+    );
+  }
   if (hardFailures.length > 0) process.exit(1);
   if (args.strict && (softFailures.length > 0 || driftItems.length > 0)) process.exit(1);
   if (infraCount > 0) process.exit(2);

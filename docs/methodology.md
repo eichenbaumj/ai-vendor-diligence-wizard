@@ -426,7 +426,7 @@ Vendor pitches are, by definition, written by the party being evaluated, and som
 
 ### ADV-01 Hidden text
 
-Text present in the submitted material but invisible to a human reader (hidden styling on web pages; hidden text layers in PDFs). Web page detection is live; PDF layer analysis is planned. The finding reports that hidden text exists and quotes it.
+Text present in the submitted material but invisible to a human reader (hidden styling on web pages; hidden text layers in PDFs). Web page detection is live, and PDF detection covers text smaller than 4 points or placed off the page; color-matched text and rendered-page comparison are planned. The finding reports that hidden text exists and quotes it.
 
 ### ADV-02 Text addressed to AI systems
 

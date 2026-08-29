@@ -28,10 +28,12 @@ export function dayKey(prefix: string, id: string, now = new Date()): string {
   return `${prefix}:${id}:${day}`;
 }
 
-export async function sha256Hex(input: string): Promise<string> {
+export async function sha256Hex(input: string | Uint8Array): Promise<string> {
   const digest = await crypto.subtle.digest(
     "SHA-256",
-    new TextEncoder().encode(input),
+    typeof input === "string"
+      ? new TextEncoder().encode(input)
+      : (input as unknown as BufferSource),
   );
   return Array.from(new Uint8Array(digest))
     .map((b) => b.toString(16).padStart(2, "0"))

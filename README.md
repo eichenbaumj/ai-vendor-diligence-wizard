@@ -1,8 +1,8 @@
 # AI Vendor Diligence Wizard
 
 A free, open-source triage tool for state and local government staff who are
-flooded with AI vendor pitches. Paste the pitch (a cold email, a marketing
-page, or just the vendor's name) and get back an evidence-based read on the
+flooded with AI vendor pitches. Paste the pitch (a cold email, a PDF
+one-pager, a marketing page URL, or just the vendor's name) and get back an evidence-based read on the
 company behind it: what public records confirm, what they do not, and the
 specific questions to send the vendor before anyone books a demo.
 

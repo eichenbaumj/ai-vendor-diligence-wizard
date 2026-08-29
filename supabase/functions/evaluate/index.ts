@@ -15,7 +15,7 @@ import { CORS_HEADERS, clientIp, json, preflight } from "../_shared/http.ts";
 import { verifyTurnstile } from "../_shared/turnstile.ts";
 import { allow, dayKey, sha256Hex } from "../_shared/ratelimit.ts";
 import { makeEmitter, type Emitter } from "../_shared/broadcast.ts";
-import { runForensics } from "../_shared/forensics.ts";
+import { detectHiddenHtml, runForensics } from "../_shared/forensics.ts";
 import {
   buildClassifyRequest,
   buildExtractRequest,
@@ -44,6 +44,18 @@ import { computeTier } from "../_shared/tier.ts";
 import { assemble } from "../_shared/assemble.ts";
 import { lintObject, lintText, looseText, tidyProse } from "../_shared/lint.ts";
 import { harvestCitations } from "../_shared/harvest.ts";
+import {
+  UrlIngestError,
+  fetchSubmittedUrl,
+  htmlToText,
+  normalizeSubmittedUrl,
+} from "../_shared/ingest-url.ts";
+import {
+  PdfIngestError,
+  analyzePdfItems,
+  extractPdf,
+  isPdfBytes,
+} from "../_shared/ingest-pdf.ts";
 import { detectPlantedCorroboration } from "../_shared/adv-corroboration.ts";
 import { PACKS, PACK_RELEASE } from "../_shared/packs.gen.ts";
 import { STATE_ITEMS } from "../_shared/state-items.ts";
@@ -102,6 +114,7 @@ Deno.serve(async (req) => {
   const body = (await req.json().catch(() => null)) as {
     input_kind?: string;
     content?: string;
+    filename?: string;
     state?: string | null;
     turnstile_token?: string | null;
     client_token?: string;
@@ -109,15 +122,26 @@ Deno.serve(async (req) => {
 
   const inputKind = body?.input_kind;
   const content = typeof body?.content === "string" ? body.content.trim() : "";
+  const filename =
+    typeof body?.filename === "string" ? body.filename.slice(0, 160) : null;
   const clientToken = body?.client_token ?? "";
-  if (inputKind !== "paste" && inputKind !== "name") {
-    return json({ error: "input_kind must be paste or name in this release" }, 400);
+  const KINDS = ["paste", "name", "pdf", "url"] as const;
+  if (!KINDS.includes(inputKind as (typeof KINDS)[number])) {
+    return json({ error: "input_kind must be paste, name, pdf, or url" }, 400);
   }
   if (inputKind === "paste" && (content.length < 40 || content.length > 40_000)) {
     return json({ error: "paste between 40 and 40,000 characters" }, 400);
   }
   if (inputKind === "name" && (content.length < 2 || content.length > 160)) {
     return json({ error: "vendor name between 2 and 160 characters" }, 400);
+  }
+  /* PDF arrives base64 in content: cheap length gate before any work.
+     8,400,000 base64 chars is ~6 MB decoded. */
+  if (inputKind === "pdf" && (content.length < 100 || content.length > 8_400_000)) {
+    return json({ error: "upload a PDF smaller than 6 MB" }, 400);
+  }
+  if (inputKind === "url" && (content.length < 12 || content.length > 2_048)) {
+    return json({ error: "submit a full https web address" }, 400);
   }
   if (!/^[0-9a-f-]{36}$/i.test(clientToken)) {
     return json({ error: "client_token required" }, 400);
@@ -148,9 +172,95 @@ Deno.serve(async (req) => {
     return json({ error: "capacity" }, 503);
   }
 
-  /* Forensics run in the foreground: cheap, and the stored pitch is always
-     the normalized text. */
-  const forensics = runForensics(content);
+  /* Ingestion + forensics in the foreground (after Turnstile and the caps:
+     no decoding or network I/O for unverified or capped requests). The
+     stored pitch is always the normalized extracted text; PDF binaries are
+     never stored. */
+  let pitchSource = content;
+  let rawHash = await sha256Hex(content);
+  const ingestNotes: string[] = [];
+  const ingestAdv: AdvFinding[] = [];
+  let hiddenSpans: string[] = [];
+  let sourceMeta: Record<string, unknown> = { kind: inputKind };
+
+  if (inputKind === "pdf") {
+    let bytes: Uint8Array;
+    try {
+      bytes = Uint8Array.from(atob(content.replace(/\s+/g, "")), (c) => c.charCodeAt(0));
+    } catch {
+      return json({ error: "that file does not look like a PDF" }, 400);
+    }
+    if (!isPdfBytes(bytes)) {
+      return json({ error: "that file does not look like a PDF" }, 400);
+    }
+    let extracted;
+    try {
+      extracted = await extractPdf(bytes);
+    } catch (err) {
+      const message =
+        err instanceof PdfIngestError ? err.message : "that file does not look like a readable PDF";
+      return json({ error: message }, 400);
+    }
+    if (extracted.text.length < 40) {
+      return json(
+        { error: "this PDF has no selectable text, paste the pitch text instead" },
+        400,
+      );
+    }
+    const hidden = analyzePdfItems(extracted.items);
+    if (hidden.finding) ingestAdv.push(hidden.finding);
+    hiddenSpans = hidden.spans;
+    pitchSource = extracted.text;
+    rawHash = await sha256Hex(bytes);
+    sourceMeta = { kind: "pdf", filename, pdf_pages: extracted.pages };
+    ingestNotes.push(
+      `Read ${extracted.pages === 1 ? "1 page" : `${extracted.pages} pages`} of text from the uploaded PDF.`,
+    );
+  } else if (inputKind === "url") {
+    let normalizedUrl: string;
+    try {
+      normalizedUrl = normalizeSubmittedUrl(content);
+    } catch (err) {
+      return json(
+        { error: err instanceof UrlIngestError ? err.message : "submit a full https web address" },
+        400,
+      );
+    }
+    let page;
+    try {
+      page = await fetchSubmittedUrl(normalizedUrl);
+    } catch (err) {
+      return json(
+        { error: err instanceof UrlIngestError ? err.message : "that page could not be fetched" },
+        400,
+      );
+    }
+    /* Hidden-text detection runs on the RAW html, before stripping. */
+    const hidden = detectHiddenHtml(page.html);
+    if (hidden.finding) ingestAdv.push(hidden.finding);
+    hiddenSpans = hidden.spans;
+    const text = htmlToText(page.html);
+    if (text.length < 40) {
+      return json({ error: "that address did not return a readable web page" }, 400);
+    }
+    pitchSource = text;
+    rawHash = await sha256Hex(normalizedUrl);
+    sourceMeta = {
+      kind: "url",
+      url: normalizedUrl,
+      final_url: page.final_url,
+      fetched_bytes: page.fetched_bytes,
+    };
+    const host = new URL(page.final_url).hostname;
+    ingestNotes.push(
+      `Fetched the page at ${host} (${Math.max(1, Math.round(page.fetched_bytes / 1024))} KB) and read its text.`,
+    );
+  }
+
+  const forensics = runForensics(pitchSource);
+  /* Ingest-detected findings (hidden HTML or PDF text) join the deterministic
+     set; like every ADV path, detection only ever ADDS. */
+  forensics.adv_findings.push(...ingestAdv);
 
   /* Name-only inputs have a known vendor key now — check the result cache
      before spending anything. */
@@ -166,12 +276,14 @@ Deno.serve(async (req) => {
       client_token: clientToken,
       status: "queued",
       input_kind: inputKind,
-      input_sha256: await sha256Hex(content),
+      input_sha256: rawHash,
       pitch_raw: forensics.normalized,
       forensics: {
         adv: forensics.adv_findings,
         pii_scrubbed: forensics.pii_scrubbed,
         invisible_stripped: forensics.invisible_stripped,
+        source: sourceMeta,
+        ...(hiddenSpans.length > 0 ? { hidden_spans: hiddenSpans.slice(0, 10) } : {}),
       },
       user_state: userState,
       methodology_version: METHODOLOGY_VERSION,
@@ -193,6 +305,7 @@ Deno.serve(async (req) => {
     forensics.normalized,
     forensics.adv_findings,
     userState,
+    ingestNotes,
   ).catch(async (err) => {
     console.error(`pipeline fatal for ${evaluationId}: ${String(err)}`);
     await supabase
@@ -237,14 +350,23 @@ async function findCached(
 
 /* ------------------------------------------------------------ the pipeline */
 
+/* How each input kind is labeled to the quarantined extractor: source
+   framing calibrates trust (research gap file, source-labeling rule). */
+const S1_SOURCE_LABELS: Record<string, string> = {
+  paste: "pasted vendor pitch from an unknown sender",
+  pdf: "text extracted from a PDF file uploaded by the user, authored by an unknown vendor",
+  url: "text extracted from the public web page at a URL the user submitted, authored by an unknown vendor",
+};
+
 async function runPipeline(
   supabase: SupabaseClient,
   env: Env,
   evaluationId: string,
-  inputKind: "paste" | "name",
+  inputKind: "paste" | "name" | "pdf" | "url",
   pitchText: string,
   forensicAdv: AdvFinding[],
   userState: string | null,
+  ingestNotes: string[] = [],
 ): Promise<void> {
   const pipelineStart = Date.now();
   const emitter = makeEmitter(supabase, env.supabaseUrl, env.serviceKey, evaluationId);
@@ -270,6 +392,9 @@ async function runPipeline(
   /* ------------------------------------------------------------- S1 parse */
   await setStatus("parsing");
   await emit({ stage: "parse", kind: "stage_start", label: "Reading the pitch" });
+  for (const note of ingestNotes) {
+    await emit({ stage: "parse", kind: "micro_finding", label: note.slice(0, 300) });
+  }
 
   let extract: PitchExtract;
   if (inputKind === "name") {
@@ -291,7 +416,7 @@ async function runPipeline(
     };
   } else {
     const res = await callAnthropic(
-      buildExtractRequest("pasted vendor pitch from an unknown sender", pitchText),
+      buildExtractRequest(S1_SOURCE_LABELS[inputKind] ?? S1_SOURCE_LABELS.paste, pitchText),
       { apiKey: env.anthropicKey, timeoutMs: STAGE_TIMEOUTS.extract },
     );
     usage = addUsage(usage, res.usage);

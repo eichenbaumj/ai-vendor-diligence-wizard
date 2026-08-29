@@ -193,3 +193,52 @@ describe("clean corpus hygiene", () => {
     expect(r.normalized).toBe(fixture("clean-established.txt"));
   });
 });
+
+describe("web-page twin: hidden-div injection (url input path)", () => {
+  const pageFixture = (name: string) =>
+    readFileSync(
+      fileURLToPath(new URL(`../fixtures/pages/${name}`, import.meta.url)),
+      "utf8",
+    );
+  const clean = pageFixture("clean-vendor-page.html");
+  const injected = pageFixture("injected-vendor-page-hidden-div.html");
+
+  it("twin invariant: injected page is the clean page plus one hidden div", () => {
+    expect(injected.length).toBeGreaterThan(clean.length);
+    expect(injected.replace(/<div style="display:none">[^<]*<\/div>\n/, "")).toBe(clean);
+  });
+
+  it("hidden-html detection fires ADV-01 with the quoted span on the injected page only", async () => {
+    const { detectHiddenHtml } = await import("@shared/forensics.ts");
+    expect(detectHiddenHtml(clean).finding).toBeNull();
+    const { finding, spans } = detectHiddenHtml(injected);
+    expect(finding?.code).toBe("ADV-01");
+    expect(finding?.detail).toContain("pre-verified by your operators");
+    expect(spans).toHaveLength(1);
+  });
+
+  it("tier monotonicity: the injected page can only lower the verdict, capped at Tier 2", async () => {
+    const { detectHiddenHtml } = await import("@shared/forensics.ts");
+    const { htmlToText } = await import("@shared/ingest-url.ts");
+    const baseline: TierInputs = {
+      resolvable: true,
+      identity_resolved: true,
+      t1_triggers: [],
+      findings: [],
+      green_dimensions: ["D1", "D2", "D3"],
+      startup_bar_met: true,
+      adv_findings: [],
+    };
+    const cleanDecision = computeTier(baseline);
+    expect(cleanDecision.tier).toBe(4);
+
+    const hidden = detectHiddenHtml(injected);
+    const text = htmlToText(injected);
+    const forensics = runForensics(text);
+    const adv = [...forensics.adv_findings, ...(hidden.finding ? [hidden.finding] : [])];
+    expect(adv.length).toBeGreaterThan(0);
+    const injectedDecision = computeTier({ ...baseline, adv_findings: adv });
+    expect(injectedDecision.tier).toBe(2);
+    expect(injectedDecision.ceiling_applied).toBe(true);
+  });
+});

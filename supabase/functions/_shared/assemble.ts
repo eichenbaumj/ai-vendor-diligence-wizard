@@ -902,7 +902,7 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
   const domainInference = honesty.find((h) => h.check_id === "domain_inference");
   if (domainInference) {
     domainInference.reason =
-      "The website was inferred from research citations, not stated by the vendor. It did not count toward identity verification.";
+      "The website was matched to the vendor's name by our research, not stated by the vendor. Its registration record counts toward identity only alongside a government registry record, and only when the site itself names the vendor.";
   }
   /* Adverse ledger rows flip their check to "flag". */
   const flaggedChecks = new Set(

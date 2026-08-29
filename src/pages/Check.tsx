@@ -293,7 +293,8 @@ export default function Check() {
                 how we handle your data
               </Link>
               . PDF files are read for their text; the file itself is not
-              stored. Nothing you share trains any model.
+              stored. We may also read a few pages of the vendor's public
+              website. Nothing you share trains any model.
             </p>
 
             {error && (

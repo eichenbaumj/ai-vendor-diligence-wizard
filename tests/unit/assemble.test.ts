@@ -251,8 +251,8 @@ describe("domain-inference honesty caveat (name-only submissions)", () => {
     const out = assemble(base);
     const item = out.honesty.find((h) => h.check_id === "domain_inference");
     expect(item?.status).toBe("pass");
-    expect(item?.reason).toContain("inferred from research citations");
-    expect(item?.reason).toContain("did not count toward identity verification");
+    expect(item?.reason).toContain("matched to the vendor's name");
+    expect(item?.reason).toContain("only alongside a government registry record");
   });
 
   it("identity inputs pass through untouched by the inference check", () => {

@@ -1,6 +1,6 @@
 # Security Design: Evaluating Text Written by the Party Being Evaluated
 
-This tool reads vendor pitches and vendor websites. Both are written by the party being evaluated, which means every input must be treated as potentially adversarial. This document explains, in plain terms, how the tool is built to stay honest when the material it reads is trying to influence it, what the ADV finding codes in a report mean, and where the honest limits are.
+This tool reads vendor pitches and vendor websites. Both are written by the party being evaluated, which means every input must be treated as potentially adversarial. The tool also fetches the vendor's public website on its own (the homepage plus up to four pages the homepage links, on the same domain, with strict size and time limits, following no deep links and stripping every address's query string). Text hidden from human readers on those pages is removed before any analysis reads them, and nothing found on the vendor's site can raise a report's confidence or, through the adversarial-content checks, lower its tier: site findings are recorded for engineering review only. A vendor watching its web logs will see a handful of page reads from a data-center address when someone runs a check. This document explains, in plain terms, how the tool is built to stay honest when the material it reads is trying to influence it, what the ADV finding codes in a report mean, and where the honest limits are.
 
 ## The threat
 

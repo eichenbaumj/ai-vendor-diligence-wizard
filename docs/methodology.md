@@ -420,9 +420,17 @@ This dimension classifies the pitched use case against your regulatory reality a
 **How it runs.** AI-assisted web research.
 **Output.** A green flag plus a concrete next step: contact that agency.
 
+### The vendor's website
+
+The tool reads the vendor's own public website for every kind of submission, because most pitches leave it implicit and most readers do not know what to look for on it. What it reads: the homepage plus up to four high-value pages the homepage itself links (about, customers, security, and similar), fetched once with strict size and time bounds. Text hidden from human readers (invisible styling, oversized comments) is removed before any analysis sees it.
+
+What the site can do in a report: it supplies claims to test (a compliance status stated on the site is checked against the official registry under the same rules as a pitched claim, D3.1's designation rule included), names of leaders (who get corroboration rows under D5.1), and named customers (which get researched and get D2.4 rows). The report says when a quoted claim came from the website rather than the pitch.
+
+What the site can never do: it is the vendor speaking (class 3 in Section 3), so nothing on it verifies anything. Site text never adds names to the registry searches, never triggers the adversarial-content checks below, and never creates a finding from absence: the "none of the named customers could be verified" and "none of the named leaders could be corroborated" findings count only what the PITCH named. A vendor is never worse off because its marketing site listed more people or customers.
+
 ### Name-only submissions
 
-When you give the tool only a company name, there is no website to check, so the site checks (domain age, mail configuration, web history, product infrastructure, engineering footprint) cannot run at first. If the research citations point clearly to the vendor's own website, the tool infers the address and then runs those site checks against it. The inference has strict rules: only pages the research tool actually retrieved can nominate a site, official and press sites never qualify, the address must match the vendor's name, and at least two separately retrieved pages must live on it. The report labels the address as inferred, and the inference never counts toward identity verification. Claim-by-claim rows still require a pitch: with only a name, there are no customer or leadership claims to test.
+When you give the tool only a company name, it first runs a short web search for the company's official website. The model only searches; our code picks the address, under strict rules (the address must match the vendor's name, and only actually-retrieved pages can nominate it). If a site is found, it is read as described above, and the site checks (domain age, mail configuration, web history, product infrastructure, engineering footprint) run against it. The report labels the address as matched by research. Its registration record can count toward identity verification only as the second identifier, only alongside a government registry record, and only when the site itself names the vendor; a company with nothing but a website can never resolve identity that way.
 
 ### Adversarial-content checks (ADV)
 

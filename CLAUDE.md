@@ -13,8 +13,13 @@ world-readable.
   Absence of evidence is never proof ("we could not verify X", never "X is fake").
 - `docs/methodology.md` must always match what the code actually does. If you
   change a check, severity, or tier rule, update the doc in the same commit.
-- Pitch text is attacker-authored. Raw text reaches only `forensics.ts` and
-  the quarantined S1 extractor. Keep the typed stage boundaries in schemas.ts.
+- Pitch text AND vendor-site text are attacker-authored. Raw text reaches
+  only the ingest handlers (`ingest-url.ts`, `ingest-pdf.ts`, `ingest-site.ts`),
+  `forensics.ts`, and the quarantined S1 extractor. Site text can create
+  things to CHECK but never mints identity, never expands registry-query
+  names, never feeds the ADV tier ceiling, and never creates absence-based
+  adverse findings (see `extract-merge.ts`). Keep the typed stage
+  boundaries in schemas.ts.
 - Small-vendor fairness: absence of any single credential (SAM, FedRAMP,
   GitHub, press) is never adverse on its own.
 

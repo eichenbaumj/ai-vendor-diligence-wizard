@@ -7,8 +7,9 @@
   S5 synthesis (+ S5.5 adversarial review) → persist report. Every stage
   writes replayable events and broadcasts live progress.
 
-  Runs on the Supabase Pro plan (400s wall clock). Stage budgets: S1 25s,
-  S2 30s, S3 200s, S4 12s, S5 50s, review 40s. Worst case ~320s.
+  Runs on the Supabase Pro plan (400s wall clock). The research deadline
+  is dynamic: whatever remains after the earlier stages, minus a reserve
+  for synthesis and review (see the deadline formula at the S3 call).
 */
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { CORS_HEADERS, clientIp, json, preflight } from "../_shared/http.ts";
@@ -18,6 +19,7 @@ import { makeEmitter, type Emitter } from "../_shared/broadcast.ts";
 import { detectHiddenHtml, runForensics } from "../_shared/forensics.ts";
 import {
   buildClassifyRequest,
+  buildDiscoveryRequest,
   buildExtractRequest,
   buildResearchRequest,
   buildReviewRequest,
@@ -45,6 +47,8 @@ import { computeTier } from "../_shared/tier.ts";
 import { assemble } from "../_shared/assemble.ts";
 import { lintObject, lintText, looseText, tidyProse } from "../_shared/lint.ts";
 import { harvestCitations } from "../_shared/harvest.ts";
+import { fetchVendorSite } from "../_shared/ingest-site.ts";
+import { mergeExtracts } from "../_shared/extract-merge.ts";
 import { inferPrimaryDomain } from "../_shared/domain-inference.ts";
 import { isNamedOrganization, splitNameCandidates } from "../_shared/text-match.ts";
 import { PROGRAMS, affirmsProgram } from "../_shared/claim-status.ts";
@@ -313,6 +317,7 @@ Deno.serve(async (req) => {
     forensics.adv_findings,
     userState,
     ingestNotes,
+    inputKind === "url" && typeof sourceMeta.url === "string" ? sourceMeta.url : null,
   ).catch(async (err) => {
     console.error(`pipeline fatal for ${evaluationId}: ${String(err)}`);
     await supabase
@@ -374,6 +379,9 @@ async function runPipeline(
   forensicAdv: AdvFinding[],
   userState: string | null,
   ingestNotes: string[] = [],
+  /* The normalized submitted URL for url-kind runs (the site pass fetches
+     more pages of that host). */
+  sourceUrl: string | null = null,
 ): Promise<void> {
   const pipelineStart = Date.now();
   const emitter = makeEmitter(supabase, env.supabaseUrl, env.serviceKey, evaluationId);
@@ -522,29 +530,14 @@ async function runPipeline(
     return;
   }
 
-  /* --------------------------------------------------------- S2 registry */
-  await setStatus("registry");
-  await emit({
-    stage: "registry",
-    kind: "stage_start",
-    label: "Checking registries and public records",
-  });
-
-  const foundingYear = extractFoundingYear(extract);
-  /* Registry contradictions arm only on affirmative present-status claims:
-     "pursuing FedRAMP authorization" is a legitimate state (methodology D3.1)
-     and must never end in a CRITICAL contradiction. */
-  const claimedFedramp = affirmsProgram(extract.claims, PROGRAMS.fedramp);
-  const claimedGovramp = affirmsProgram(extract.claims, PROGRAMS.govramp);
-  const claimedTxramp = affirmsProgram(extract.claims, PROGRAMS.txramp);
-  const claimedSourcewell = affirmsProgram(extract.claims, PROGRAMS.sourcewell);
-  const senderDomain = extract.sender_email?.split("@")[1] ?? null;
   /* Compound names ("TrueTax by Govra") hide the registered company from
      every query: split into identity candidates (the company) and product
      names. Identity lanes query identityNames; product names additionally
      join feed/product matching; productTokens guard acceptance so a record
      named entirely from product-brand tokens ("TRUETAX INC") is never
-     accepted as this vendor. The verbatim name stays candidates[0]. */
+     accepted as this vendor. The verbatim name stays candidates[0].
+     (Names are pitch-only by construction, so this is safe to compute
+     before the site merge below.) */
   const rawNames = extract.vendor_name_candidates.length
     ? extract.vendor_name_candidates
     : [vendorName];
@@ -562,6 +555,150 @@ async function runPipeline(
       (n) => !rawNames.includes(n) && n.trim().split(/\s+/).length >= 2,
     ),
   ];
+
+  /* ---------------------------------------- S1b: vendor-site evidence pass */
+
+  /* The vendor's public website is an evidence source for EVERY input kind:
+     users rarely submit it and rarely know what to look for on it. The site
+     is discovered (two code-picked searches) for name-only runs, fetched
+     under the SSRF bounds in ingest-site.ts, quarantined exactly like pitch
+     text (forensics + the S1 extractor), and merged under the provenance
+     rules in extract-merge.ts — site text creates things to CHECK, never
+     identity, and never absence-based findings. Runs after the cache check
+     so cached results never pay for fetches; vendorKey never changes. */
+  let pitchPersonCount = extract.people.length;
+  let pitchCustomerCount = extract.named_customers.length;
+  let siteClaimQuotes: string[] = [];
+  let discoveredDomain: string | null = null;
+  let discoveredConfirmed = false;
+  {
+    let siteHost: string | null = null;
+    let siteSourceLabel = "";
+    if (inputKind === "url" && sourceUrl) {
+      try {
+        siteHost = new URL(sourceUrl).hostname;
+      } catch {
+        siteHost = null;
+      }
+      siteSourceLabel =
+        "text extracted from additional pages of the website the user submitted, authored by the vendor";
+    } else if (primaryDomain) {
+      siteHost = primaryDomain;
+      siteSourceLabel =
+        "text extracted from a public website the pitch identifies as the vendor's, authored by the vendor";
+    } else if (inputKind === "name") {
+      const disc = await runResearchLoop(buildDiscoveryRequest(companyNames), {
+        apiKey: env.anthropicKey,
+        timeoutMs: 20_000,
+        deadlineMs: 30_000,
+        maxContinuations: 1,
+      });
+      usage = addUsage(usage, disc.usage);
+      const discCitations = harvestCitations(
+        { citations: disc.citations, narrative: disc.narrative },
+        [],
+        new Date().toISOString(),
+      );
+      discoveredDomain = inferPrimaryDomain(discCitations, feedNames);
+      markStage("s1b_discovery");
+      if (discoveredDomain) {
+        siteHost = discoveredDomain;
+        siteSourceLabel =
+          "text extracted from a public website matched to the vendor's name, authored by the vendor";
+        await emit({
+          stage: "parse",
+          kind: "micro_finding",
+          label: `Found a likely vendor website: ${discoveredDomain}`,
+        });
+      }
+    }
+    if (siteHost && Date.now() - pipelineStart < 60_000) {
+      const site = await fetchVendorSite(siteHost);
+      markStage("s1b_site_fetch");
+      if (site && site.combinedText.length >= 200) {
+        /* Informational forensics only: the SSN scrub and invisible-char
+           strip run, but site findings NEVER join the ceiling-bearing adv
+           set — "system prompt" appears on every AI vendor's docs pages,
+           and hidden text was already subtracted before this point. */
+        const siteForensics = runForensics(site.combinedText);
+        const res = await callAnthropic(
+          buildExtractRequest(siteSourceLabel, siteForensics.normalized),
+          { apiKey: env.anthropicKey, timeoutMs: STAGE_TIMEOUTS.extract },
+        );
+        usage = addUsage(usage, res.usage);
+        stageUsage.s1b = res.usage;
+        const parsed = res.ok ? parseStructured<unknown>(res) : null;
+        const validated = parsed ? PitchExtract.safeParse(parsed) : null;
+        if (validated?.success) {
+          const siteExtract = validated.data;
+          const siteLoose = looseText(siteForensics.normalized);
+          siteExtract.named_customers = siteExtract.named_customers.filter(
+            (c) => siteLoose.includes(looseText(c)) && isNamedOrganization(c),
+          );
+          siteExtract.claims = siteExtract.claims.filter((c) =>
+            siteLoose.includes(looseText(c.quote)),
+          );
+          if (discoveredDomain) {
+            /* The discovered domain's registration record may count as the
+               SECOND identity identifier only when the site's own extracted
+               name matches the submitted name (see resolveIdentity). */
+            discoveredConfirmed = siteExtract.vendor_name_candidates.some(
+              (n) => registry.matchCompanyName(n, companyNames).kind === "match",
+            );
+          }
+          const merged = mergeExtracts(extract, siteExtract);
+          extract = merged.extract;
+          pitchPersonCount = merged.pitch_person_count;
+          pitchCustomerCount = merged.pitch_customer_count;
+          siteClaimQuotes = merged.site_claim_quotes;
+          await emit({
+            stage: "parse",
+            kind: "micro_finding",
+            label: `Read ${site.pages.length} page${site.pages.length === 1 ? "" : "s"} of ${siteHost} as vendor-stated evidence`,
+          });
+          const { data: fRow } = await supabase
+            .from("evaluations")
+            .select("forensics")
+            .eq("id", evaluationId)
+            .maybeSingle();
+          await supabase
+            .from("evaluations")
+            .update({
+              forensics: {
+                ...((fRow?.forensics as Record<string, unknown>) ?? {}),
+                site_signals: {
+                  domain: siteHost,
+                  pages: site.pages.map((pg) => pg.final_url),
+                  hidden_spans: site.hidden_span_total,
+                  adv_codes: siteForensics.adv_findings.map((a) => a.code),
+                  invisible_stripped: siteForensics.invisible_stripped,
+                },
+              },
+            })
+            .eq("id", evaluationId);
+        }
+        markStage("s1b_site_extract");
+      }
+    }
+  }
+
+  /* --------------------------------------------------------- S2 registry */
+  await setStatus("registry");
+  await emit({
+    stage: "registry",
+    kind: "stage_start",
+    label: "Checking registries and public records",
+  });
+
+  const foundingYear = extractFoundingYear(extract);
+  /* Registry contradictions arm only on affirmative present-status claims:
+     "pursuing FedRAMP authorization" is a legitimate state (methodology D3.1)
+     and must never end in a CRITICAL contradiction. */
+  const claimedFedramp = affirmsProgram(extract.claims, PROGRAMS.fedramp);
+  const claimedGovramp = affirmsProgram(extract.claims, PROGRAMS.govramp);
+  const claimedTxramp = affirmsProgram(extract.claims, PROGRAMS.txramp);
+  const claimedSourcewell = affirmsProgram(extract.claims, PROGRAMS.sourcewell);
+  const senderDomain = extract.sender_email?.split("@")[1] ?? null;
 
   const feeds = await loadFeeds(supabase);
   const checks: RegistryCheck[] = [];
@@ -627,6 +764,41 @@ async function runPipeline(
       track(registry.checkSubdomains({ domain: primaryDomain }, ctx(10_000))),
       track(registry.checkGithubOrg({ candidates: feedNames, domain: primaryDomain }, ctx())),
     );
+  } else if (discoveredDomain) {
+    /* Hygiene lanes for the DISCOVERED domain. Every check is annotated
+       with provenance: resolveIdentity applies the second-identifier-only
+       rule to the RDAP record (never on its own, never unconfirmed), and
+       the honesty panel carries the inference caveat via the synthetic
+       check below. */
+    const annotate = (p: Promise<RegistryCheck | RegistryCheck[]>) =>
+      p.then((r) => {
+        const list = Array.isArray(r) ? r : [r];
+        for (const c of list) {
+          c.data = {
+            ...((c.data ?? {}) as Record<string, unknown>),
+            discovered_domain: true,
+            confirmed_name_match: discoveredConfirmed,
+          };
+        }
+        return r;
+      });
+    checks.push({
+      check_id: "domain_inference",
+      source: "Domain inference from research citations",
+      status: "hit",
+      confidence: "name_similarity",
+      summary: `A web search matched ${discoveredDomain} to the vendor's name, so the site checks below use this address. The pitch did not state a website.`,
+      evidence_url: `https://${discoveredDomain}`,
+      retrieved_at: new Date().toISOString(),
+      data: { inferred: true, domain: discoveredDomain, confirmed_name_match: discoveredConfirmed },
+    });
+    tasks.push(
+      track(annotate(registry.checkDomainAge({ domain: discoveredDomain, claimedFoundingYear: foundingYear }, ctx()))),
+      track(annotate(registry.checkEmailHygiene({ domain: discoveredDomain, senderDomain }, ctx()))),
+      track(annotate(registry.checkWebHistory({ domain: discoveredDomain }, ctx()))),
+      track(annotate(registry.checkSubdomains({ domain: discoveredDomain }, ctx(10_000)))),
+      track(annotate(registry.checkGithubOrg({ candidates: feedNames, domain: discoveredDomain }, ctx()))),
+    );
   }
   await Promise.allSettled(tasks);
 
@@ -689,10 +861,16 @@ async function runPipeline(
     label: "Searching for delivery evidence on the open web",
   });
 
+  /* Research and citation classification should know the vendor's site
+     even when the pitch did not state it (context only — never identity). */
+  const researchDomains = [
+    ...extract.domains,
+    ...(discoveredDomain ? [discoveredDomain] : []),
+  ];
   const research = await runResearchLoop(
     buildResearchRequest({
       vendor_name_candidates: extract.vendor_name_candidates,
-      domains: extract.domains,
+      domains: researchDomains,
       people: extract.people,
       named_customers: extract.named_customers,
       claims: extract.claims,
@@ -726,7 +904,7 @@ async function runPipeline(
   markStage("s3_research");
   const citations = harvestCitations(
     research,
-    extract.domains,
+    researchDomains,
     new Date().toISOString(),
   );
   const budget = researchBudget({
@@ -769,7 +947,7 @@ async function runPipeline(
      resolveIdentity here — an inferred RDAP hit must never count toward
      the two-identifier bar. The inferred domain feeds D1 hygiene rows and
      D4 greens only, labeled as inferred in the honesty panel. */
-  if (inputKind === "name" && !primaryDomain) {
+  if (inputKind === "name" && !primaryDomain && !discoveredDomain) {
     const inferred = inferPrimaryDomain(citations, feedNames);
     if (inferred) {
       checks.push({
@@ -860,11 +1038,14 @@ async function runPipeline(
     packs: PACKS,
     resolvable,
     research_partial: research.partial,
+    pitch_person_count: pitchPersonCount,
+    pitch_customer_count: pitchCustomerCount,
     generated_at: generatedAt,
   });
   const decision = computeTier(skeleton.tierInputs);
 
   /* Narrative pass. */
+  const siteQuoteSet = new Set(siteClaimQuotes);
   const s5Input: S5UserInput = {
     tier: decision.tier,
     tier_label: decision.label,
@@ -882,7 +1063,7 @@ async function runPipeline(
       source_dates: r.sources.map((s) => s.retrieved_at.slice(0, 10)),
       fact_basis: `${r.what_checked}. Result: ${r.result}. ${
         r.sources.map((s) => `${s.title ?? s.url} (${s.retrieved_at.slice(0, 10)})`).join("; ") || "No public source located."
-      }`,
+      }${r.claim_quote && siteQuoteSet.has(r.claim_quote) ? " The quoted claim comes from the vendor's public website." : ""}`,
     })),
     green_flag_facts: skeleton.greenFlagFacts,
     sector: {

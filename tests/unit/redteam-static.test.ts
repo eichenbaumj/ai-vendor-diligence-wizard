@@ -166,6 +166,7 @@ describe("citation-level invariant: composed URLs never verify", () => {
       sector: { pack_ids: [], elevated: false, overlay_reason: null, state_items: [] },
       packs: {},
       resolvable: true,
+      research_partial: false,
       generated_at: "2026-08-28T00:00:00.000Z",
     });
     const row = out.ledger.find((r) => r.methodology_ref === "d2-4");

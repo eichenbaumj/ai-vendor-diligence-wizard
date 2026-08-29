@@ -58,6 +58,7 @@ function input(customers: string[], citations: Citation[]): AssembleInput {
     sector: { pack_ids: [], elevated: false, overlay_reason: null, state_items: [] },
     packs: {},
     resolvable: true,
+    research_partial: false,
     generated_at: AT,
   };
 }

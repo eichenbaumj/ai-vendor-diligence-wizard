@@ -291,8 +291,8 @@ Do the people the vendor presents as its leadership verifiably exist, in the rol
 
 **What we look at.** Whether the named founders and executives appear anywhere independent of the vendor's own website: news coverage, conference programs, professional records.
 **Public sources.** [GDELT global news database](https://www.gdeltproject.org/); public conference and press archives.
-**How it runs.** AI-assisted web research.
-**If adverse.** An entire claimed leadership team with no independent public trace is weighted High, phrased strictly as "we could not verify," never worse. A single person with a thin footprint is not a finding at all; early-career founders often have little public record, and that is real and normal.
+**How it runs.** AI-assisted web research, with the verdict decided by code over the retrieved evidence. A person counts as corroborated only when one retrieved page from an official or independent-press source names both the person and the vendor in its retrieved text. This is the same two-identifier discipline as D5.2, here as name plus affiliation. A web address alone never counts, and the vendor's own pages never count. Corroboration means the person appears in public sources independent of the vendor's site; it does not confirm their title or employment. The report checks up to six named leaders.
+**If adverse.** An entire claimed leadership team with no independent public trace is weighted High, phrased strictly as "we could not verify," never worse. That weight applies only when the research ran to completion and the pitch names three or more leaders, none of whom could be corroborated; a two-person team with no trace is weighted Medium. A single person with a thin footprint is not a finding at all; early-career founders often have little public record, and that is real and normal.
 
 ### D5.2 Publications and patents
 

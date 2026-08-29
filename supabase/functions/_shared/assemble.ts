@@ -41,6 +41,10 @@ export interface AssembleInput {
   sector: SectorContext;
   packs: Record<string, SectorPack>;
   resolvable: boolean;
+  /* True when research was cut off before completing its objectives. Gates
+     the D5 aggregate finding: leadership corroboration is research objective
+     3, so a partial run cannot support "the whole team left no trace". */
+  research_partial: boolean;
   generated_at: string; // ISO
 }
 
@@ -581,6 +585,72 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
       fact: "A public engineering footprint exists on GitHub",
       source_name: github.source,
       date: dateOf(github),
+    });
+  }
+
+  /* ------------------------------------------------- D5: team credibility */
+
+  /* Person corroboration over research citations, same grounded rule as
+     customer traces: a person is corroborated only when ONE class 1-2
+     citation names both the person and the vendor in retrieved content
+     (the two-identifier rule instantiated as name + affiliation). URL
+     strings never corroborate. Corroboration establishes the person exists
+     in public sources independent of the vendor's site — not employment or
+     title. Uncorroborated is never individually adverse (thin founder
+     footprints are real and normal); the only adverse path is the aggregate
+     below, gated on complete research. */
+  const people = extract.people.slice(0, 6);
+  let corroboratedPeople = 0;
+  for (const person of people) {
+    const support = citations.find(
+      (c) =>
+        canVerify(c.domain_class) &&
+        contentMentions(c, person.name) &&
+        contentMentions(c, vendorName),
+    );
+    const claim = extract.claims.find(
+      (c) =>
+        c.type === "team" && c.subject && norm(c.subject) === norm(person.name),
+    );
+    ledger.push({
+      id: rowId(),
+      dimension: "D5",
+      claim_quote: claim?.quote ?? null,
+      what_checked: `Whether ${person.name} appears in public sources independent of the vendor's site`,
+      result: support ? "VERIFIED" : "COULD_NOT_VERIFY",
+      evidence_tier: support ? (support.domain_class === 1 ? "T1" : "T3") : "T4",
+      severity: null,
+      sources: support
+        ? [{ url: support.url, title: support.title, retrieved_at: support.retrieved_at }]
+        : [],
+      note: "",
+      methodology_ref: "d5-1",
+    });
+    if (support) {
+      corroboratedPeople += 1;
+      greenDims.add("D5");
+      if (corroboratedPeople <= 2) {
+        let host = support.url;
+        try {
+          host = new URL(support.url).hostname;
+        } catch {
+          /* keep the raw URL as the source name */
+        }
+        greenFlagFacts.push({
+          fact: `${person.name} (${person.title}) appears in public sources independent of the vendor's site`,
+          source_name: host,
+          date: support.retrieved_at.slice(0, 10),
+        });
+      }
+    }
+  }
+  if (!input.research_partial && corroboratedPeople === 0 && people.length >= 2) {
+    findings.push({
+      id: "leadership",
+      dimension: "D5",
+      severity: people.length >= 3 ? "HIGH" : "MEDIUM",
+      resolved: false,
+      detail: `None of the ${people.length} people the pitch presents as leadership could be corroborated in retrieved public sources independent of the vendor's site.`,
     });
   }
 

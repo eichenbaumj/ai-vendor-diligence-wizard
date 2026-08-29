@@ -730,6 +730,7 @@ async function runPipeline(
     sector,
     packs: PACKS,
     resolvable,
+    research_partial: research.partial,
     generated_at: generatedAt,
   });
   const decision = computeTier(skeleton.tierInputs);

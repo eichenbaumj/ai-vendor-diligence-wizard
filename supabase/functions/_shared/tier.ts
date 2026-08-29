@@ -50,7 +50,8 @@ export interface TierInputs {
   identity_resolved: boolean;
   t1_triggers: T1Trigger[];
   findings: Finding[];
-  /* Dimensions (D1..D5) carrying at least one T1-verified green flag. */
+  /* Dimensions (D1..D5) carrying at least one green flag grounded in
+     official or independent class 1-2 evidence. */
   green_dimensions: string[];
   /* Startup calibration bar (methodology §7.2): at least one of SOC 2 Type I /
      named-auditor engagement / GovRAMP Snapshot / signed BAA-DPA history /

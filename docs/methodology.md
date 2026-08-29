@@ -524,9 +524,9 @@ Every external source the tool consults, with its refresh cadence. This table is
 | SAM.gov Exclusions API (with OpenSanctions mirror) | Debarment and exclusion records | https://open.gsa.gov/api/exclusions-api/ | Queried live per evaluation | Live |
 | USAspending API | Federal award and payment records | https://api.usaspending.gov/ | Queried live per evaluation | Live |
 | FedRAMP Marketplace data feed | FedRAMP authorization status | https://raw.githubusercontent.com/FedRAMP/marketplace-fedramp-gov-data/main/data.json | Published daily by FedRAMP | Live |
-| GovRAMP program participants | GovRAMP/StateRAMP status levels | https://govramp.org/program-participants/ | Published daily by GovRAMP | Live |
-| TX-RAMP certified products list | TX-RAMP status (known publishing lag) | https://dir.texas.gov/resource-library-item/tx-ramp-certified-cloud-products | As published by Texas DIR | Live |
-| Sourcewell contract search | Cooperative contract holders | https://www.sourcewell-mn.gov/contract-search | As published by Sourcewell | Live |
+| GovRAMP program participants | GovRAMP/StateRAMP status levels | https://govramp.org/program-participants/ | Copied daily from the published participants page | Live |
+| TX-RAMP certified products list | TX-RAMP status (known publishing lag) | https://dir.texas.gov/resource-library-item/tx-ramp-certified-cloud-products | Copied daily; the current spreadsheet link is found on the DIR page each run | Live |
+| Sourcewell contract search | Cooperative contract holders | https://www.sourcewell-mn.gov/contract-search | Copied daily from the spreadsheet Sourcewell publishes nightly | Live |
 | RDAP | Domain registration dates | https://rdap.org/ | Queried live per evaluation | Live |
 | Internet Archive Wayback CDX | Historical snapshots of vendor sites | https://web.archive.org/cdx/search/cdx | Queried live per evaluation | Live |
 | crt.sh certificate transparency | Certificate and subdomain history | https://crt.sh/ | Queried live per evaluation | Live |

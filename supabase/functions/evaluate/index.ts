@@ -395,6 +395,14 @@ async function runPipeline(
     web_search_requests: 0,
   };
   const stageUsage: Record<string, Usage> = {};
+  /* Wall-clock elapsed per stage (ms). Persisted alongside usage as
+     stages_ms — kept OUT of `stages`, whose Usage shape feeds addUsage. */
+  const stageMs: Record<string, number> = {};
+  let stageMark = Date.now();
+  const markStage = (name: string) => {
+    stageMs[name] = Date.now() - stageMark;
+    stageMark = Date.now();
+  };
 
   /* ------------------------------------------------------------- S1 parse */
   await setStatus("parsing");
@@ -428,6 +436,7 @@ async function runPipeline(
     );
     usage = addUsage(usage, res.usage);
     stageUsage.s1 = res.usage;
+    markStage("s1_extract");
     const parsed = res.ok ? parseStructured<unknown>(res) : null;
     const validated = parsed ? PitchExtract.safeParse(parsed) : null;
     if (!validated?.success) {
@@ -669,6 +678,7 @@ async function runPipeline(
     }
   }
 
+  markStage("s2_registry");
   const identity = registry.resolveIdentity(checks);
 
   /* --------------------------------------------------------- S3 research */
@@ -713,6 +723,7 @@ async function runPipeline(
   );
   usage = addUsage(usage, research.usage);
   stageUsage.s3 = research.usage;
+  markStage("s3_research");
   const citations = harvestCitations(
     research,
     extract.domains,
@@ -811,6 +822,7 @@ async function runPipeline(
     );
     usage = addUsage(usage, res.usage);
     stageUsage.s4 = res.usage;
+    markStage("s4_classify");
     const parsed = res.ok
       ? parseStructured<{ pack_ids: string[]; overlay: boolean; overlay_reason: string | null }>(res)
       : null;
@@ -884,6 +896,7 @@ async function runPipeline(
   let narrative = await runStructurePass(env, s5Input);
   usage = addUsage(usage, narrative.usage);
   stageUsage.s5 = narrative.usage;
+  markStage("s5_structure");
 
   /* Compose the report. */
   const ledger = skeleton.ledger.map((r) => {
@@ -959,6 +972,7 @@ async function runPipeline(
     });
     usage = addUsage(usage, res.usage);
     stageUsage.review = res.usage;
+    markStage("s5r_review");
     const review = res.ok
       ? parseStructured<{
           approved: boolean;
@@ -1039,7 +1053,7 @@ async function runPipeline(
     .update({
       report: validated.data,
       status: "complete",
-      usage: { total: usage, stages: stageUsage },
+      usage: { total: usage, stages: stageUsage, stages_ms: stageMs },
     })
     .eq("id", evaluationId);
   await emit({ stage: "synthesis", kind: "done", label: "Report ready" });

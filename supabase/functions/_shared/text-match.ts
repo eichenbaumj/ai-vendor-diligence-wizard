@@ -53,6 +53,82 @@ export function hostCovers(url: string, subject: string): boolean {
   }
 }
 
+/* ------------------------------------------------ candidate name splitting */
+
+/* Compound vendor names hide the registered company from every registry
+   query: "TrueTax by Govra" can never full-text-match "GOVRA, INC.".
+   splitNameCandidates derives extra candidates under a deliberately narrow
+   grammar:
+   - "X by Y": Y is the company (identity candidate), X is the product.
+   - "X (Y)":  Y is an alternate company name (identity candidate).
+   Guards: both sides must look like proper names (a capital letter, no
+   digits, at least one real token) and Y must not start with a stopword
+   ("formerly", "a Delaware corporation"...). The verbatim originals always
+   stay first — candidates[0] is the display name and the cache key.
+   productNames never join identity queries; anchorNames (Y-parts plus
+   unsplit originals) define which tokens can anchor a registry match. */
+const SPLIT_STOP = new Set(["formerly", "a", "an", "the", "dba", "aka", "now"]);
+
+function properName(s: string): boolean {
+  const t = s.trim();
+  return /[A-Z]/.test(t) && !/\d/.test(t) && tokensOf(t).length >= 1;
+}
+
+export interface SplitCandidates {
+  /* Verbatim originals first, then company parts. Feed to identity lanes. */
+  identityNames: string[];
+  /* Product parts (the X of "X by Y"). Product/feed matching only. */
+  productNames: string[];
+  /* Names whose tokens may anchor a registry match: Y-parts + originals
+     that produced no split. */
+  anchorNames: string[];
+}
+
+export function splitNameCandidates(candidates: string[]): SplitCandidates {
+  const identity: string[] = [...candidates];
+  const product: string[] = [];
+  const anchors: string[] = [];
+  for (const c of candidates) {
+    const by = c.match(/^(.{2,}?)\s+by\s+(.{2,})$/i);
+    const paren = by ? null : c.match(/^(.{2,}?)\s*\(([^)]{2,})\)\s*$/);
+    const m = by ?? paren;
+    if (m && properName(m[1]) && properName(m[2])) {
+      const yFirst = norm(m[2]).split(" ")[0] ?? "";
+      if (!SPLIT_STOP.has(yFirst)) {
+        identity.push(m[2].trim());
+        product.push(m[1].trim());
+        anchors.push(m[2].trim());
+        continue;
+      }
+    }
+    anchors.push(c);
+  }
+  /* Originals pass through untouched (the lanes dedupe for themselves);
+     only APPENDED parts are deduped against what is already present. */
+  const appendUnique = (base: string[], extras: string[], cap: number) => {
+    const seen = new Set(base.map((x) => norm(x)));
+    const out = [...base];
+    for (const x of extras) {
+      const k = norm(x);
+      if (!k || seen.has(k)) continue;
+      seen.add(k);
+      out.push(x);
+    }
+    return out.slice(0, cap);
+  };
+  const originals = [...candidates];
+  const yParts = identity.slice(candidates.length);
+  const unsplitOriginals = anchors.filter((a) => candidates.includes(a));
+  /* Cap at 6: S1 provides at most 5 candidates and the SOS lanes run two
+     serial fetches per name inside a 12s budget — early exact-match breaks
+     keep the common case far below the cap. */
+  return {
+    identityNames: appendUnique(originals, yParts, 6),
+    productNames: appendUnique([], product, 3),
+    anchorNames: appendUnique(unsplitOriginals, yParts, 5),
+  };
+}
+
 /* A named customer must look like a proper organization name, not a count
    or a description ("1,600 governments", "more than 50 municipalities").
    Counts carry digits; descriptions carry no capitalized word or are a

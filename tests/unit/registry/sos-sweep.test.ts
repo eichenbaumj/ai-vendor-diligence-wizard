@@ -376,3 +376,55 @@ describe("resolveIdentity", () => {
     expect(r.identifiers_found).toHaveLength(1);
   });
 });
+
+/* The Govra fixture carries both the real company (GOVRA, INC.) and the
+   trap: an unrelated company named exactly after the product (TRUETAX INC).
+   The split candidates must find the first and the product-token guard must
+   reject the second. */
+const { splitNameCandidates } = await import("@shared/text-match.ts");
+const { productOnlyTokens } = await import(
+  "../../../supabase/functions/_shared/registry/sam.ts"
+);
+const govraFixture = (await import("../../fixtures/registry-responses/sos-tx-govra.json"))
+  .default;
+
+describe("checkSosSweep: compound-name splitting (the Govra case)", () => {
+
+  async function runGovraSweep() {
+    const split = splitNameCandidates(["TrueTax by Govra"]);
+    return await checkSosSweep(
+      {
+        companyNames: split.identityNames,
+        productTokens: productOnlyTokens(split.productNames, split.anchorNames),
+      },
+      {
+        fetchFn: makeFetch([
+          { match: NY, body: sosEmpty },
+          { match: CO, body: sosEmpty },
+          { match: CT, body: sosEmpty },
+          { match: TX, body: govraFixture },
+          { match: OR, body: sosEmpty },
+        ]),
+        now: NOW,
+      },
+    );
+  }
+
+  it("finds GOVRA, INC. via the split company candidate", async () => {
+    const checks = byId(await runGovraSweep());
+    expect(checks.sos_tx.status).toBe("hit");
+    expect(checks.sos_tx.summary).toContain("GOVRA, INC.");
+    const data = checks.sos_tx.data as { matches: { name: string }[] };
+    expect(data.matches.some((m) => m.name === "GOVRA, INC.")).toBe(true);
+  });
+
+  it("never accepts the unrelated product-namesake TRUETAX INC", async () => {
+    const checks = byId(await runGovraSweep());
+    const data = checks.sos_tx.data as {
+      matches: { name: string }[];
+      rejected_product_only: string[];
+    };
+    expect(data.matches.some((m) => m.name === "TRUETAX INC")).toBe(false);
+    expect(data.rejected_product_only).toContain("TRUETAX INC");
+  });
+});

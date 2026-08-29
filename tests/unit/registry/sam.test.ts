@@ -4,8 +4,10 @@ import { lintText } from "../../../supabase/functions/_shared/lint.ts";
 import {
   checkSamEntity,
   checkSamExclusions,
+  isProductOnlyName,
   matchCompanyName,
   normalizeCompanyName,
+  productOnlyTokens,
 } from "../../../supabase/functions/_shared/registry/sam.ts";
 import type { RegistryCtx } from "../../../supabase/functions/_shared/registry/sam.ts";
 import entityHit from "../../fixtures/registry-responses/sam-entity-hit.json";
@@ -212,5 +214,24 @@ describe("copy safety", () => {
     for (const check of checks) {
       expect(lintText(check.summary)).toEqual([]);
     }
+  });
+});
+
+describe("product-only match guard", () => {
+
+  it("product tokens exclude anything shared with an anchor name", () => {
+    expect(productOnlyTokens(["TrueTax"], ["Govra"])).toEqual(["TRUETAX"]);
+    expect(productOnlyTokens(["Acme Tax"], ["Acme Inc"])).toEqual(["TAX"]);
+    expect(productOnlyTokens([], ["Govra"])).toEqual([]);
+  });
+
+  it("rejects records named entirely from product tokens", () => {
+    const toks = productOnlyTokens(["TrueTax"], ["Govra"]);
+    expect(isProductOnlyName("TRUETAX INC", toks)).toBe(true);
+    expect(isProductOnlyName("TrueTax", toks)).toBe(true);
+    expect(isProductOnlyName("GOVRA, INC.", toks)).toBe(false);
+    expect(isProductOnlyName("TRUETAX SOLUTIONS LLC", toks)).toBe(false);
+    expect(isProductOnlyName("ANYONE", undefined)).toBe(false);
+    expect(isProductOnlyName("ANYONE", [])).toBe(false);
   });
 });

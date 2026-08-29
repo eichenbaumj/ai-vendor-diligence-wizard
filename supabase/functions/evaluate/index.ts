@@ -46,7 +46,7 @@ import { assemble } from "../_shared/assemble.ts";
 import { lintObject, lintText, looseText, tidyProse } from "../_shared/lint.ts";
 import { harvestCitations } from "../_shared/harvest.ts";
 import { inferPrimaryDomain } from "../_shared/domain-inference.ts";
-import { isNamedOrganization } from "../_shared/text-match.ts";
+import { isNamedOrganization, splitNameCandidates } from "../_shared/text-match.ts";
 import { PROGRAMS, affirmsProgram } from "../_shared/claim-status.ts";
 import {
   UrlIngestError,
@@ -530,9 +530,29 @@ async function runPipeline(
   const claimedTxramp = affirmsProgram(extract.claims, PROGRAMS.txramp);
   const claimedSourcewell = affirmsProgram(extract.claims, PROGRAMS.sourcewell);
   const senderDomain = extract.sender_email?.split("@")[1] ?? null;
-  const companyNames = extract.vendor_name_candidates.length
+  /* Compound names ("TrueTax by Govra") hide the registered company from
+     every query: split into identity candidates (the company) and product
+     names. Identity lanes query identityNames; product names additionally
+     join feed/product matching; productTokens guard acceptance so a record
+     named entirely from product-brand tokens ("TRUETAX INC") is never
+     accepted as this vendor. The verbatim name stays candidates[0]. */
+  const rawNames = extract.vendor_name_candidates.length
     ? extract.vendor_name_candidates
     : [vendorName];
+  const split = splitNameCandidates(rawNames);
+  const companyNames = split.identityNames;
+  const productTokens = registry.productOnlyTokens(split.productNames, split.anchorNames);
+  const feedNames = [...split.identityNames, ...split.productNames];
+  /* Debarment queries: verbatim names plus multi-token company parts.
+     Single-token fragments are never queried directly (a namesake exact
+     match on the exclusion list would be a false CRITICAL); the resolved
+     legal name follow-up below covers them. */
+  const exclusionNames = [
+    ...rawNames,
+    ...split.anchorNames.filter(
+      (n) => !rawNames.includes(n) && n.trim().split(/\s+/).length >= 2,
+    ),
+  ];
 
   const feeds = await loadFeeds(supabase);
   const checks: RegistryCheck[] = [];
@@ -564,17 +584,17 @@ async function runPipeline(
   const tasks: Promise<void>[] = [
     track(registry.checkEdgarFts({ companyNames }, ctx())),
     track(registry.checkEdgarCompany({ companyNames }, ctx(12_000))),
-    track(registry.checkSosSweep({ companyNames }, ctx(12_000))),
-    track(registry.checkSamEntity({ companyNames }, ctx())),
+    track(registry.checkSosSweep({ companyNames, productTokens }, ctx(12_000))),
+    track(registry.checkSamEntity({ companyNames, productTokens }, ctx())),
     track(
       registry.checkSamExclusions(
-        { companyNames, people: extract.people },
+        { companyNames: exclusionNames, people: extract.people },
         ctx(),
       ),
     ),
-    track(registry.checkFederalAwards({ companyNames }, ctx())),
+    track(registry.checkFederalAwards({ companyNames, productTokens }, ctx())),
     track(registry.checkFedramp({
-      companyNames,
+      companyNames: feedNames,
       claimedFedramp,
       cachedFeed: async () => {
         const { data } = await supabase
@@ -586,9 +606,9 @@ async function runPipeline(
         return data ? { payload: data.payload, fetched_at: String(data.fetched_at) } : null;
       },
     }, ctx(12_000))),
-    track(Promise.resolve(registry.checkGovRamp({ companyNames, claimed: claimedGovramp }, feeds.govramp, ctx()))),
-    track(Promise.resolve(registry.checkTxRamp({ companyNames, claimed: claimedTxramp, sellingIntoTexas: userState === "TX" }, feeds.txramp, ctx()))),
-    track(Promise.resolve(registry.checkSourcewell({ companyNames, claimed: claimedSourcewell }, feeds.sourcewell, ctx()))),
+    track(Promise.resolve(registry.checkGovRamp({ companyNames: feedNames, claimed: claimedGovramp }, feeds.govramp, ctx()))),
+    track(Promise.resolve(registry.checkTxRamp({ companyNames: feedNames, claimed: claimedTxramp, sellingIntoTexas: userState === "TX" }, feeds.txramp, ctx()))),
+    track(Promise.resolve(registry.checkSourcewell({ companyNames: feedNames, claimed: claimedSourcewell }, feeds.sourcewell, ctx()))),
   ];
   if (primaryDomain) {
     tasks.push(
@@ -596,10 +616,59 @@ async function runPipeline(
       track(registry.checkEmailHygiene({ domain: primaryDomain, senderDomain }, ctx())),
       track(registry.checkWebHistory({ domain: primaryDomain }, ctx())),
       track(registry.checkSubdomains({ domain: primaryDomain }, ctx(10_000))),
-      track(registry.checkGithubOrg({ candidates: companyNames, domain: primaryDomain }, ctx())),
+      track(registry.checkGithubOrg({ candidates: feedNames, domain: primaryDomain }, ctx())),
     );
   }
   await Promise.allSettled(tasks);
+
+  /* Debarment follows the resolved entity: when a registry resolved a legal
+     name not already covered by the exclusion queries (the single-token
+     "Govra" case), re-run the exclusions lane under that name. Replace only
+     when the follow-up finds a record. */
+  const resolvedLegalNames = checks
+    .filter(
+      (c) => c.status === "hit" && (c.check_id.startsWith("sos_") || c.check_id === "sam_entity"),
+    )
+    .flatMap((c) => {
+      const d = (c.data ?? {}) as {
+        matches?: { name?: string }[];
+        legal_business_name?: string;
+      };
+      return [
+        ...(d.matches ?? []).map((m) => m.name).filter((n): n is string => Boolean(n)),
+        ...(d.legal_business_name ? [d.legal_business_name] : []),
+      ];
+    });
+  const coveredExclusion = new Set(
+    exclusionNames.map((n) => registry.normalizeCompanyName(n)),
+  );
+  const freshLegalNames = registry
+    .dedupeNames(resolvedLegalNames)
+    .filter((n) => !coveredExclusion.has(registry.normalizeCompanyName(n)));
+  if (freshLegalNames.length > 0) {
+    try {
+      const follow = await registry.checkSamExclusions(
+        { companyNames: freshLegalNames.slice(0, 4), people: [] },
+        ctx(),
+      );
+      const existing = checks.findIndex((c) => c.check_id === "sam_exclusions");
+      if (follow.status === "hit" && (existing === -1 || checks[existing].status !== "hit")) {
+        if (existing >= 0) checks[existing] = follow;
+        else checks.push(follow);
+        await emit({
+          stage: "registry",
+          kind: "check_result",
+          label: follow.summary,
+          check_id: follow.check_id,
+          status: follow.status,
+          evidence_url: follow.evidence_url,
+        });
+      }
+    } catch (err) {
+      console.error(`exclusions follow-up failed: ${String(err)}`);
+    }
+  }
+
   const identity = registry.resolveIdentity(checks);
 
   /* --------------------------------------------------------- S3 research */
@@ -690,7 +759,7 @@ async function runPipeline(
      the two-identifier bar. The inferred domain feeds D1 hygiene rows and
      D4 greens only, labeled as inferred in the honesty panel. */
   if (inputKind === "name" && !primaryDomain) {
-    const inferred = inferPrimaryDomain(citations, extract.vendor_name_candidates);
+    const inferred = inferPrimaryDomain(citations, feedNames);
     if (inferred) {
       checks.push({
         check_id: "domain_inference",

@@ -131,6 +131,39 @@ export function matchCompanyName(
   return similarity ?? rejected ?? { kind: "none" };
 }
 
+/* ---------------------------------------------- product-only match guard */
+
+/* Split-derived product names ("TrueTax" from "TrueTax by Govra") widen the
+   records a query surfaces, but a record whose entire name lives inside the
+   product tokens is a different company that happens to share the product's
+   brand ("TRUETAX INC", an unrelated tax-prep firm). Such records must never
+   be accepted — acceptance has to anchor on at least one company token.
+   productOnlyTokens = tokens of the product names that appear in NO anchor
+   (company) name. */
+export function productOnlyTokens(
+  productNames: string[],
+  anchorNames: string[],
+): string[] {
+  const anchor = new Set(anchorNames.flatMap((n) => tokensOf(n)));
+  const out = new Set<string>();
+  for (const p of productNames) {
+    for (const t of tokensOf(p)) {
+      if (t && !anchor.has(t)) out.add(t);
+    }
+  }
+  return [...out];
+}
+
+export function isProductOnlyName(
+  rowName: string,
+  productTokens: string[] | undefined,
+): boolean {
+  if (!productTokens || productTokens.length === 0) return false;
+  const set = new Set(productTokens);
+  const toks = normalizeCompanyName(rowName).split(" ").filter(Boolean);
+  return toks.length > 0 && toks.every((t) => set.has(t));
+}
+
 /* Unique normalized query names, preserving the first raw spelling. */
 export function dedupeNames(names: string[]): string[] {
   const seen = new Set<string>();
@@ -223,7 +256,7 @@ interface SamEntityHit {
 }
 
 export async function checkSamEntity(
-  { companyNames }: { companyNames: string[] },
+  { companyNames, productTokens }: { companyNames: string[]; productTokens?: string[] },
   ctx: RegistryCtx,
 ): Promise<RegistryCheck> {
   const check_id = "sam_entity";
@@ -269,6 +302,7 @@ export async function checkSamEntity(
         const reg = asRecord(rec["entityRegistration"]) ?? rec;
         const legal = firstString(reg, ["legalBusinessName", "name"]);
         if (!legal) continue;
+        if (isProductOnlyName(legal, productTokens)) continue;
         const match = matchCompanyName(legal, names);
         if (match.kind === "vehicle_rejected") {
           rejectedVehicles.push(legal);

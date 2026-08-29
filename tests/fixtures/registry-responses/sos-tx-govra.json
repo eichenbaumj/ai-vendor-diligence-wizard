@@ -1,0 +1,20 @@
+[
+  {
+    "taxpayer_number": "32106852679",
+    "taxpayer_name": "GOVRA, INC.",
+    "taxpayer_city": "AUSTIN",
+    "taxpayer_state": "TX",
+    "sos_charter_date": "2024-11-04",
+    "sos_file_number": "0806679136",
+    "right_to_transact_business": "ACTIVE"
+  },
+  {
+    "taxpayer_number": "32011111111",
+    "taxpayer_name": "TRUETAX INC",
+    "taxpayer_city": "HOUSTON",
+    "taxpayer_state": "TX",
+    "sos_charter_date": "2009-02-11",
+    "sos_file_number": "0801111111",
+    "right_to_transact_business": "ACTIVE"
+  }
+]

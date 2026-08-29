@@ -19,9 +19,11 @@ export {
   checkSamExclusions,
   dedupeNames,
   isInvestmentVehicleMismatch,
+  isProductOnlyName,
   matchCompanyName,
   normalizeCompanyName,
   normalizePersonName,
+  productOnlyTokens,
 } from "./sam.ts";
 export { checkFederalAwards } from "./usaspending.ts";
 export { checkFedramp } from "./fedramp.ts";

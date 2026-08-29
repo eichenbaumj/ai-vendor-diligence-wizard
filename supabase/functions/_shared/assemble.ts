@@ -117,8 +117,21 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
       methodology_ref: "d1-1",
     });
     if (best) {
+      /* When the record's legal name differs from the pitch's display name
+         (compound names like "TrueTax by Govra" resolving to GOVRA, INC.),
+         say so — the D1 row must not conflate product and company. */
+      const bestData = (best.data ?? {}) as {
+        matches?: { name?: string }[];
+        legal_business_name?: string;
+      };
+      const legalName =
+        bestData.matches?.[0]?.name ?? bestData.legal_business_name ?? null;
+      const differs =
+        legalName && norm(legalName) !== norm(vendorName) ? legalName : null;
       greenFlagFacts.push({
-        fact: `A registered legal entity was found for ${vendorName} (${basis})`,
+        fact: differs
+          ? `A registered legal entity was found for ${vendorName} under the legal name ${differs} (${basis})`
+          : `A registered legal entity was found for ${vendorName} (${basis})`,
         source_name: best.source,
         date: dateOf(best),
       });

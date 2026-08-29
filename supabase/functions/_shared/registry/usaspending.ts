@@ -18,6 +18,7 @@ import {
   dedupeNames,
   errorCheck,
   firstString,
+  isProductOnlyName,
   matchCompanyName,
   nowIso,
 } from "./sam.ts";
@@ -55,7 +56,7 @@ function isoDate(d: Date): string {
 }
 
 export async function checkFederalAwards(
-  { companyNames }: { companyNames: string[] },
+  { companyNames, productTokens }: { companyNames: string[]; productTokens?: string[] },
   ctx: RegistryCtx,
 ): Promise<RegistryCheck> {
   const check_id = "usaspending_awards";
@@ -97,6 +98,7 @@ export async function checkFederalAwards(
           "legal_business_name",
         ]);
         if (!recipientName) continue;
+        if (isProductOnlyName(recipientName, productTokens)) continue;
         const match = matchCompanyName(recipientName, names);
         if (match.kind === "vehicle_rejected") {
           rejectedVehicles.push(recipientName);

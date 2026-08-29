@@ -50,7 +50,7 @@ Does a real, registered company stand behind this pitch? This dimension gates th
 
 **What we look at.** Whether a registered legal entity exists under any name the pitch discloses, and its status.
 **Public sources.** [SEC EDGAR full-text search](https://efts.sec.gov/LATEST/search-index?q=%22company%22&forms=D) (nearly every venture-funded company has filed a Form D, which names its state of incorporation); plus the five state business registries that offer open data we can query directly: [New York](https://data.ny.gov/resource/n9v6-gdp6.json), [Colorado](https://data.colorado.gov/resource/4ykn-tg5h.json), [Connecticut](https://data.ct.gov/resource/n7gp-d28j.json), [Oregon](https://data.oregon.gov/resource/tckn-sxa6.json), and [Texas (Comptroller)](https://data.texas.gov/resource/9cir-efmm.json). Florida publishes [free bulk data files](https://dos.fl.gov/sunbiz/other-services/data-downloads/); an automated mirror of them is planned, and until it ships Florida gets a manual card with a direct Sunbiz link. Every other state gets a manual check card with a direct link to its official business search.
-**How it runs.** Automatic lookup (EDGAR plus a parallel sweep of all five open-data states), with a manual check card for states we cannot search automatically.
+**How it runs.** Automatic lookup (EDGAR plus a parallel sweep of all five open-data states), with a manual check card for states we cannot search automatically. Compound names are searched under each part: for a pitch styled "Product by Company," the registries are searched under the company name as well as the full phrase, and a record is accepted only when it matches the company, never when it merely shares the product's brand name with an unrelated firm.
 **If adverse.** Weight: Critical, but only under a strict rule. "No registration found" can count against a vendor only when a definitive search actually ran and returned empty, in a place where the vendor itself claims to be registered, or when a registry shows the entity as dissolved or terminated. Absence from a registry we could not search is always "coverage limited," never a finding. Routine lapses like "annual report past due" are noted as Info, not treated as alarms; they are common at young companies.
 
 ### D1.2 Federal registration (SAM.gov)
@@ -65,7 +65,7 @@ Does a real, registered company stand behind this pitch? This dimension gates th
 **What we look at.** Whether the entity, or a principal the vendor presents as leadership, appears on the federal exclusion (debarment) list.
 **Public sources.** [SAM.gov Exclusions API](https://open.gsa.gov/api/exclusions-api/); mirror at [OpenSanctions](https://www.opensanctions.org/datasets/us_sam_exclusions/).
 **How it runs.** Automatic lookup.
-**If adverse.** Weight: Critical, but only on a strict identity match (exact legal name plus corroborating identifiers). A name that merely resembles a listed name is suppressed entirely rather than hedged; we show nothing rather than risk tarring the wrong company.
+**If adverse.** Weight: Critical, but only on a strict identity match (exact legal name plus corroborating identifiers). A name that merely resembles a listed name is suppressed entirely rather than hedged; we show nothing rather than risk tarring the wrong company. Short name fragments from a compound name are never searched on their own here; when a registry resolves the vendor's full legal name, the exclusion list is searched again under that resolved name.
 
 ### D1.4 Domain age vs. claimed history
 

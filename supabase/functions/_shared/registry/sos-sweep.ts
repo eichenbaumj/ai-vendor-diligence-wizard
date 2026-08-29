@@ -32,6 +32,7 @@ import {
   dedupeNames,
   errorCheck,
   firstString,
+  isProductOnlyName,
   matchCompanyName,
   normalizeCompanyName,
   nowIso,
@@ -205,11 +206,13 @@ interface LaneMatch {
 async function runSocrataLane(
   lane: SocrataLane,
   names: string[],
+  productTokens: string[] | undefined,
   ctx: RegistryCtx,
 ): Promise<RegistryCheck> {
   try {
     const matches: LaneMatch[] = [];
     const rejectedVehicles: string[] = [];
+    const rejectedProductOnly: string[] = [];
     const queriesRun: string[] = [];
     for (const name of names) {
       for (const url of socrataQueryUrls(lane, name)) {
@@ -218,6 +221,14 @@ async function runSocrataLane(
         for (const row of rows) {
           const rowName = firstString(row, [lane.nameCol, ...NAME_COLS]);
           if (!rowName) continue;
+          /* A record named entirely from product-brand tokens is a different
+             company sharing the brand ("TRUETAX INC") — never accepted. */
+          if (isProductOnlyName(rowName, productTokens)) {
+            if (!rejectedProductOnly.includes(rowName)) {
+              rejectedProductOnly.push(rowName);
+            }
+            continue;
+          }
           const match = matchCompanyName(rowName, names);
           if (match.kind === "vehicle_rejected") {
             if (!rejectedVehicles.includes(rowName)) {
@@ -263,6 +274,7 @@ async function runSocrataLane(
         data: {
           matches,
           rejected_investment_vehicles: rejectedVehicles,
+          rejected_product_only: rejectedProductOnly,
           queries_run: queriesRun,
         },
       };
@@ -277,6 +289,7 @@ async function runSocrataLane(
       retrieved_at: nowIso(ctx),
       data: {
         rejected_investment_vehicles: rejectedVehicles,
+        rejected_product_only: rejectedProductOnly,
         queries_run: queriesRun,
       },
     };
@@ -301,7 +314,7 @@ function runOfflineLane(lane: OfflineLane, ctx: RegistryCtx): RegistryCheck {
 /* Fan out to all six lanes in parallel. Always returns one check per state,
    in the LANES order; no lane failure can sink the others. */
 export async function checkSosSweep(
-  { companyNames }: { companyNames: string[] },
+  { companyNames, productTokens }: { companyNames: string[]; productTokens?: string[] },
   ctx: RegistryCtx,
 ): Promise<RegistryCheck[]> {
   const names = dedupeNames(companyNames);
@@ -322,7 +335,7 @@ export async function checkSosSweep(
           data: null,
         });
       }
-      return runSocrataLane(lane, names, ctx);
+      return runSocrataLane(lane, names, productTokens, ctx);
     }),
   );
 }

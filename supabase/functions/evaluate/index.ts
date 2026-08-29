@@ -427,7 +427,7 @@ async function runPipeline(
 
   const tasks: Promise<void>[] = [
     track(registry.checkEdgarFts({ companyNames }, ctx())),
-    track(registry.checkEdgarCompany({ companyNames }, ctx())),
+    track(registry.checkEdgarCompany({ companyNames }, ctx(12_000))),
     track(registry.checkSosSweep({ companyNames }, ctx(12_000))),
     track(registry.checkSamEntity({ companyNames }, ctx())),
     track(

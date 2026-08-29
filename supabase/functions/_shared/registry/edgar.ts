@@ -401,7 +401,12 @@ export async function checkEdgarCompany(
       retrieved_at,
       data: { queries: names },
     };
-  } catch {
+  } catch (err) {
+    /* Diagnostic breadcrumb: distinguishes an 8s timeout from SEC blocking
+       datacenter egress IPs (both real possibilities on this host). */
+    console.warn(
+      `edgar_company failed: ${err instanceof Error ? `${err.name}: ${err.message}` : String(err)}`,
+    );
     return {
       check_id: COMPANY_CHECK_ID,
       source: COMPANY_SOURCE,

@@ -146,7 +146,7 @@ function ReportView({
             >
               report an error
             </Link>{" "}
-            and we will review it within five business days.
+            and a person will review it.
           </p>
           <PrintButton />
         </div>

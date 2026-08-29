@@ -72,6 +72,6 @@ Deno.serve(async (req) => {
   return json({
     ok: true,
     message:
-      "Received. We review disputes within 5 business days. While a dispute is open, affected reports show a disputed notice.",
+      "Received. A person reviews every dispute. While a dispute is open, affected reports show a disputed notice.",
   });
 });

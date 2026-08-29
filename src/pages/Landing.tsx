@@ -95,7 +95,7 @@ const FAQS: { q: string; a: string }[] = [
   },
   {
     q: "What if the vendor disputes a finding?",
-    a: "Any vendor named in a report can ask for a review at no cost. We review within 5 business days, and the item is marked as disputed and under review until it is resolved. See the Disputes and corrections page.",
+    a: "Any vendor named in a report can ask for a review at no cost. A person reviews every dispute, and the item is marked as disputed and under review until it is resolved. See the Disputes and corrections page.",
   },
   {
     q: "Can I trust the AI parts?",

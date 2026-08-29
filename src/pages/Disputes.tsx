@@ -231,7 +231,7 @@ export default function Disputes() {
 
           <h2 className="mt-10 font-serif text-2xl font-bold">What happens next</h2>
           <p className="mt-4 font-sans text-base leading-relaxed md:text-lg">
-            We review every dispute within 5 business days. While a finding is
+            A person reviews every dispute. While a finding is
             under review, it is marked "disputed by vendor, under review" in
             the report. If the finding is wrong, we correct it, and the
             correction carries through to every copy of the report the tool

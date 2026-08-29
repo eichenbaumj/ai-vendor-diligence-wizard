@@ -266,7 +266,7 @@ export async function submitDispute(params: DisputeParams): Promise<{ message: s
   if (IS_MOCK) {
     return {
       message:
-        "Received. We review disputes within 5 business days. While a dispute is open, affected reports show a disputed notice.",
+        "Received. A person reviews every dispute. While a dispute is open, affected reports show a disputed notice.",
     };
   }
 
@@ -281,6 +281,6 @@ export async function submitDispute(params: DisputeParams): Promise<{ message: s
   return {
     message:
       data.message ??
-      "Received. We review disputes within 5 business days.",
+      "Received. A person reviews every dispute.",
   };
 }

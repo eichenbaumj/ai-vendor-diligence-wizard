@@ -651,7 +651,7 @@ The tool's output language is constrained by rules that are enforced by an autom
 If you are a vendor named in a report and believe something is wrong, tell us. The channel is free, and using it is not an admission of anything.
 
 - **How:** every report carries an "Are you this vendor? Report an error" link, which opens a dispute form tied to the specific report and finding.
-- **Review:** a human reviews every dispute within **5 business days**.
+- **Review:** a human reviews every dispute.
 - **While under review:** the disputed item displays a "disputed by the vendor, under review" notation on any report generated in the meantime.
 - **If we were wrong:** the correction applies immediately to all future report generations, and because reports expire and regenerate from sources, corrections propagate rather than lingering in stale copies. We also record what was wrong and why in the public changelog when the error was in the methodology rather than the data.
 - **If the source was wrong:** we will point you to the registry or record at issue so you can correct it at the source, and we will note the dispute in the meantime.

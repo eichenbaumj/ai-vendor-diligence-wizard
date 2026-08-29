@@ -60,3 +60,16 @@ describe("buildResearchRequest budget wiring", () => {
     );
   });
 });
+
+describe("buildDiscoveryRequest", () => {
+  it("uses the cheap model, two basic searches, and never a format schema", async () => {
+    const { buildDiscoveryRequest, MODELS } = await import("@shared/anthropic.ts");
+    const req = buildDiscoveryRequest(["TrueTax by Govra", "Govra"]);
+    expect(req.model).toBe(MODELS.extract);
+    const tool = (req.tools as { type: string; max_uses: number }[])[0];
+    expect(tool.type).toBe("web_search_20250305");
+    expect(tool.max_uses).toBe(2);
+    expect(req.output_config).toBeUndefined();
+    expect(JSON.stringify(req.messages)).toContain("Govra");
+  });
+});

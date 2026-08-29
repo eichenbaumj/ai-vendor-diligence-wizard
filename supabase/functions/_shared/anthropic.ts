@@ -281,6 +281,33 @@ export function buildResearchRequest(input: S3UserInput): AnthropicRequestBody {
   };
 }
 
+/* Name-only website discovery: two basic searches on the cheap model, run
+   through the same non-streaming pause_turn loop as research. The model
+   only SEARCHES — the domain itself is picked by code (harvestCitations →
+   inferPrimaryDomain), so narrative text can never nominate a site. */
+export function buildDiscoveryRequest(names: string[]): AnthropicRequestBody {
+  return {
+    model: MODELS.extract,
+    max_tokens: 1024,
+    system:
+      "Find the official website of the company named in the input. Use at most two web searches. Then state in one or two sentences which domain appears to be the company's own website, based only on what the searches returned. If the searches do not make it clear, say so plainly. Never guess a domain the searches did not surface.",
+    tools: [
+      {
+        type: "web_search_20250305",
+        name: "web_search",
+        max_uses: 2,
+        blocked_domains: BLOCKED_SEARCH_DOMAINS,
+      },
+    ],
+    messages: [
+      {
+        role: "user",
+        content: JSON.stringify({ vendor_name_candidates: names }),
+      },
+    ],
+  };
+}
+
 /* pause_turn continuation: append the paused assistant content unmodified and
    re-send with the SAME system and tools objects. */
 export function buildResearchContinuation(

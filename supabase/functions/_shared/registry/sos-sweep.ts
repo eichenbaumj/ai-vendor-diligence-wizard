@@ -346,12 +346,28 @@ export async function checkSosSweep(
    are deliberately NOT identity evidence. */
 type IdentifierClass = "sos" | "rdap" | "edgar" | "sam" | "lei";
 
-function classifyIdentifier(check: RegistryCheck): IdentifierClass | null {
+function classifyIdentifier(
+  check: RegistryCheck,
+): IdentifierClass | "rdap_discovered" | null {
   if (check.status !== "hit") return null;
   const id = check.check_id;
   if (id.startsWith("sos_")) return "sos";
   if (id === "sam_exclusions") return null;
-  if (/rdap|whois|domain_registration/.test(id)) return "rdap";
+  if (/rdap|whois|domain_registration/.test(id)) {
+    /* A domain the pipeline DISCOVERED (rather than one the pitch stated)
+       may count only as the second identifier, and only when the fetched
+       site's own extracted name matched the submitted vendor name (the
+       confirmed_name_match code check). Unconfirmed discovered domains
+       never count. See resolveIdentity below. */
+    const d = (check.data ?? {}) as {
+      discovered_domain?: boolean;
+      confirmed_name_match?: boolean;
+    };
+    if (d.discovered_domain) {
+      return d.confirmed_name_match ? "rdap_discovered" : null;
+    }
+    return "rdap";
+  }
   if (/edgar|sec_/.test(id)) return "edgar";
   if (/^sam(_entity)?$/.test(id)) return "sam";
   if (/gleif|lei/.test(id)) return "lei";
@@ -381,9 +397,14 @@ export function resolveIdentity(checks: RegistryCheck[]): {
 } {
   const identifiers: string[] = [];
   const nonSosSeen = new Set<string>();
+  let discoveredRdap = false;
   for (const check of checks) {
     const cls = classifyIdentifier(check);
     if (!cls) continue;
+    if (cls === "rdap_discovered") {
+      discoveredRdap = true;
+      continue;
+    }
     if (cls === "sos") {
       /* Each state registry is an independent government record. */
       const label = `${check.source}: registration record`;
@@ -392,6 +413,14 @@ export function resolveIdentity(checks: RegistryCheck[]): {
       nonSosSeen.add(cls);
       identifiers.push(IDENTIFIER_LABELS[cls]);
     }
+  }
+  /* A confirmed discovered-domain record is only ever the SECOND
+     identifier: at least one true registry record must anchor the entity,
+     so a purely-web presence can never resolve identity on its own. */
+  if (discoveredRdap && identifiers.length >= 1 && !nonSosSeen.has("rdap")) {
+    identifiers.push(
+      "Domain registration record (RDAP), for a website matched to the vendor's name",
+    );
   }
   return {
     identity_resolved: identifiers.length >= 2,

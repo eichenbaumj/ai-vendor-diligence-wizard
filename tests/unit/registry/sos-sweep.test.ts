@@ -428,3 +428,58 @@ describe("checkSosSweep: compound-name splitting (the Govra case)", () => {
     expect(data.rejected_product_only).toContain("TRUETAX INC");
   });
 });
+
+describe("resolveIdentity: discovered-domain provenance", () => {
+  const sosHit: RegistryCheck = {
+    check_id: "sos_tx",
+    source: "Texas Comptroller Active Franchise Taxpayers (data.texas.gov)",
+    status: "hit",
+    summary: "Texas business records list GOVRA, INC.",
+    evidence_url: "https://comptroller.texas.gov/taxes/franchise/account-status/search",
+    confidence: "exact",
+    retrieved_at: "2026-08-28T12:00:00.000Z",
+    data: { matches: [{ name: "GOVRA, INC." }] },
+  };
+  const rdapOf = (data: Record<string, unknown> | null): RegistryCheck => ({
+    check_id: "rdap_domain_age",
+    source: "Domain registration records (RDAP)",
+    status: "hit",
+    summary: "The domain was registered in 2024.",
+    evidence_url: "https://rdap.org/domain/govra.com",
+    confidence: "exact",
+    retrieved_at: "2026-08-28T12:00:00.000Z",
+    data,
+  });
+
+  it("a confirmed discovered domain counts only as the SECOND identifier", () => {
+    const r = resolveIdentity([
+      sosHit,
+      rdapOf({ discovered_domain: true, confirmed_name_match: true }),
+    ]);
+    expect(r.identity_resolved).toBe(true);
+    expect(r.identifiers_found).toHaveLength(2);
+    expect(r.identifiers_found[1]).toContain("matched to the vendor's name");
+  });
+
+  it("a confirmed discovered domain ALONE never resolves identity", () => {
+    const r = resolveIdentity([
+      rdapOf({ discovered_domain: true, confirmed_name_match: true }),
+    ]);
+    expect(r.identity_resolved).toBe(false);
+    expect(r.identifiers_found).toHaveLength(0);
+  });
+
+  it("an unconfirmed discovered domain never counts at all", () => {
+    const r = resolveIdentity([
+      sosHit,
+      rdapOf({ discovered_domain: true, confirmed_name_match: false }),
+    ]);
+    expect(r.identity_resolved).toBe(false);
+    expect(r.identifiers_found).toHaveLength(1);
+  });
+
+  it("a pitch-stated domain keeps its full identifier standing (unchanged)", () => {
+    const r = resolveIdentity([sosHit, rdapOf({ contradiction: false })]);
+    expect(r.identity_resolved).toBe(true);
+  });
+});

@@ -114,6 +114,26 @@ export interface HiddenHtmlResult {
   spans: string[];
 }
 
+/* Remove hidden-text regions from raw HTML entirely, using the SAME
+   patterns detectHiddenHtml matches on. Used for auto-fetched vendor-site
+   pages: hidden text must never reach the extractor, but no ADV finding is
+   emitted for it there (display:none navigation is near-universal on real
+   marketing sites, and the ADV ceiling would cap legitimate vendors —
+   ADV-01 stays scoped to pages the USER submitted). */
+export function stripHiddenHtml(html: string): {
+  html: string;
+  spanCount: number;
+  spans: string[];
+} {
+  const { spans } = detectHiddenHtml(html);
+  let out = html;
+  for (const re of HIDDEN_HTML_PATTERNS) {
+    re.lastIndex = 0;
+    out = out.replace(re, " ");
+  }
+  return { html: out, spanCount: spans.length, spans };
+}
+
 export function detectHiddenHtml(html: string): HiddenHtmlResult {
   const spans: string[] = [];
   for (const re of HIDDEN_HTML_PATTERNS) {

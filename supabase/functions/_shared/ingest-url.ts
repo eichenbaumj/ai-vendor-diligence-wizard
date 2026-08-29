@@ -94,9 +94,17 @@ export interface FetchedPage {
 export async function fetchSubmittedUrl(
   normalizedUrl: string,
   fetchFn: typeof fetch = globalThis.fetch,
+  /* Optional shared deadline (multi-page site fetches): aborting it aborts
+     this call too, on top of the per-call 8s timer. */
+  externalSignal?: AbortSignal,
 ): Promise<FetchedPage> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  const onExternalAbort = () => controller.abort();
+  if (externalSignal) {
+    if (externalSignal.aborted) controller.abort();
+    else externalSignal.addEventListener("abort", onExternalAbort, { once: true });
+  }
   try {
     let current = normalizedUrl;
     for (let hop = 0; hop <= MAX_REDIRECT_HOPS; hop++) {
@@ -155,6 +163,7 @@ export async function fetchSubmittedUrl(
     throw new UrlIngestError("that page could not be fetched");
   } finally {
     clearTimeout(timer);
+    externalSignal?.removeEventListener("abort", onExternalAbort);
   }
 }
 

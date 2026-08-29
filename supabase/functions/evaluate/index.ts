@@ -610,7 +610,7 @@ async function runPipeline(
         [],
         new Date().toISOString(),
       );
-      discoveredDomain = inferPrimaryDomain(discCitations, feedNames);
+      discoveredDomain = inferPrimaryDomain(discCitations, feedNames, 1);
       markStage("s1b_discovery");
       if (discoveredDomain) {
         siteHost = discoveredDomain;

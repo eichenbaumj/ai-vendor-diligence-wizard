@@ -392,3 +392,37 @@ describe("honesty-panel grouping", () => {
     expect(out.manualChecks.some((m) => m.id === "manual-sos")).toBe(true);
   });
 });
+
+describe("partial-identity D1 row", () => {
+  it("a lone registry hit reframes the row instead of reading as nothing-found", () => {
+    const base = input([], []);
+    base.identity = { identity_resolved: false, identifiers_found: [] };
+    base.checks = [
+      {
+        check_id: "sos_tx",
+        source: "Texas Comptroller Active Franchise Taxpayers (data.texas.gov)",
+        status: "hit",
+        summary: "Texas business records list GOVRA, INC., registered 2026-06-29.",
+        evidence_url: "https://comptroller.texas.gov/taxes/franchise/account-status/search",
+        confidence: "exact",
+        retrieved_at: AT,
+        data: { matches: [{ name: "GOVRA, INC." }] },
+      },
+      {
+        check_id: "sos_ny",
+        source: "New York Department of State (data.ny.gov)",
+        status: "definitive_miss",
+        summary: "We searched New York's registry and did not find this company.",
+        evidence_url: "https://apps.dos.ny.gov/publicInquiry/",
+        confidence: null,
+        retrieved_at: AT,
+        data: null,
+      },
+    ];
+    const out = assemble(base);
+    const row = out.ledger.find((r) => r.methodology_ref === "d1-1");
+    expect(row?.what_checked).toContain("second independent identifier");
+    expect(row?.what_checked).toContain("Texas");
+    expect(row?.sources[0].title).toContain("Texas");
+  });
+});

@@ -39,6 +39,13 @@ export function registrableDomain(hostname: string): string {
 export function inferPrimaryDomain(
   citations: Citation[],
   vendorNames: string[],
+  /* Minimum distinct citation URLs required on the winning domain. The
+     default (2) is for RESEARCH citations, which are downstream of
+     attacker-influencable text. The two-search DISCOVERY step passes 1:
+     its citations come only from a name search, and the pick is validated
+     afterwards by fetching the site and requiring its own extracted name
+     to match before anything can count toward identity. */
+  minUrls = 2,
 ): string | null {
   const names = vendorNames.filter((n) => n.trim().length > 0);
   if (names.length === 0) return null;
@@ -64,7 +71,7 @@ export function inferPrimaryDomain(
   let best: string | null = null;
   let bestCount = 0;
   for (const [domain, urls] of urlsByDomain) {
-    if (urls.size < 2) continue;
+    if (urls.size < minUrls) continue;
     if (
       urls.size > bestCount ||
       (urls.size === bestCount && best !== null && domain < best)

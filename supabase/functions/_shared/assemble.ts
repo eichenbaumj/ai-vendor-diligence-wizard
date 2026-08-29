@@ -174,19 +174,28 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
       });
     }
     const limited = sosChecks.some((c) => c.status === "coverage_limited");
+    /* When a registration WAS found but only one identifier class exists,
+       the row must say that — otherwise the narrative model reads the
+       COULD_NOT_VERIFY result plus the state sources and writes "we
+       searched Texas and found nothing" over a Texas hit. */
+    const partialHit = sosHits[0] ?? null;
     ledger.push({
       id: rowId(),
       dimension: "D1",
       claim_quote: null,
-      what_checked: "Whether a registered legal entity stands behind this pitch",
+      what_checked: partialHit
+        ? `Whether a second independent identifier corroborates the registration found in ${partialHit.source}`
+        : "Whether a registered legal entity stands behind this pitch",
       result: limited && sosHits.length === 0 ? "COVERAGE_LIMITED" : "COULD_NOT_VERIFY",
       evidence_tier: "T4",
       severity: "MEDIUM",
-      /* All searched states, capped at the schema's 6-source limit
-         (LedgerRow.sources max 6; there are exactly 6 SOS lanes today).
-         Slicing lower made the verdict claim only three states were
-         searched. */
-      sources: sosChecks.slice(0, 6).flatMap(src),
+      /* All searched states, hit first, capped at the schema's 6-source
+         limit (LedgerRow.sources max 6; there are exactly 6 SOS lanes
+         today). Slicing lower made the verdict claim only three states
+         were searched. */
+      sources: [...sosHits, ...sosChecks.filter((c) => c.status !== "hit")]
+        .slice(0, 6)
+        .flatMap(src),
       note: "",
       methodology_ref: "d1-1",
     });

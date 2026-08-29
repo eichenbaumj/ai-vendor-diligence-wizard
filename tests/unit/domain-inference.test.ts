@@ -156,3 +156,14 @@ describe("inferPrimaryDomain", () => {
     ).toBeNull();
   });
 });
+
+describe("minUrls override (discovery)", () => {
+  it("one retrieved citation is enough when minUrls is 1", () => {
+    expect(
+      inferPrimaryDomain([cite("https://govra.com/", 3, "Govra")], ["Govra"], 1),
+    ).toBe("govra.com");
+    expect(
+      inferPrimaryDomain([cite("https://govra.com/", 3, "Govra")], ["Govra"]),
+    ).toBeNull();
+  });
+});

@@ -15,6 +15,7 @@ import type {
   AdvFinding,
   Citation,
   HonestyItem,
+  LeadRef,
   LedgerRow,
   ManualCheck,
   PitchExtract,
@@ -22,6 +23,7 @@ import type {
   ReportQuestion,
   SectorContext,
 } from "./schemas.ts";
+import { lintText } from "./lint.ts";
 import type { Finding, T1Trigger, TierInputs } from "./tier.ts";
 import type { SectorPack } from "./packs-types.ts";
 import { canVerify } from "./domain-classes.ts";
@@ -56,6 +58,7 @@ export interface AssembledSkeleton {
   questions: ReportQuestion[];
   honesty: HonestyItem[];
   manualChecks: ManualCheck[];
+  leads: LeadRef[];
 }
 
 function find(checks: RegistryCheck[], id: string): RegistryCheck | undefined {
@@ -939,6 +942,57 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
 
   manualChecks.push(...leadCards);
 
+  /* -------------------------------------------------------------- leads */
+
+  /* Research findings that back no ledger row, surfaced instead of silently
+     discarded (the Carahsoft/PitchBook problem): a citation qualifies when
+     it mentions a report subject — a named customer, a named person, or the
+     vendor — and its URL is not already attached to a row or a manual card.
+     Leads are follow-ups for the reader, never evidence: class 4 (PR wires)
+     never appears, class 3 carries a verify-independently note, and note
+     copy states honestly whether the page was read or only surfaced. */
+  const usedUrls = new Set<string>([
+    ...ledger.flatMap((r) => r.sources.map((s) => s.url)),
+    ...manualChecks.flatMap((m) => (m.link ? [m.link] : [])),
+  ]);
+  const leadSubjects = [
+    ...namedCustomers,
+    ...people.map((p) => p.name),
+    vendorName,
+  ];
+  const leads: LeadRef[] = [];
+  const sortedCitations = [...citations].sort(
+    (a, b) => a.domain_class - b.domain_class || a.url.localeCompare(b.url),
+  );
+  for (const c of sortedCitations) {
+    if (leads.length >= 8) break;
+    if (c.domain_class === 4) continue;
+    if (usedUrls.has(c.url)) continue;
+    const retrieved = c.title !== null || c.cited_text !== null;
+    const subject = leadSubjects.find((s) =>
+      retrieved ? contentMentions(c, s) || urlMentions(c.url, s) : urlMentions(c.url, s),
+    );
+    if (!subject) continue;
+    const classPhrase =
+      c.domain_class === 1
+        ? "an official government source"
+        : c.domain_class === 2
+          ? "independent press"
+          : "a directory or vendor-linked page; verify independently";
+    const channelPhrase = retrieved
+      ? "Read during research"
+      : "Surfaced during research but not opened";
+    const cleanTitle =
+      c.title && lintText(c.title).some((v) => v.kind === "banned") ? null : c.title;
+    leads.push({
+      url: c.url,
+      title: cleanTitle,
+      retrieved_at: c.retrieved_at,
+      source_class: c.domain_class as 1 | 2 | 3,
+      note: `${channelPhrase}: mentions ${subject}. This is ${classPhrase}.`.slice(0, 200),
+    });
+  }
+
   return {
     tierInputs,
     ledger,
@@ -946,5 +1000,6 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
     questions: finalQuestions,
     honesty,
     manualChecks: manualChecks.slice(0, 8),
+    leads,
   };
 }

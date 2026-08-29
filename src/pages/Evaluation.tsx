@@ -24,6 +24,7 @@ import { VerificationLedger } from "@/components/report/VerificationLedger";
 import { HonestyPanel } from "@/components/report/HonestyPanel";
 import { QuestionPack } from "@/components/report/QuestionPack";
 import { ManualCheckCards } from "@/components/report/ManualCheckCards";
+import { LeadsList } from "@/components/report/LeadsList";
 import { NextSteps } from "@/components/report/NextSteps";
 import { SourcesList } from "@/components/report/SourcesList";
 import { PrintButton } from "@/components/report/PrintButton";
@@ -128,6 +129,7 @@ function ReportView({
       <HonestyPanel items={report.honesty_panel} />
       <QuestionPack report={report} />
       <ManualCheckCards checks={report.manual_checks} />
+      <LeadsList leads={report.leads ?? []} />
       <NextSteps steps={report.next_steps} />
       <SourcesList sources={report.sources} />
 

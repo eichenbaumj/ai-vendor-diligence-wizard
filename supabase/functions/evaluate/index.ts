@@ -938,6 +938,7 @@ async function runPipeline(
     honesty_panel: skeleton.honesty,
     questions: skeleton.questions,
     manual_checks: skeleton.manualChecks,
+    leads: skeleton.leads,
     next_steps: (narrative.value?.next_steps ?? defaultNextSteps(decision.tier))
       .slice(0, 8)
       .map((s) => tidyProse(s, 500)),

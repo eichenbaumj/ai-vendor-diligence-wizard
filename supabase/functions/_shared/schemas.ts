@@ -248,6 +248,17 @@ export const ManualCheck = z.object({
 });
 export type ManualCheck = z.infer<typeof ManualCheck>;
 
+/* A research finding that backs no ledger row: surfaced for the reader to
+   follow up, never counted as evidence. Class 4 (PR wires) never appears. */
+export const LeadRef = z.object({
+  url: z.string().max(600),
+  title: z.string().max(300).nullable(),
+  retrieved_at: z.string(),
+  source_class: z.union([z.literal(1), z.literal(2), z.literal(3)]),
+  note: z.string().max(200),
+});
+export type LeadRef = z.infer<typeof LeadRef>;
+
 export const Report = z.object({
   verdict: z.object({
     tier: VerdictTier,
@@ -262,6 +273,8 @@ export const Report = z.object({
   honesty_panel: z.array(HonestyItem),
   questions: z.array(ReportQuestion).max(16),
   manual_checks: z.array(ManualCheck).max(8),
+  /* Optional: reports stored before this field exists lack it. */
+  leads: z.array(LeadRef).max(8).optional(),
   next_steps: z.array(z.string().max(500)).max(8),
   sector: SectorContext,
   sources: z.array(SourceRef),

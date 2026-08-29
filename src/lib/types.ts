@@ -16,6 +16,7 @@ export type {
   ManualCheck,
   AdvFinding,
   SourceRef,
+  LeadRef,
   SectorContext,
   VerdictTier,
   Severity,

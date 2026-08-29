@@ -274,3 +274,66 @@ describe("domain-inference honesty caveat (name-only submissions)", () => {
     expect(out.tierInputs.identity_resolved).toBe(false);
   });
 });
+
+describe("unverified leads", () => {
+  it("a class-3 retrieved page mentioning the vendor becomes a labeled lead", () => {
+    const out = assemble(
+      input(
+        [],
+        [
+          cite(
+            "https://www.carahsoft.com/acme",
+            3,
+            "Acme AI | Carahsoft",
+            "Acme AI products available through Carahsoft.",
+          ),
+        ],
+      ),
+    );
+    expect(out.leads).toHaveLength(1);
+    expect(out.leads[0].source_class).toBe(3);
+    expect(out.leads[0].note).toContain("Read during research");
+    expect(out.leads[0].note).toContain("verify independently");
+  });
+
+  it("class-4 wires never appear; row-attached URLs are excluded", () => {
+    const out = assemble(
+      input(
+        ["Franklin County"],
+        [
+          cite("https://www.prnewswire.com/acme-release", 4, "Acme AI announces"),
+          /* This one becomes the customer row's lead source, so it must NOT
+             duplicate into the leads list. */
+          cite("https://www.franklincountyohio.gov/agenda/acme-ai.pdf", 1),
+        ],
+      ),
+    );
+    expect(out.leads.filter((l) => l.url.includes("prnewswire"))).toHaveLength(0);
+    expect(out.leads.filter((l) => l.url.includes("franklincountyohio"))).toHaveLength(0);
+  });
+
+  it("an unopened official page mentioning a customer is a not-opened lead", () => {
+    const out = assemble(
+      input(
+        ["Suisun City"],
+        [
+          cite("https://www.suisuncity.com/council/agenda-2026", 3),
+        ],
+      ),
+    );
+    const lead = out.leads.find((l) => l.url.includes("suisuncity"));
+    expect(lead).toBeDefined();
+    expect(lead?.note).toContain("not opened");
+    expect(lead?.note).toContain("Suisun City");
+  });
+
+  it("caps at 8, ordered class-ascending", () => {
+    const cites = Array.from({ length: 12 }, (_, i) =>
+      cite(`https://site-${i}.example.com/acme-ai-page`, ((i % 3) + 1) as 1 | 2 | 3, `Acme AI page ${i}`),
+    );
+    const out = assemble(input([], cites));
+    expect(out.leads.length).toBeLessThanOrEqual(8);
+    const classes = out.leads.map((l) => l.source_class);
+    expect([...classes].sort((a, b) => a - b)).toEqual(classes);
+  });
+});

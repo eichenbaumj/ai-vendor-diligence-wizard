@@ -68,28 +68,95 @@ const FAQS: { q: string; a: string }[] = [
 export default function Landing() {
   return (
     <>
-      {/* 1. Hero: cobalt billboard with ambient dot texture. */}
+      {/* 1. Hero: the product IS the billboard — an evidence-ledger specimen
+          beside an editorial headline, instead of a generic SaaS card. */}
       <Section tone="cobalt" className="relative overflow-hidden">
         <DotField className="pointer-events-none absolute inset-0 text-white" />
-        <div className="relative max-w-4xl">
-          <p className="font-sans text-sm font-bold tracking-[0.14em] [font-variant-caps:all-small-caps] text-white/85">
-            Free and open source · For public agencies
-          </p>
-          <h1 className="mt-4 font-serif text-[clamp(2.5rem,5vw,4.25rem)] font-bold leading-[1.06] tracking-tight">
-            Got an AI vendor pitch? Check it before you spend an hour on it.
-          </h1>
-          <p className="mt-7 max-w-2xl font-sans text-lg leading-relaxed text-brand-cobalt-100 md:text-xl">
-            Paste the email. We check the company against public records and
-            registries, then hand you the questions to send back. Free, open,
-            built for state and local government.
-          </p>
-          <div className="mt-10 flex flex-wrap items-center gap-4">
-            <PillButton to="/check" variant="inverse" size="lg">
-              Check a pitch
-            </PillButton>
-            <PillButton to="/check?sample=meridian" variant="ghost" size="lg">
-              Try a sample pitch
-            </PillButton>
+        <div className="relative grid items-center gap-12 lg:grid-cols-[7fr_5fr]">
+          <div>
+            <p className="font-mono text-[13px] tracking-wide text-white/70">
+              methodology v1.1 · open source · 30+ public-record checks
+            </p>
+            <h1 className="mt-5 font-serif text-[clamp(2.6rem,5.4vw,4.5rem)] font-bold leading-[1.02] tracking-tight">
+              Got an AI vendor pitch? Check it before you spend an hour on it.
+            </h1>
+            <p className="mt-7 max-w-2xl font-sans text-lg leading-relaxed text-brand-cobalt-100 md:text-xl">
+              Give us the website, the email, or just the name. We check the
+              company against public records and registries, then hand you the
+              questions to send back. Free, open, built for state and local
+              government.
+            </p>
+            <div className="mt-10 flex flex-wrap items-center gap-4">
+              <PillButton to="/check" variant="inverse" size="lg">
+                Check a pitch
+              </PillButton>
+              <PillButton to="/check?sample=meridian" variant="ghost" size="lg">
+                Try a sample pitch
+              </PillButton>
+            </div>
+          </div>
+
+          {/* The specimen: a fragment of a real (fictional-vendor) ledger. */}
+          <div aria-hidden="true" className="hidden select-none lg:block">
+            <div className="rounded-md border border-white/20 bg-white text-brand-charcoal shadow-[0_24px_60px_rgba(10,10,60,0.45)]">
+              <div className="flex items-baseline justify-between border-b border-brand-silver-soft px-5 py-3">
+                <span className="font-mono text-[11px] tracking-[0.12em] text-brand-steel">
+                  VERIFICATION LEDGER · MERIDIAN ANALYTICS
+                </span>
+                <span className="font-mono text-[11px] text-brand-steel">
+                  AUG 2026
+                </span>
+              </div>
+              <ul className="divide-y divide-brand-silver-soft">
+                <li className="flex items-start gap-3 px-5 py-3">
+                  <span className="mt-0.5 font-bold text-status-good">✓</span>
+                  <span className="flex-1 text-[13px] leading-snug">
+                    Registered legal entity
+                    <span className="block font-mono text-[11px] text-brand-steel">
+                      COLORADO SECRETARY OF STATE · T1
+                    </span>
+                  </span>
+                </li>
+                <li className="flex items-start gap-3 px-5 py-3">
+                  <span className="mt-0.5 font-bold text-status-good">✓</span>
+                  <span className="flex-1 text-[13px] leading-snug">
+                    Federal award history
+                    <span className="block font-mono text-[11px] text-brand-steel">
+                      USASPENDING.GOV · T1
+                    </span>
+                  </span>
+                </li>
+                <li className="flex items-start gap-3 px-5 py-3">
+                  <span className="mt-0.5 font-bold text-status-warn">⚠</span>
+                  <span className="flex-1 text-[13px] leading-snug">
+                    "Serving 40 states since 2019"
+                    <span className="block font-mono text-[11px] text-brand-steel">
+                      DOMAIN REGISTERED MAR 2026 · CONTRADICTED
+                    </span>
+                  </span>
+                </li>
+                <li className="flex items-start gap-3 px-5 py-3">
+                  <span className="mt-0.5 font-bold text-brand-charcoal-soft">○</span>
+                  <span className="flex-1 text-[13px] leading-snug">
+                    "98% accuracy" claim
+                    <span className="block font-mono text-[11px] text-brand-steel">
+                      NO PUBLISHED METHODOLOGY · COULD NOT VERIFY
+                    </span>
+                  </span>
+                </li>
+              </ul>
+              <div className="flex items-center justify-between border-t border-brand-silver-soft px-5 py-4">
+                <span className="-rotate-2 whitespace-nowrap rounded border-2 border-status-warn px-3 py-1 font-mono text-[11px] font-bold tracking-[0.12em] text-status-warn">
+                  TIER 2 · SIGNIFICANT GAPS
+                </span>
+                <span className="font-mono text-[11px] text-brand-steel">
+                  MEETS 3 OF 7 CHECKS
+                </span>
+              </div>
+            </div>
+            <p className="mt-3 text-center font-mono text-[11px] text-white/60">
+              a report fragment · fictional vendor
+            </p>
           </div>
         </div>
       </Section>

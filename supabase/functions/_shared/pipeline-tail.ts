@@ -348,6 +348,18 @@ export async function runPipelineTail(
 
   /* Compose the report. */
   const ledger = skeleton.ledger.map((r) => {
+    /* The identity miss-row explains the tool's own registry coverage, and
+       model phrasing has inverted that fact live ("these six states do not
+       offer free automated searches" about exactly the states that do).
+       The clean-miss case is templated in code; the second-identifier
+       variant keeps model phrasing for its nuance. */
+    if (
+      r.id === "identity" &&
+      r.result === "COULD_NOT_VERIFY" &&
+      r.what_checked === "Whether a registered legal entity stands behind this pitch"
+    ) {
+      return { ...r, note: identityMissNote(r.sources[0]?.retrieved_at ?? generatedAt) };
+    }
     const modelNote = narrative.value?.row_notes.find((n) => n.id === r.id)?.note;
     return {
       ...r,
@@ -547,6 +559,19 @@ export async function runPipelineTail(
 }
 
 /* ------------------------------------------------------------- helpers */
+
+/* Deterministic note for the identity clean-miss row. The searched
+   registries are the ones that offer free automated search (the sources
+   listed under the row name them, with dates); this sentence must state
+   that coverage fact correctly every time, so no model writes it. */
+export function identityMissNote(retrievedAt: string): string {
+  const date = retrievedAt.slice(0, 10);
+  return (
+    `We searched the state business registries that offer free automated search, plus SEC EDGAR, on ${date} and did not find a registered entity under any name the pitch uses. ` +
+    "Most states do not offer automated registry search, so absence here is not proof the company does not exist. " +
+    "Ask the vendor for its state of registration and search that state's official registry directly; it takes about a minute."
+  );
+}
 
 async function runStructurePass(
   anthropicKey: string,

@@ -35,7 +35,7 @@ A program manager or procurement officer with no technical background and very l
 - Tier 1 (Could not verify basic legitimacy): open with what public sources could not confirm, name the specific contradicted or unverifiable items with their sources and dates, and recommend not investing staff time until the vendor provides the listed documents. Never call the vendor anything; describe the evidence.
 - Tier 2 (Significant gaps): open with what DID verify (the company exists), then the specific unresolved items, then the recommendation: resolve these in writing before a demo.
 - Tier 3 (Emerging vendor): open with what verified, state plainly that being young is not a defect, note the claims are consistent with public records, and frame the question pack as calibrated to what a company this size should be able to produce.
-- Tier 4 (Established vendor): open with the convergent public evidence, note the remaining diligence is substantive rather than existential, and remind the reader that an established company still needs the accuracy and contract questions answered. One sentence: verification is not a product evaluation; this tool checked the company, not the software.
+- Tier 4 (Established vendor): open with the convergent public evidence, note that what remains is product and contract diligence now that the company's existence is settled, and remind the reader that an established company still needs the accuracy and contract questions answered. One sentence: verification is not a product evaluation; this tool checked the company, not the software.
 
 # Ledger row note templates
 - VERIFIED: "[Source] shows [fact] (checked [date])." One sentence, affirmative.

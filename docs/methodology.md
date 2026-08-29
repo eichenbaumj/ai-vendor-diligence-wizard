@@ -8,20 +8,20 @@ Every report links each of its findings back to a section of this document, so y
 
 ---
 
-## 1. What this tool is, and what it is not
+## 1. What you get
 
-**What it is.** A free triage tool for state and local government staff. You paste an AI vendor's pitch (an email, a PDF, a web page, or just a company name). The tool checks the pitch's claims against public records and gives you three things:
+A free triage tool for state and local government staff. Give it an AI vendor's pitch, as a website address, a pasted email, a PDF, or just a company name. It checks the pitch's claims against public records. Every report has three parts:
 
 1. A **verdict tier**: a plain-language statement about how much of the pitch could be confirmed, and what to do with your time next.
 2. A **verification ledger**: a row-by-row record of each claim, what we checked, what we found, and a link to the evidence.
 3. A **question pack**: specific questions to send the vendor before you spend an hour in a demo.
 
-**What it is not.**
+**Limits, stated up front.**
 
-- **It is not a purchase recommendation.** The tool never says buy or do not buy. It never scores vendors with a number. Its strongest negative output is: "we could not verify this claim in public sources; ask the vendor for this document before spending staff time."
-- **It is not a rating directory.** Reports are generated on demand, one at a time, at your request. There is no browsable list of vendor grades, and every report expires and must be regenerated to be relied on.
-- **It is not a consumer reporting agency**, and its reports are not consumer reports under the Fair Credit Reporting Act. **Do not use this tool or its output to make decisions about any person's employment, hiring, promotion, credit, insurance, or housing.** The tool looks at named individuals only in their business capacity, and only when the vendor itself presents them as its leadership.
-- **It does not judge character.** It evaluates the pitch in front of you against public records. Where records and claims disagree, it shows you both, with links and dates, and lets you draw your own conclusion.
+- The tool never says buy or do not buy, and it never scores vendors with a number. Its strongest negative output is: "we could not verify this claim in public sources; ask the vendor for this document before spending staff time."
+- There is no browsable directory of vendor grades. Reports are generated on demand, one at a time, at your request, and every report expires and must be regenerated to be relied on.
+- Reports are not consumer reports under the Fair Credit Reporting Act, and the tool is not a consumer reporting agency. **Do not use this tool or its output to make decisions about any person's employment, hiring, promotion, credit, insurance, or housing.** The tool looks at named individuals only in their business capacity, and only when the vendor itself presents them as its leadership.
+- The tool evaluates the pitch in front of you against public records. Where records and claims disagree, it shows you both, with links and dates, and leaves the conclusion to you. It never judges character.
 
 **Who runs it.** The tool is open source. The code, this methodology, and the sector question packs are public. Anyone can read exactly how it works, and anyone can point out where it is wrong.
 
@@ -31,8 +31,8 @@ Every report links each of its findings back to a section of this document, so y
 
 The tool organizes its checks into seven dimensions, D1 through D7. Two principles govern all of them:
 
-- **Contradiction is the signal, not absence.** A missing credential, on its own, never counts against a vendor. Many good vendors are small, young, or new to government. What matters is when a pitch's claims conflict with public records: a company that says "a decade serving states" on a website registered eight months ago, or a "FedRAMP Authorized" claim that is absent from the official FedRAMP feed.
-- **Unreachable is not adverse.** Some public sources block automated searches or require paid access. When we cannot search a source, the report says "coverage limited" and hands you a short manual check card instead. A source we could not reach never counts against a vendor. (Our [state coverage map](./coverage-map.md) lists which registries we can and cannot search automatically, and why.)
+- **We flag conflicts between the pitch and the public record.** A company that says "a decade serving states" on a website registered eight months ago, or a "FedRAMP Authorized" claim that is absent from the official FedRAMP feed. That is the signal. A missing credential, on its own, never counts against a vendor; many good vendors are small, young, or new to government.
+- **A source we could not reach counts for nothing.** Some public sources block automated searches or require paid access. When we cannot search a source, the report says "coverage limited" and hands you a short manual check card instead. A source we could not reach never counts against a vendor. (Our [state coverage map](./coverage-map.md) lists which registries we can and cannot search automatically, and why.)
 
 Each check below states four things: what we look at, the public source, how it runs, and what an adverse finding means. "How it runs" is one of:
 
@@ -86,7 +86,7 @@ Does a real, registered company stand behind this pitch? This dimension gates th
 **What we look at.** Whether a claimed software product leaves the normal technical traces: application, API, documentation, or status subdomains.
 **Public sources.** [crt.sh](https://crt.sh/) subdomain records, plus direct checks of common subdomains.
 **How it runs.** Automatic lookup.
-**If adverse.** A claimed software-as-a-service product with nothing but a bare marketing page is weighted Medium. This is a prompt to ask for a live demo environment, not a conclusion.
+**If adverse.** A claimed software-as-a-service product with nothing but a bare marketing page is weighted Medium. It is a prompt to ask for a live demo environment, nothing more.
 
 ### D1.7 Email and DNS hygiene
 
@@ -232,7 +232,7 @@ Compliance claims come in different kinds: some can be checked against official 
 
 ### D3.10 AI governance commitments
 
-**What we look at.** This check produces a question, not a flag: whether the vendor will certify an AI governance program consistent with the NIST AI Risk Management Framework or ISO/IEC 42001, and share its risk management plan.
+**What we look at.** This check only ever produces a question for your pack: whether the vendor will certify an AI governance program consistent with the NIST AI Risk Management Framework or ISO/IEC 42001, and share its risk management plan.
 **Public sources.** [NIST AI RMF](https://www.nist.gov/itl/ai-risk-management-framework); the GovAI Coalition vendor agreement template.
 **How it runs.** Added to the question pack automatically.
 **If adverse.** Not applicable; there is no adverse finding here. Refusal to make the commitment is information for your negotiation, not a flag from this tool.
@@ -246,7 +246,7 @@ Is there a real AI product behind the marketing, and is its architecture describ
 **What we look at.** Whether the vendor says which foundation models its product uses (name, version, provider), and what the vendor itself adds: fine-tuning, prompts, classifiers, filters. Building on major AI providers' models is normal 2026 architecture and is not a flag; hiding it is the issue.
 **Public sources.** The pitch and the vendor's public documentation, compared with any public evidence of the underlying stack.
 **How it runs.** AI-assisted web research.
-**If adverse.** "Our proprietary AI" claims alongside public evidence that the product runs on a third-party model are weighted High; this is a candor problem, not a technology problem. No model disclosure anywhere is Medium and becomes a direct question in the pack.
+**If adverse.** "Our proprietary AI" claims alongside public evidence that the product runs on a third-party model are weighted High; the concern is candor about what was built. No model disclosure anywhere is Medium and becomes a direct question in the pack.
 
 ### D4.2 Engineering footprint
 
@@ -390,7 +390,7 @@ Certain classes of marketing claims have repeatedly drawn federal enforcement ag
 
 ### Dimension 7: Sector fit and risk tier (D7)
 
-This dimension classifies the pitched use case against your regulatory reality and adjusts the question pack. It produces context and questions, never adverse flags.
+This dimension classifies the pitched use case against your regulatory reality and adjusts the question pack. It produces context and questions; nothing in this dimension can create an adverse flag.
 
 ### D7.1 Use-case classification
 
@@ -442,7 +442,7 @@ Invisible Unicode characters (zero-width, directional, or tag characters) that c
 
 ### ADV-04 Possible planted corroboration
 
-The same marketing phrasing repeated across multiple low-authority websites, a pattern consistent with content placed to be found by AI research tools. The scan is code over retrieved passages: a run of eight or more identical words recurring on at least two unrelated sites that present as independent. Press wires syndicating the same release do not count, and neither does the vendor repeating its own copy on its own properties; both are ordinary marketing. Reported with the matching sites named, as an observation, not an accusation.
+The same marketing phrasing repeated across multiple low-authority websites, a pattern consistent with content placed to be found by AI research tools. The scan is code over retrieved passages: a run of eight or more identical words recurring on at least two unrelated sites that present as independent. Press wires syndicating the same release do not count, and neither does the vendor repeating its own copy on its own properties; both are ordinary marketing. Reported with the matching sites named, phrased strictly as an observation.
 
 ---
 
@@ -469,7 +469,7 @@ Rules that connect the tiers:
 
 ## 4. The verdict tiers
 
-The verdict is a recommendation about your time and process, never about whether to buy. There are five tiers. There is no numeric score. Every verdict states "meets N of 7 verification checks" so you can see the basis; the seven points are: identity resolved with at least two independent identifiers (two points), up to four dimensions carrying at least one verified green flag (up to four points), and no unresolved High or Critical findings (one point).
+The verdict is a recommendation about your time and process. It never advises buying or not buying. There are five tiers. There is no numeric score. Every verdict states "meets N of 7 verification checks" so you can see the basis; the seven points are: identity resolved with at least two independent identifiers (two points), up to four dimensions carrying at least one verified green flag (up to four points), and no unresolved High or Critical findings (one point).
 
 The tier is computed by plain code from typed, logged inputs. No AI model assigns the tier, and no AI model can raise it. The full decision rules follow.
 
@@ -505,7 +505,7 @@ The tier is computed by plain code from typed, logged inputs. No AI model assign
 ### Tier 4: Established vendor. Proceed to an informed conversation.
 
 **Criteria (exact):** identity verified; no unresolved High or Critical findings; verified green flags across three or more dimensions (for example: verified entity, verified government customers, verified security posture).
-**What the report says:** "Public records corroborate this vendor's core claims. The remaining diligence is substantive, not existential." The pack shifts to contract terms, reference calls with verified customers, and demo structure. The report also reminds you that an established name does not equal an accurate product; that is what the questions are for.
+**What the report says:** "Public records corroborate this vendor's core claims. What remains is product and contract diligence; whether the company is real is settled." The pack shifts to contract terms, reference calls with verified customers, and demo structure. The report also reminds you that an established name does not equal an accurate product; that is what the questions are for.
 
 **On every report, at every tier:** the generation date, every source queried, an expiry date ("re-run before relying on this"), the triage disclaimer, and the vendor dispute link.
 
@@ -562,7 +562,7 @@ Every external source the tool consults, with its refresh cadence. This table is
 
 ## 6. Fairness to small vendors
 
-A diligence tool that punishes vendors for being small would be worse than no tool. These rules are enforced in the tool's code, not just promised here.
+A diligence tool that punishes vendors for being small would be worse than no tool. The tool's code enforces these rules; this page describes what the code does.
 
 1. **Absence is never adverse on its own.** No SAM registration, no FedRAMP status, no GSA Schedule, no ISO certificate, no federal awards, no GitHub presence, no press coverage: each of these renders as "neutral, common for vendors of this profile," in those words.
 2. **Two calibration bars, applied automatically.** Based on verified company age and size, the report applies either the *startup bar* (SOC 2 Type I or a named-auditor Type II underway, a penetration test letter, a trust page, a subprocessor list, willingness to sign standard data agreements, a GovRAMP Snapshot if courting government) or the *established bar* (a current SOC 2 Type II with bridge letters, GovRAMP or TX-RAMP where selling, a named security lead). The report states which bar was applied and why. Demanding FedRAMP authorization or multiple simultaneous certifications from a seed-stage company is explicitly outside this methodology.

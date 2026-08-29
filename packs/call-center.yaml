@@ -25,6 +25,24 @@ inclusion_test:
     Does it name a CCaaS platform (Amazon Connect, Genesys, NICE, Five9,
     Talkdesk) as its base?
 
+# Classifier-fallback terms, lowercase substring-matched against the pitch
+# (>= 2 distinct hits = a match; see _shared/sector-lexicon.ts).
+signal_lexicon:
+  - call center
+  - contact center
+  - ivr
+  - voice agent
+  - voice ai
+  - call deflection
+  - containment rate
+  - hold time
+  - agent assist
+  - after-call
+  - call volume
+  - ccaas
+  - benefits hotline
+  - "311"
+
 scrutiny_tier: standard
 
 incumbent_landscape: >-
@@ -273,6 +291,10 @@ skepticism_triggers:
 
 diligence_questions:
   - id: call-center-q01
+    select:
+      claim_types: [performance]
+      finding_ids: ["perf-*"]
+      weight: 5
     question: >-
       Show the exact formula for the containment or resolution rate you
       quoted. Do abandons, IVR completions, transfers, or 7-day callbacks
@@ -287,6 +309,10 @@ diligence_questions:
       abandons and menu completions as contained.
     source_url: null
   - id: call-center-q02
+    select:
+      claim_types: [customer]
+      finding_ids: [customers]
+      weight: 4
     question: >-
       Name three government agencies of comparable volume and program type in
       production today, with contacts who will confirm your deck's metrics.
@@ -299,6 +325,8 @@ diligence_questions:
       acceptable answer here.
     source_url: null
   - id: call-center-q03
+    select:
+      base: true
     question: >-
       Walk us through every path to a human: what happens when a caller says
       "agent" on turn one? After two failed answers? At 2 a.m.? Is the
@@ -312,6 +340,8 @@ diligence_questions:
       or drops the caller's context at transfer.
     source_url: null
   - id: call-center-q04
+    select:
+      base: true
     question: >-
       Is the system restricted to content we approve, with the source cited
       for each answer? What does it do when the answer is not there: guess,
@@ -326,6 +356,9 @@ diligence_questions:
       resistance to pre-award testing.
     source_url: null
   - id: call-center-q05
+    select:
+      base: true
+      tiers: [3, 4]
     question: >-
       If the bot gives a claimant wrong information, what does the contract
       say? What are the correction SLAs and the indemnification terms?
@@ -338,6 +371,8 @@ diligence_questions:
       its bot says.
     source_url: https://www.cbsnews.com/news/aircanada-chatbot-discount-customer/
   - id: call-center-q06
+    select:
+      elevated: true
     question: >-
       Which languages do you support, on which channels, with what human
       review? Is spoken Spanish actual Spanish reviewed by native speakers?
@@ -351,6 +386,8 @@ diligence_questions:
       English.
     source_url: https://statetechmagazine.com/article/2024/03/state-governments-deploy-contact-center-ai-bolster-customer-service
   - id: call-center-q07
+    select:
+      claim_types: [customer]
     question: >-
       Have you integrated with our exact stack (our IVR plus our CRM or
       eligibility system)? Name the client. Is the integration fixed-price?
@@ -363,6 +400,8 @@ diligence_questions:
       stack, or open-ended integration billing.
     source_url: null
   - id: call-center-q08
+    select:
+      base: true
     question: >-
       Which FedRAMP or GovRAMP authorization does this specific product hold?
       Where are recordings and transcripts stored, how long are they retained,
@@ -376,6 +415,8 @@ diligence_questions:
       product-level question, or vague data-use terms.
     source_url: https://marketplace.fedramp.gov/
   - id: call-center-q09
+    select:
+      finding_ids: [model-transparency]
     question: >-
       Which LLM and speech-recognition vendors are under the hood, and where
       are they hosted? When the underlying model updates, how do you
@@ -387,6 +428,8 @@ diligence_questions:
       Refusal to name subprocessors, or no regression-testing process at all.
     source_url: null
   - id: call-center-q10
+    select:
+      base: true
     question: >-
       Does the system disclose that it is automated at the start of each
       interaction? For outbound calls: how do you comply with FCC ruling
@@ -401,6 +444,8 @@ diligence_questions:
       with FCC 24-17.
     source_url: https://docs.fcc.gov/public/attachments/FCC-24-17A1.pdf
   - id: call-center-q11
+    select:
+      claim_types: [pricing]
     question: >-
       Break the price into platform, per-minute or per-message usage, telecom
       passthrough, AI metering, integration, and support. What happens to our
@@ -412,6 +457,8 @@ diligence_questions:
       contract draft.
     source_url: https://aws.amazon.com/connect/pricing/
   - id: call-center-q12
+    select:
+      base: true
     question: >-
       Do we get raw transcripts plus a dashboard covering containment,
       escalation, abandonment, wait time, and per-intent accuracy? Can our
@@ -425,6 +472,8 @@ diligence_questions:
       as a paid professional service.
     source_url: null
   - id: call-center-q13
+    select:
+      claim_types: [availability]
     question: >-
       When your AI is down, what does a caller hear: a queue or a dead line?
       What is your uptime SLA, and can we see your last two incident
@@ -435,6 +484,8 @@ diligence_questions:
     red_flag: No failover story, or refusal to share incident history.
     source_url: null
   - id: call-center-q14
+    select:
+      elevated: true
     question: >-
       Can we buy after-call summarization alone, without a resident-facing
       bot? What accuracy review exists for auto-summaries written into our
@@ -447,6 +498,10 @@ diligence_questions:
       CRM with no review.
     source_url: null
   - id: call-center-q15
+    select:
+      claim_types: [performance]
+      finding_ids: [automation]
+      weight: 2
     question: >-
       If you project staffing savings, name the client where that happened and
       tell us what happened to their quality metrics afterward.
@@ -624,7 +679,7 @@ realistic_pricing: |-
   five figures for small jurisdictions; that figure is uncertain, so negotiate
   per jurisdiction.
 
-last_updated: "2026-08-28"
+last_updated: "2026-08-29"
 refresh_cadence: quarterly
 
 known_gaps: |-

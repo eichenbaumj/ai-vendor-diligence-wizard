@@ -47,12 +47,13 @@ copy rules below.
 | `pack_name` | string, user-facing | Plain-language name a program officer recognizes ("Call Center & Phone AI"). |
 | `definition` | markdown, user-facing | 120 words or fewer. What the category IS, in the buyer's language, plus what it is NOT (an explicit boundary with adjacent packs, naming them). |
 | `inclusion_test` | list of 3 to 6 strings | Yes/no questions answerable from the pitch artifact alone. A pitch matches the pack if ANY answer is yes. Each question should map to detectable pitch language. |
+| `signal_lexicon` | list of 8 to 15 strings | Lowercase domain terms for the code-side classifier fallback (`_shared/sector-lexicon.ts`): when the S4 model call fails, terms are substring-matched against the pitch's use-case description and claim quotes, and 2 or more distinct hits select the pack. Prefer multi-word domain phrases ("call deflection", "meeting transcription") over single common words ("analytics" would hit everywhere). Each term is 3 to 40 characters, lowercase, no surrounding whitespace (CI-enforced). An eligibility-lexicon hit can only ADD scrutiny, never remove it. |
 | `scrutiny_tier` | `standard` or `elevated` | `elevated` changes output behavior: the strongest caution band floor, a mandatory legal-context block, and overlay behavior. `eligibility-case-mgmt` is elevated and must stay elevated (CI-enforced). |
 | `incumbent_landscape` | markdown, user-facing | 300 words or fewer. Who actually sells this to state and local government, structured in layers (platforms, integrators, startups). Answers the buyer's first question: is this vendor even on the real market map? |
 | `established_vendors` | list of `{name, tier, one_liner, gov_evidence_url}` | `tier` is one of `platform`, `integrator`, `specialist`, `startup-verified`. Presence is a "known quantity" signal, never an endorsement. A vendor with no independently verifiable government deployment never appears here. `gov_evidence_url` may be null when the evidence is cited by outlet and date in the one-liner. |
 | `failure_modes` | list of `{title, description, named_incident, source_url}` | Category-specific ways deployments go wrong. Every mode must cite a real named incident or oversight finding. No hypotheticals. `source_url` is required (CI-enforced). Extra supporting URLs can live inside `description`. |
 | `skepticism_triggers` | list of `{claim_pattern, threshold, why, source_url}` | Claims that flip the output toward caution, each with a numeric or categorical threshold and the evidence-based reason. These feed the pitch scanner. `source_url` may be null (the type allows it); CI warns so the gap is visible each run. |
-| `diligence_questions` | ordered list of 10 to 15 `{id, question, good_answer, red_flag, source_url}` | Copy-paste-ready questions an officer can send verbatim. Ids are `<pack_id>-q01` through `<pack_id>-qNN`, sequential and zero-padded (CI-enforced). Question 1 is always the highest-yield discriminator for the category. `good_answer` describes what a credible answer looks like; `red_flag` describes the disqualifying answer. |
+| `diligence_questions` | ordered list of 10 to 15 `{id, question, good_answer, red_flag, source_url, select?}` | Copy-paste-ready questions an officer can send verbatim. Ids are `<pack_id>-q01` through `<pack_id>-qNN`, sequential and zero-padded (CI-enforced). Question 1 is always the highest-yield discriminator for the category. `good_answer` describes what a credible answer looks like; `red_flag` describes the disqualifying answer. `select` is the question-selection metadata; see "Question selection metadata" below. |
 | `elevated_scrutiny_rules` | list of `{condition, action}` | Machine-readable rules that raise scrutiny within the pack, including overlay triggers into `eligibility-case-mgmt`. Present in every pack, including `standard` ones. |
 | `reference_deployments` | list of `{agency, vendor_stack, what, metric, metric_source_type, source_url}` | Named government deployments the user can cite back to vendors. `metric_source_type` is one of `oversight`, `independent-press`, `government-page`, `vendor-reported`. `source_url` is required (CI-enforced). Cautionary deployments are welcome; label them in `agency`. |
 | `registries_to_check` | list of `{name, url, what_it_proves}` | Category-relevant automated checks (FedRAMP Marketplace, GovRAMP APL, BTAH, AI Incident Database, and so on). Only registries with a confirmed URL appear; registries known by name but with an unconfirmed URL go in `known_gaps`. |
@@ -70,6 +71,29 @@ vendor-reported` value, which the UI renders as a caveat badge. If the
 `metric` text itself says "vendor-reported," the field must agree
 (CI-enforced). In `established_vendors` one-liners and landscape prose,
 write the caveat inline: "(vendor-reported)".
+
+## Question selection metadata (`select`)
+
+The question engine (`_shared/questions.ts`) selects pack questions from
+typed signals only; the `select` block on each question is how the YAML
+controls that selection. The type contract is `QuestionSelect` in
+`packs-types.ts`. Fields, all optional:
+
+| Field | Meaning |
+|---|---|
+| `base: true` | Member of the pack's default slate, asked of every vendor matching the pack (3 to 6 per pack, CI-enforced). Reserve it for the universal asks: disclosure, escalation, monitoring, security basics, and the pack's question 1 discriminator. Base questions never double as triggered questions. |
+| `claim_types` | Fires when the pitch carries a claim of a listed type. Values come from the `ClaimType` enum in `_shared/schemas.ts`: `identity`, `customer`, `compliance`, `performance`, `team`, `pricing`, `availability` (CI-enforced). Use for questions that test a specific claim class (a containment number, a named customer, a certification). |
+| `finding_ids` | Fires on an unresolved engine finding: an exact id from `FINDING_IDS` in `_shared/finding-ids.ts`, or the prefix form `"perf-*"` (CI-enforced). Use only where the question is the natural follow-up to that finding; do not spray selectors. |
+| `elevated: true` | Fires when the report runs under elevated scrutiny (methodology D7.2): pre-deployment testing, impact assessment, human oversight, appeals and redress. An `elevated` pack must carry at least 2 (CI-enforced). |
+| `overlay_core: true` | `eligibility-case-mgmt` only, on exactly 4 questions (CI-enforced): the human-decision, denial-notice, appeal-record, and rollback questions the overlay merges into other packs' reports. |
+| `tiers` | Verdict tiers (0 to 4) at which the question is eligible. Use `[3, 4]` or `[4]` for contract-stage, reference-call, and demo-structure questions, which are noise in a tier-2 report. A gate, not a trigger: a question with only `tiers` never fires. |
+| `weight` | Integer 0 to 10, default 0. Orders triggered questions within a pack (higher first); the base slate keeps file order. Use sparingly. |
+
+A question may combine keys (`base` + `tiers`, `claim_types` +
+`finding_ids`). A pack with no `select` anywhere is a legacy pack: its
+first five questions act as the base slate. Once ANY question carries
+`select`, the pack is annotated and the full CI invariants below apply;
+questions left without a trigger or `base` flag will not ship in reports.
 
 ## CI invariants
 
@@ -97,6 +121,16 @@ write the caveat inline: "(vendor-reported)".
 9. `eligibility-case-mgmt` not marked `scrutiny_tier: elevated`.
 10. A metric described as vendor-reported without `metric_source_type:
     vendor-reported`.
+11. `signal_lexicon` missing, outside 8 to 15 entries, or containing a term
+    that is not lowercase, is shorter than 3 or longer than 40 characters,
+    or has surrounding whitespace.
+12. In an annotated pack (any question carrying `select`): fewer than 3 or
+    more than 6 `base: true` questions; a `claim_types` value outside the
+    `ClaimType` enum; a `finding_ids` entry that is not a `FINDING_IDS` id
+    or a known prefix form (`"perf-*"`); a `tiers` value outside 0 to 4; a
+    `weight` outside integer 0 to 10; `overlay_core` outside
+    `eligibility-case-mgmt` or not on exactly 4 questions there; or an
+    `elevated`-tier pack with fewer than 2 `elevated: true` questions.
 
 Warnings (printed, non-fatal): lint violations of kind "style" (em dashes,
 AI-tell vocabulary), because pack content may legitimately quote vendor

@@ -25,6 +25,22 @@ inclusion_test:
     Is the primary interface the agency's website or public meetings rather
     than the phone?
 
+# Classifier-fallback terms, lowercase substring-matched against the pitch
+# (>= 2 distinct hits = a match; see _shared/sector-lexicon.ts).
+signal_lexicon:
+  - chatbot
+  - web chat
+  - virtual assistant
+  - resident engagement
+  - machine translation
+  - language access
+  - meeting interpretation
+  - ai search
+  - mass notification
+  - constituent communication
+  - multilingual
+  - faq bot
+
 scrutiny_tier: standard
 
 incumbent_landscape: >-
@@ -197,6 +213,8 @@ skepticism_triggers:
 
 diligence_questions:
   - id: public-comms-q01
+    select:
+      base: true
     question: >-
       Is every answer generated only from content we control? Show us what
       the bot says when the answer is not in that corpus: does it refuse and
@@ -208,11 +226,16 @@ diligence_questions:
       improvised.
     source_url: https://themarkup.org/artificial-intelligence/2026/01/30/mamdani-to-kill-the-nyc-ai-chatbot-we-caught-telling-businesses-to-break-the-law
   - id: public-comms-q02
+    select:
+      elevated: true
     question: Does each answer link to the specific official source page?
     good_answer: Yes, with per-answer citations to your own pages.
     red_flag: No citations. You cannot audit what you cannot trace.
     source_url: null
   - id: public-comms-q03
+    select:
+      elevated: true
+      weight: 3
     question: >-
       Will you run and share results on our top 100 real resident questions,
       including legally consequential ones (tenant rights, wages, deadlines),
@@ -222,6 +245,8 @@ diligence_questions:
     red_flag: Testing after launch, or vendor-graded results only.
     source_url: null
   - id: public-comms-q04
+    select:
+      base: true
     question: >-
       When the council changes an ordinance or a fee, what is the update
       pipeline and SLA? Who is responsible for stale answers?
@@ -230,6 +255,9 @@ diligence_questions:
     red_flag: '"The bot re-crawls periodically" with no SLA.'
     source_url: null
   - id: public-comms-q05
+    select:
+      base: true
+      tiers: [3, 4]
     question: >-
       Given Moffatt v. Air Canada, what does your contract say about
       indemnification when the bot causes harm with wrong information?
@@ -239,6 +267,8 @@ diligence_questions:
       lost.
     source_url: https://www.americanbar.org/groups/business_law/resources/business-law-today/2024-february/bc-tribunal-confirms-companies-remain-liable-information-provided-ai-chatbot/
   - id: public-comms-q06
+    select:
+      base: true
     question: >-
       At what point (topic, confidence, frustration, or a direct request)
       does the bot transfer to a person, and during what hours does that
@@ -247,6 +277,9 @@ diligence_questions:
     red_flag: A bot with no human behind it.
     source_url: null
   - id: public-comms-q07
+    select:
+      elevated: true
+      weight: 2
     question: >-
       Which languages do you support, with what measured quality per
       language? Is there human review for benefits, legal, and health
@@ -258,6 +291,8 @@ diligence_questions:
     red_flag: A language count with no measurements.
     source_url: https://www.ncsc.org/sites/default/files/media/document/NCSC%20Machine%20Translation%20Guide_0.pdf
   - id: public-comms-q08
+    select:
+      base: true
     question: >-
       Are transcripts fully exportable for public-records compliance? What
       resident PII do you retain, for how long, and is any of it used for
@@ -269,6 +304,8 @@ diligence_questions:
       No export path, or "anonymized" training use with no definition.
     source_url: https://www.sos.wa.gov/sites/default/files/2025-02/advice-sheet-are-generative-ai-interactions-public-records-(june-2024).pdf
   - id: public-comms-q09
+    select:
+      base: true
     question: >-
       Does the bot clearly disclose that it is AI (the Utah SB 452 and Maine
       LD 1727 pattern; TRAIGA for Texas)? Does it meet WCAG 2.1 AA
@@ -279,6 +316,10 @@ diligence_questions:
       Disclosure as a configurable option, or no accessibility testing.
     source_url: https://fpf.org/blog/understanding-the-new-wave-of-chatbot-legislation-california-sb-243-and-beyond/
   - id: public-comms-q10
+    select:
+      claim_types: [performance]
+      finding_ids: ["perf-*"]
+      weight: 3
     question: >-
       What accuracy and containment metrics will you report monthly, how is
       "accurate" defined and audited, and can we sample real transcripts?
@@ -287,6 +328,8 @@ diligence_questions:
     red_flag: Self-graded accuracy with no sampling rights.
     source_url: null
   - id: public-comms-q11
+    select:
+      elevated: true
     question: >-
       How fast can we take down a wrong answer, or the whole bot, and what is
       the fallback experience?
@@ -297,6 +340,10 @@ diligence_questions:
       Correction requests routed through a support queue with no SLA.
     source_url: null
   - id: public-comms-q12
+    select:
+      claim_types: [customer]
+      finding_ids: [customers]
+      weight: 4
     question: >-
       Name three government customers our size, with one live for 12 or more
       months. Has any government customer decommissioned the product, and
@@ -410,7 +457,7 @@ realistic_pricing: |-
   A corpus-bounded FAQ bot priced above $100K deserves a written itemization
   of what the money buys.
 
-last_updated: "2026-08-28"
+last_updated: "2026-08-29"
 refresh_cadence: quarterly
 
 known_gaps: |-

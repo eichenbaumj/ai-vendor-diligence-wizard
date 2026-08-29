@@ -24,8 +24,10 @@ import type {
   SectorContext,
 } from "./schemas.ts";
 import { lintText } from "./lint.ts";
+import { computeTier } from "./tier.ts";
 import type { Finding, T1Trigger, TierInputs } from "./tier.ts";
 import type { SectorPack } from "./packs-types.ts";
+import { selectQuestions } from "./questions.ts";
 import { canVerify } from "./domain-classes.ts";
 import {
   contentMentions,
@@ -756,6 +758,50 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
     });
   }
 
+  /* D4.1 model transparency: a pitch selling performance with no model
+     disclosure anywhere gets a MEDIUM finding and a direct question
+     (methodology D4.1). MEDIUM never moves the tier. */
+  const disclosureCorpus = [
+    extract.use_case_description,
+    ...extract.claims.map((c) => c.quote),
+  ]
+    .join(" ")
+    .toLowerCase();
+  const mentionsModel =
+    /\b(gpt[-\s]?[0-9a-z]*|claude|gemini|llama|mistral|anthropic|openai|azure openai|bedrock|vertex ai|foundation models?|large language models?|llms?|open[-\s]?weights?|fine[-\s]?tun\w*)\b/i.test(
+      disclosureCorpus,
+    );
+  const sellsCapability = extract.claims.some(
+    (c) => c.type === "performance" || c.type === "availability",
+  );
+  if (!mentionsModel && sellsCapability) {
+    findings.push({
+      id: "model-transparency",
+      dimension: "D4",
+      severity: "MEDIUM",
+      resolved: false,
+      detail:
+        "The materials make capability claims without disclosing what AI models power the product.",
+    });
+  }
+
+  /* D4.3 automation honesty: an unqualified full-automation claim gets a
+     MEDIUM finding and the staffing question (methodology D4.3). */
+  const automationClaim = extract.claims.find((c) =>
+    /\b(fully automated|no human (intervention|review|in the loop)|zero[-\s]touch|end[-\s]to[-\s]end automation|without (any )?human)\b/i.test(
+      c.quote,
+    ),
+  );
+  if (automationClaim) {
+    findings.push({
+      id: "automation",
+      dimension: "D4",
+      severity: "MEDIUM",
+      resolved: false,
+      detail: `The materials describe unqualified full automation ("${automationClaim.quote.slice(0, 80)}").`,
+    });
+  }
+
   /* Domain-age contradiction escalates to a trigger only with zero verified
      customers (methodology tier-1 criteria). */
   if (rdapContradiction && verifiedCustomers === 0 && usasp?.status !== "hit") {
@@ -788,106 +834,27 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
 
   /* ------------------------------------------------------------- questions */
 
-  const questions: ReportQuestion[] = [];
-
-  /* Gap-driven. */
-  for (const f of findings.filter((x) => x.severity === "HIGH" || x.severity === "CRITICAL").slice(0, 4)) {
-    if (f.id === "customers") {
-      questions.push({
-        id: "gap-customers",
-        source: "gap",
-        text: `Your materials name ${namedCustomers.slice(0, 3).join(", ")} as customers. For each: is there an active paid contract, a pilot, or individual users? Please provide the contract administrator's name and contact so we may verify.`,
-        why: "None of the named customers left a public record trace we could find.",
-      });
-    } else if (f.id.startsWith("perf-")) {
-      const q = extract.claims.find((c) => `perf-${c.id}` === f.id);
-      if (q) {
-        questions.push({
-          id: f.id,
-          source: "claim",
-          text: `Your materials state: "${q.quote}". Which deployment produced this figure, measured how, over what period, and may we contact that organization?`,
-          why: "Performance numbers need a methodology and a named reference before they can inform a decision.",
-        });
-      }
-    } else if (f.id === "fedramp_marketplace" || f.id === "govramp") {
-      questions.push({
-        id: `gap-${f.id}`,
-        source: "gap",
-        text: "Please provide the exact authorization your product holds: the program (FedRAMP or GovRAMP), the status level, the package or listing ID, and the sponsoring agency, so we can confirm it in the public marketplace.",
-        why: "The authorization described in the pitch did not match the public feed when we checked.",
-      });
-    } else if (f.id === "txramp") {
-      questions.push({
-        id: "gap-txramp",
-        source: "gap",
-        text: "Please provide your TX-RAMP certification letter, or a confirmation from Texas DIR, naming the level you hold (Level 1, Level 2, or Provisional) and the certified product.",
-        why: "The TX-RAMP certification described in the pitch was not on the published list when we checked, and that list can lag.",
-      });
-    } else if (f.id === "domain-age") {
-      questions.push({
-        id: "gap-domain-age",
-        source: "gap",
-        text: "Your materials describe a multi-year track record. Please list the legal entity name and founding year, any prior company names, and two customers from that earlier period we may contact.",
-        why: "The company's web presence is much newer than the history described.",
-      });
-    }
-  }
-
-  /* Sector pack questions (top of each matched pack, by id). */
-  const perPack = sector.pack_ids.length > 1 ? 3 : 5;
-  for (const packId of sector.pack_ids) {
-    const pack = input.packs[packId];
-    if (!pack) continue;
-    for (const pq of pack.diligence_questions.slice(0, perPack)) {
-      questions.push({
-        id: pq.id,
-        source: "pack",
-        text: pq.question,
-        why: `A standard question for ${pack.pack_name.toLowerCase()} vendors. A credible answer: ${pq.good_answer}`,
-      });
-    }
-  }
-
-  /* Universal core. */
-  const core: ReportQuestion[] = [
-    {
-      id: "core-data-training",
-      source: "core",
-      text: "Will you sign a contract clause permanently prohibiting the use of our data to train any model, yours or a subprocessor's, absent our written consent?",
-      why: "The single most common gap in government AI contracts.",
-    },
-    {
-      id: "core-export",
-      source: "core",
-      text: "At contract end, what do we get back? Confirm no-cost machine-readable export of all our data and configurations, and name the format.",
-      why: "Protects you from lock-in before it starts.",
-    },
-    {
-      id: "core-references",
-      source: "core",
-      text: "Which government agencies use this product today? Are you listed in the GovAI Coalition registry, a state AI inventory, or a cooperative contract we can check?",
-      why: "Verifiable references are the fastest path from pitch to informed conversation.",
-    },
-    {
-      id: "core-breach",
-      source: "core",
-      text: "Define a reportable incident under our contract, your notification timeline, and who pays for breach response.",
-      why: "Incident terms are cheapest to fix before signature.",
-    },
-    {
-      id: "core-pricing",
-      source: "core",
-      text: "Provide the complete pricing structure: platform, usage, integration, support, and every trigger that changes our bill, including a surge scenario.",
-      why: "Surprise overage economics are a recurring failure mode in AI contracts.",
-    },
+  /* Question selection lives in questions.ts (pure code, tier-aware). The
+     tier is computed here because selection honors the methodology's tier
+     conditioning; computeTier is pure and cheap, and the pipeline tail's
+     own call returns the identical decision. */
+  const decision = computeTier(tierInputs);
+  const t4Dimensions = [
+    ...new Set(
+      ledger
+        .filter((r) => r.result === "COULD_NOT_VERIFY")
+        .map((r) => r.dimension),
+    ),
   ];
-  questions.push(...core);
-
-  /* Dedup by id, cap at 15. */
-  const seenQ = new Set<string>();
-  const finalQuestions = questions
-    .filter((q) => (seenQ.has(q.id) ? false : (seenQ.add(q.id), true)))
-    .slice(0, 15);
+  const finalQuestions = selectQuestions({
+    findings,
+    extract,
+    sector,
+    packs: input.packs,
+    tier: decision.tier,
+    t4_dimensions: t4Dimensions,
+    namedCustomers,
+  });
 
   /* ---------------------------------------------------------- honesty panel */
 

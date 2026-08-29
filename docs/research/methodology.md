@@ -164,6 +164,18 @@ No numeric score. No buy/do-not-buy. Five named tiers, each a **process recommen
 
 ## 4. Question Generation Logic
 
+> **Implementation status (2026-08-29, methodology v1.2):** this section is
+> implemented by `_shared/questions.ts`. Deltas from the spec below, all
+> deliberate: the hard cap is 15 with the five universal-core slots
+> reserved (not ~18); gap questions are severity-ordered with a
+> two-per-dimension cap; MEDIUM+ findings all map to templates; pack
+> questions are selected by published per-question `select` metadata
+> (claim types, finding ids, elevated, tier gates) rather than a
+> classifier score; the multi-match merge is primary 6 / secondary 3;
+> the eligibility overlay merges that pack's four `overlay_core`
+> questions; tier 0–1 reports carry gap + document-request + core only;
+> per-T4-item questions are consolidated one per dimension (cap 3).
+
 Questions are the wizard's principal product for Tiers 2–4. Composition = **A. gap-driven + B. sector pack + C. claims-specific challenges + D. universal core**, deduplicated, capped at ~12–15, ordered by severity of the gap they close.
 
 **A. Gap-driven (from the ledger).** Every T4/could-not-verify and every MEDIUM+ finding maps to a question template:

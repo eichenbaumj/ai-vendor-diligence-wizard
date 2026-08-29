@@ -26,6 +26,23 @@ inclusion_test:
     scores, caseload prioritization)?
   - Does it offer an LLM "chat with your data" interface?
 
+# Classifier-fallback terms, lowercase substring-matched against the pitch
+# (>= 2 distinct hits = a match; see _shared/sector-lexicon.ts).
+signal_lexicon:
+  - dashboard
+  - business intelligence
+  - predictive analytics
+  - risk score
+  - risk scoring
+  - data warehouse
+  - ask your data
+  - natural language query
+  - fraud analytics
+  - data visualization
+  - anomaly detection
+  - decision support
+  - forecasting
+
 scrutiny_tier: standard
 
 incumbent_landscape: >-
@@ -211,6 +228,8 @@ skepticism_triggers:
 
 diligence_questions:
   - id: data-analytics-q01
+    select:
+      base: true
     question: >-
       What decisions will these outputs feed, and can a score or flag by
       itself trigger an adverse action against a person (a benefit cut, a
@@ -224,6 +243,8 @@ diligence_questions:
       consequences.
     source_url: null
   - id: data-analytics-q02
+    select:
+      elevated: true
     question: >-
       Show the exact notice text an affected resident would receive. Can a
       caseworker explain in plain language why this specific person was
@@ -233,6 +254,8 @@ diligence_questions:
     red_flag: No notice exists because "the score is advisory."
     source_url: null
   - id: data-analytics-q03
+    select:
+      elevated: true
     question: >-
       Will you contractually commit to disclosing model logic, features, and
       weights to us, our auditors, and a court if litigated?
@@ -242,6 +265,10 @@ diligence_questions:
     red_flag: Trade-secret carve-outs over decision logic.
     source_url: https://www.acluidaho.org/en/cases/kw-v-armstrong
   - id: data-analytics-q04
+    select:
+      claim_types: [performance]
+      finding_ids: ["perf-*"]
+      weight: 4
     question: >-
       Not "accuracy": what are precision and recall at your recommended
       threshold, validated on data like ours? At our prevalence, how many
@@ -254,6 +281,10 @@ diligence_questions:
     red_flag: A single accuracy number.
     source_url: https://www.taxpayeradvocate.irs.gov/wp-content/uploads/2020/07/ARC18_Volume1_MSP_05_FalsePositiveRates.pdf
   - id: data-analytics-q05
+    select:
+      finding_ids: [automation]
+      elevated: true
+      weight: 5
     question: >-
       Where exactly is human review mandatory, as a designed control? Can
       the system technically execute an adverse action with no human
@@ -264,6 +295,8 @@ diligence_questions:
       Auto-execution is possible and "most customers add review."
     source_url: null
   - id: data-analytics-q06
+    select:
+      elevated: true
     question: >-
       What testing across race, disability, age, and language has been done,
       on which population, and will you share the results? Has any customer,
@@ -273,6 +306,8 @@ diligence_questions:
     red_flag: '"Bias-free" claims, or evasion about known inquiries.'
     source_url: https://www.pbs.org/newshour/nation/ap-report-doj-examining-ai-screening-tool-used-by-pa-child-welfare-agency
   - id: data-analytics-q07
+    select:
+      base: true
     question: >-
       When our input data is wrong, stale, or missing, does the system flag
       uncertainty or silently score anyway?
@@ -282,6 +317,8 @@ diligence_questions:
       shipped with syntax errors.
     source_url: https://www.btah.org/case-studies.html
   - id: data-analytics-q08
+    select:
+      base: true
     question: >-
       What drift monitoring and revalidation exist, who sees the results,
       and what triggers suspension of the model?
@@ -290,6 +327,8 @@ diligence_questions:
     red_flag: No revalidation after go-live.
     source_url: null
   - id: data-analytics-q09
+    select:
+      elevated: true
     question: >-
       When we discover a wrong score, what is the process to correct it,
       find everyone else affected by the same defect, and make them whole?
@@ -299,6 +338,8 @@ diligence_questions:
     red_flag: Correction handled case by case with no systematic lookback.
     source_url: null
   - id: data-analytics-q10
+    select:
+      base: true
     question: >-
       For LLM insight layers: how do you prevent hallucinated numbers, and
       does every generated claim link to the underlying query and rows?
@@ -307,6 +348,10 @@ diligence_questions:
     red_flag: Generated narratives with no provenance.
     source_url: null
   - id: data-analytics-q11
+    select:
+      claim_types: [customer]
+      finding_ids: [customers]
+      weight: 3
     question: >-
       List the government deployments of this specific model or product,
       including any that were challenged, audited, or decommissioned.
@@ -318,6 +363,9 @@ diligence_questions:
       Logos-only marketing, or omission of documented challenges.
     source_url: https://www.btah.org/case-studies.html
   - id: data-analytics-q12
+    select:
+      base: true
+      tiers: [3, 4]
     question: >-
       What warranty, indemnification, and insurance terms apply when system
       errors trigger litigation?
@@ -420,7 +468,7 @@ realistic_pricing: |-
   until questions q01 through q05 have good answers, the price of an
   adverse-action scoring system is not the issue.
 
-last_updated: "2026-08-28"
+last_updated: "2026-08-29"
 refresh_cadence: quarterly
 
 known_gaps: |-

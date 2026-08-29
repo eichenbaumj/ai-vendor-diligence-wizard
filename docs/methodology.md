@@ -1,6 +1,6 @@
 # How This Tool Evaluates AI Vendor Pitches
 
-**Methodology version 1.1** · Effective August 29, 2026 · Licensed [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)
+**Methodology version 1.2** · Effective August 29, 2026 · Licensed [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)
 
 This document describes every check the AI Vendor Diligence Wizard runs, every source it consults, how it grades evidence, and how it decides what to say. It is the complete basis for every report the tool produces. If a check is not described here, the tool does not run it. Checks marked **planned** are documented for transparency but do not run yet; no report relies on them.
 
@@ -234,7 +234,7 @@ Compliance claims come in different kinds: some can be checked against official 
 
 **What we look at.** This check only ever produces a question for your pack: whether the vendor will certify an AI governance program consistent with the NIST AI Risk Management Framework or ISO/IEC 42001, and share its risk management plan.
 **Public sources.** [NIST AI RMF](https://www.nist.gov/itl/ai-risk-management-framework); the GovAI Coalition vendor agreement template.
-**How it runs.** Added to the question pack automatically.
+**How it runs.** Added to the question pack automatically on any report at Tier 2 or above.
 **If adverse.** Not applicable; there is no adverse finding here. Refusal to make the commitment is information for your negotiation, not a flag from this tool.
 
 ### Dimension 4: Technical substance (D4)
@@ -394,7 +394,7 @@ This dimension classifies the pitched use case against your regulatory reality a
 
 ### D7.1 Use-case classification
 
-**What we look at.** Which of six use-case categories the pitch fits: call center and phone AI, document processing, eligibility and case management, public communications, staff productivity, or data analytics.
+**What we look at.** Which of nine use-case categories the pitch fits: call center and phone AI, document processing, eligibility and case management, public communications, staff productivity, data analytics, public safety and policing, tax and revenue, or permitting and licensing.
 **Public source.** The pitch text.
 **How it runs.** Automatic classification, checked against pack inclusion tests that are published in the open sector-pack files.
 **Output.** Selects the sector question pack. Each pack is versioned, dated, and public in the project repository.
@@ -419,6 +419,46 @@ This dimension classifies the pitched use case against your regulatory reality a
 **Public sources.** The registries in check D2.5.
 **How it runs.** AI-assisted web research.
 **Output.** A green flag plus a concrete next step: contact that agency.
+
+### How the question pack is assembled
+
+Every question is selected by code from published templates and the public
+sector-pack files. No AI model chooses, writes, or reorders a question. The
+pack is built in a fixed priority order, up to 15 questions, with the five
+universal questions always reserved so they can never be crowded out:
+
+1. **Gap questions.** Every unresolved finding above Low severity maps to a
+   fixed template, ordered by severity, with at most two per dimension so
+   registry findings cannot push out the claim-specific questions.
+2. **High-impact additions.** When the elevated-scrutiny escalation (D7.2)
+   fires and the eligibility pack is not already selected, the eligibility
+   pack's four core questions on human oversight, appeals, records, and the
+   cost of being wrong join the pack.
+3. **Sector questions matched to this pitch.** Sector-pack questions carry
+   published selection tags. A question fires when the pitch makes the kind
+   of claim it tests (a performance number, a named customer, a
+   certification) or when a report finding calls for it. The tags are in
+   the public pack files.
+4. **The sector's standard questions.** Each matched pack contributes its
+   default slate, up to six from the best-matched pack and three from each
+   additional one.
+5. **The governance question (D3.10)**, on any report at Tier 2 or above.
+6. **Document requests for unverified areas.** Each dimension holding
+   claims we could not corroborate, and no gap question already, gets one
+   consolidated document-request question, up to three.
+7. **The five universal questions** on data use, export, references,
+   incidents, and pricing, on every report.
+
+The pack also adapts to the verdict tier. Tier 0 and Tier 1 reports carry
+only the gap questions, document requests, and universal five, because the
+next step there is resolving identity, not vendor conversations. Tier 3
+reports omit the contract-stage questions. Tier 4 reports include them:
+contract terms, reference calls, and demo structure.
+
+Sector questions display two extra lines from the pack files: what a
+credible answer looks like, and what a weak answer looks like. The weak-
+answer line appears on screen only; the copy-for-email text does not
+include it, since that note is for you, not the vendor.
 
 ### The vendor's website
 
@@ -463,7 +503,7 @@ Every ledger row carries an evidence tier badge, T1 through T4. The tier control
 | **T1** | Verified public record | A government registry, court record, official feed, statutory inventory, or archived page, fetched by the tool and logged with a link and timestamp | Stated plainly, with the source, date, and link inside the sentence: "SAM.gov shows an active registration (checked August 28, 2026, link)." Adverse T1 items are attributed, dated, and linked; allegations are labeled as allegations; outcomes are always stated |
 | **T2** | Vendor-published | The vendor's own site, documents, or filings it authored | Always attributed: "The vendor states..." Never repeated as established fact |
 | **T3** | Third-party claim | News coverage, analyst notes, conference materials | Attributed with outlet and date. Press-release wire copy is flagged as self-published and treated like T2, because vendors write it themselves |
-| **T4** | Unverifiable | A claim we searched for and could not corroborate anywhere in T1 through T3 | Only the absence template: "We searched [named sources] on [date] and did not find X. This is not proof the claim is false." Every T4 item automatically generates a question for the vendor |
+| **T4** | Unverifiable | A claim we searched for and could not corroborate anywhere in T1 through T3 | Only the absence template: "We searched [named sources] on [date] and did not find X. This is not proof the claim is false." Every unverified area generates or joins a question for the vendor, consolidated by dimension |
 
 Rules that connect the tiers:
 
@@ -592,7 +632,7 @@ The tool's output language is constrained by rules that are enforced by an autom
 
 **Words the tool never uses about itself:** comprehensive, unbiased, guaranteed. This document is the full statement of what the tool does; the tool claims nothing beyond it.
 
-**The absence template.** When a claim cannot be corroborated, the only permitted framing is: "We searched [named sources] on [date] and did not find a record matching [name]. Absence from these sources is not proof the claim is false." Every such item automatically generates a question for the vendor instead of a conclusion.
+**The absence template.** When a claim cannot be corroborated, the only permitted framing is: "We searched [named sources] on [date] and did not find a record matching [name]. Absence from these sources is not proof the claim is false." Every such area generates or joins a question for the vendor instead of a conclusion, consolidated by dimension.
 
 **The asymmetry principle.** Positive verification is stated affirmatively on modest evidence. Negative implication requires official records with the source, date, and link inside the sentence. Absence is always framed as absence.
 
@@ -622,7 +662,7 @@ This process is designed to align with the U.S. Chamber of Commerce [Principles 
 
 ## 9. Versioning
 
-- Every report records the **methodology version** that produced it (this document is version 1.0) and the **sector pack release** it drew questions from.
+- Every report records the **methodology version** that produced it (this document is version 1.2) and the **sector pack release** it drew questions from.
 - Changes to checks, weights, tier criteria, or language rules happen only through a new version of this document, recorded in the repository's public changelog with the date and the expected effect on verdicts.
 - Material changes (a new check, a changed weight, a changed tier rule) are announced in the repository before they take effect.
 - Sector packs carry their own dates and refresh cadences, printed in every report that uses them.

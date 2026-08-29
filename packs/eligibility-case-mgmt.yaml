@@ -34,6 +34,25 @@ inclusion_test:
     Does any other pack's pitch describe outputs that could deny, reduce,
     terminate, or flag a person's benefits? (This is the overlay trigger.)
 
+# Classifier-fallback terms, lowercase substring-matched against the pitch
+# (>= 2 distinct hits = a match; see _shared/sector-lexicon.ts).
+signal_lexicon:
+  - eligibility
+  - case management
+  - benefits determination
+  - snap
+  - medicaid
+  - tanf
+  - caseworker
+  - adjudication
+  - recertification
+  - program integrity
+  - fraud detection
+  - improper payments
+  - public benefits
+  - benefits application
+  - unemployment claims
+
 scrutiny_tier: elevated
 
 incumbent_landscape: >-
@@ -280,6 +299,9 @@ skepticism_triggers:
 
 diligence_questions:
   - id: eligibility-case-mgmt-q01
+    select:
+      base: true
+      overlay_core: true
     question: >-
       Does your system ever deny, reduce, terminate, or flag-for-fraud on its
       own, or does a named human make every adverse decision?
@@ -291,6 +313,9 @@ diligence_questions:
       no acceptable middle answer.
     source_url: null
   - id: eligibility-case-mgmt-q02
+    select:
+      base: true
+      overlay_core: true
     question: >-
       Show the exact notice a person receives after an AI-influenced denial.
       Does it state the specific factual reasons and the regulation relied
@@ -303,6 +328,9 @@ diligence_questions:
       "explanation."
     source_url: null
   - id: eligibility-case-mgmt-q03
+    select:
+      base: true
+      overlay_core: true
     question: >-
       On appeal, can you produce the complete record (inputs, extractions,
       model version, what the human saw and did), and will you commit in
@@ -313,6 +341,10 @@ diligence_questions:
     red_flag: Any trade-secret carve-out over decision logic.
     source_url: https://www.acluidaho.org/en/cases/kw-v-armstrong
   - id: eligibility-case-mgmt-q04
+    select:
+      claim_types: [performance]
+      finding_ids: ["perf-*"]
+      weight: 4
     question: >-
       What is your measured accuracy on OUR state's rules, evaluated against
       our policy manual and historically adjudicated cases, and what is the
@@ -324,6 +356,9 @@ diligence_questions:
       A generic accuracy number from another state or from a demo corpus.
     source_url: null
   - id: eligibility-case-mgmt-q05
+    select:
+      elevated: true
+      weight: 3
     question: >-
       Break error rates out by language, disability status, age, and, where
       lawful, race and ethnicity. What disparate-performance testing exists,
@@ -333,6 +368,8 @@ diligence_questions:
     red_flag: '"Our AI is unbiased" with no data behind it.'
     source_url: null
   - id: eligibility-case-mgmt-q06
+    select:
+      elevated: true
     question: What happens when the model is wrong but confident?
     good_answer: >-
       A confidence-threshold design, the share of items routed to humans, and
@@ -342,6 +379,8 @@ diligence_questions:
       that reach residents.
     source_url: null
   - id: eligibility-case-mgmt-q07
+    select:
+      base: true
     question: >-
       Who updates the system when our state plan, waivers, or verification
       rules change, how fast, and how is the change tested?
@@ -351,6 +390,8 @@ diligence_questions:
       No update pipeline. NYC's chatbot stayed wrong for roughly two years.
     source_url: https://themarkup.org/artificial-intelligence/2024/03/29/nycs-ai-chatbot-tells-businesses-to-break-the-law
   - id: eligibility-case-mgmt-q08
+    select:
+      base: true
     question: >-
       Where does our data go? Is applicant data used to train models or
       shared with third parties? Which of these do you hold: GovRAMP or
@@ -363,6 +404,8 @@ diligence_questions:
     red_flag: Verbal assurances, or "compliant" phrasing.
     source_url: https://marketplace.fedramp.gov/
   - id: eligibility-case-mgmt-q09
+    select:
+      elevated: true
     question: >-
       Does this require an APD amendment or CMS/FNS sign-off, and have you
       been through that process in other states?
@@ -374,6 +417,10 @@ diligence_questions:
       this space.
     source_url: null
   - id: eligibility-case-mgmt-q10
+    select:
+      claim_types: [customer]
+      finding_ids: [customers]
+      weight: 3
     question: >-
       Name three comparable agencies in production, not pilots, that we can
       call. What independent evaluations of your product exist?
@@ -385,6 +432,10 @@ diligence_questions:
       Pilots presented as production, or logos with no callable contact.
     source_url: https://codeforamerica.org/explore/government-ai-landscape-assessment/
   - id: eligibility-case-mgmt-q11
+    select:
+      finding_ids: [automation]
+      elevated: true
+      weight: 2
     question: >-
       What is the caseworker's realistic review burden: items per worker per
       day, and your own override-rate data?
@@ -396,6 +447,9 @@ diligence_questions:
       Near-zero overrides means rubber-stamping.
     source_url: null
   - id: eligibility-case-mgmt-q12
+    select:
+      base: true
+      overlay_core: true
     question: >-
       What is your rollback plan? If we find a systematic error, how fast can
       we identify every affected case, notify people, and reinstate
@@ -406,6 +460,9 @@ diligence_questions:
     red_flag: No answer here means no deployment.
     source_url: null
   - id: eligibility-case-mgmt-q13
+    select:
+      elevated: true
+      tiers: [3, 4]
     question: >-
       Who bears liability for wrongful denials caused by system error, and
       will you accept indemnification and audit-rights clauses?
@@ -573,7 +630,7 @@ realistic_pricing: |-
   diligence questions q01 through q03 pass. For the document-automation
   slice, use the document-processing pack's anchors.
 
-last_updated: "2026-08-28"
+last_updated: "2026-08-29"
 refresh_cadence: monthly
 
 known_gaps: |-

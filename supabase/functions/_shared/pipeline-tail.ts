@@ -13,11 +13,17 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   type AdvFinding,
   type Citation,
+  DecisionImpact,
   PitchExtract,
   type RegistryCheck,
   Report,
   type SectorContext,
 } from "./schemas.ts";
+import {
+  buildLexiconCorpus,
+  eligibilityLexiconHit,
+  lexiconFallbackPackIds,
+} from "./sector-lexicon.ts";
 import { computeTier } from "./tier.ts";
 import { assemble } from "./assemble.ts";
 import { lintObject, lintText, tidyProse } from "./lint.ts";
@@ -40,7 +46,7 @@ import { STATE_ITEMS } from "./state-items.ts";
 import type { S5UserInput } from "./prompts/s5-structure.ts";
 import * as registry from "./registry/index.ts";
 
-export const METHODOLOGY_VERSION = "1.1";
+export const METHODOLOGY_VERSION = "1.2";
 
 const TAIL_TIMEOUTS = {
   registryPerEndpoint: 8_000,
@@ -94,6 +100,11 @@ export interface TailState {
   siteClaimQuotes: string[];
   /* Marks the report as a deep-mode result in the usage jsonb. */
   deep?: boolean;
+  /* A deep check was requested but the deep-research handoff failed, so
+     this run continued as a standard check. Recorded in the usage jsonb
+     and surfaced as an honesty-panel row — a degraded deep run must never
+     pass silently (the cook-time study caught one in the wild). */
+  deepHandoffFailed?: boolean;
 }
 
 export async function runPipelineTail(
@@ -209,24 +220,73 @@ export async function runPipelineTail(
     deps.stageUsage.s4 = res.usage;
     markStage("s4_classify");
     const parsed = res.ok
-      ? parseStructured<{ pack_ids: string[]; overlay: boolean; overlay_reason: string | null }>(res)
+      ? parseStructured<{
+          pack_ids: string[];
+          overlay: boolean;
+          overlay_reason: string | null;
+          decision_impact?: string;
+        }>(res)
       : null;
     if (parsed) {
       const validIds = parsed.pack_ids.filter((id) => PACKS[id]).slice(0, 3);
       const elevatedPack = validIds.some((id) => PACKS[id]?.scrutiny_tier === "elevated");
+      const impact = DecisionImpact.safeParse(parsed.decision_impact);
       sector = {
         ...sector,
         pack_ids: validIds as SectorContext["pack_ids"],
-        elevated: elevatedPack || parsed.overlay,
+        /* A determinative read adds scrutiny even if the overlay boolean
+           did not fire; nothing here can remove it. */
+        elevated:
+          elevatedPack || parsed.overlay || impact.data === "determinative",
         overlay_reason: parsed.overlay ? (parsed.overlay_reason ?? "").slice(0, 300) || null : null,
+        ...(impact.success ? { decision_impact: impact.data } : {}),
       };
-      if (validIds.length > 0) {
-        await emit({
-          stage: "packs",
-          kind: "micro_finding",
-          label: `Category: ${validIds.map((id) => PACKS[id].pack_name).join(", ")}${sector.elevated ? " (elevated scrutiny)" : ""}`,
-        });
+    }
+    /* Lexicon fallback: a failed or empty model classification must not
+       erase sector tailoring (a 12-second Haiku timeout used to do exactly
+       that). Code matches each pack's signal_lexicon and takes the top
+       matches. */
+    if (sector.pack_ids.length === 0) {
+      const corpus = buildLexiconCorpus(
+        extract.use_case_description,
+        extract.claims.map((c) => c.quote),
+      );
+      const fallbackIds = lexiconFallbackPackIds(PACKS, corpus).filter(
+        (id): id is SectorContext["pack_ids"][number] => Boolean(PACKS[id]),
+      );
+      if (fallbackIds.length > 0) {
+        sector = {
+          ...sector,
+          pack_ids: fallbackIds as SectorContext["pack_ids"],
+          elevated:
+            sector.elevated ||
+            fallbackIds.some((id) => PACKS[id]?.scrutiny_tier === "elevated"),
+        };
       }
+    }
+    /* Eligibility safety net, applied regardless of classifier health:
+       an eligibility-lexicon hit can only ADD scrutiny. */
+    if (!sector.elevated) {
+      const corpus = buildLexiconCorpus(
+        extract.use_case_description,
+        extract.claims.map((c) => c.quote),
+      );
+      if (eligibilityLexiconHit(PACKS, corpus)) {
+        sector = {
+          ...sector,
+          elevated: true,
+          overlay_reason:
+            sector.overlay_reason ??
+            "Automatic pattern check: the product description matches eligibility and benefits decision vocabulary.",
+        };
+      }
+    }
+    if (sector.pack_ids.length > 0) {
+      await emit({
+        stage: "packs",
+        kind: "micro_finding",
+        label: `Category: ${sector.pack_ids.map((id) => PACKS[id].pack_name).join(", ")}${sector.elevated ? " (elevated scrutiny)" : ""}`,
+      });
     }
   }
 
@@ -347,6 +407,17 @@ export async function runPipelineTail(
     },
   };
 
+  if (state.deepHandoffFailed) {
+    report.honesty_panel.push({
+      check_id: "deep-mode",
+      label: "Deep check",
+      status: "could_not_check",
+      reason:
+        "The deep engine did not respond, so this ran as a standard check. Re-run to try deep mode again.",
+      group: "unavailable",
+    });
+  }
+
   /* --------------------------------------------- S5.5 adversarial review */
   const needsReview =
     decision.tier <= 2 ||
@@ -411,6 +482,24 @@ export async function runPipelineTail(
     if (lintText(report.verdict.summary).some((v) => v.kind === "banned")) {
       report.verdict.summary = defaultSummary(report.verdict.tier);
     }
+    /* Questions can quote attacker-authored claim text (perf-* templates).
+       A banned word in the question text drops the question; in the why or
+       red_flag it falls back to a neutral template. Core questions carry no
+       quotes and are never dropped. */
+    report.questions = report.questions.flatMap((q) => {
+      if (lintText(q.text).some((v) => v.kind === "banned")) return [];
+      const cleaned = { ...q };
+      if (lintText(cleaned.why).some((v) => v.kind === "banned")) {
+        cleaned.why = "This question closes a gap the report flagged above.";
+      }
+      if (
+        cleaned.red_flag &&
+        lintText(cleaned.red_flag).some((v) => v.kind === "banned")
+      ) {
+        delete cleaned.red_flag;
+      }
+      return [cleaned];
+    });
   }
 
   const validated = Report.safeParse(report);
@@ -448,6 +537,9 @@ export async function runPipelineTail(
         stages: deps.stageUsage,
         stages_ms: deps.stageMs,
         ...(state.deep ? { deep: true } : {}),
+        ...(state.deepHandoffFailed
+          ? { deep_requested: true, deep_handoff_failed: true }
+          : {}),
       },
     })
     .eq("id", evaluationId);

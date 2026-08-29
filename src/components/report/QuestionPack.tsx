@@ -69,6 +69,11 @@ function QuestionCard({ q, index }: { q: ReportQuestion; index: number }) {
       <p className="mt-2 pl-8 text-[13px] leading-relaxed text-brand-charcoal-soft">
         Why ask: {q.why}
       </p>
+      {q.red_flag ? (
+        <p className="mt-1 pl-8 text-[13px] leading-relaxed text-brand-steel">
+          A weak answer looks like: {q.red_flag}
+        </p>
+      ) : null}
     </li>
   );
 }

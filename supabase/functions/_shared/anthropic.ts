@@ -104,7 +104,7 @@ export const EXTRACT_SCHEMA = {
 export const CLASSIFY_SCHEMA = {
   type: "object",
   additionalProperties: false,
-  required: ["pack_ids", "overlay", "overlay_reason"],
+  required: ["pack_ids", "overlay", "overlay_reason", "decision_impact"],
   properties: {
     pack_ids: {
       type: "array",
@@ -117,11 +117,21 @@ export const CLASSIFY_SCHEMA = {
           "public-comms",
           "staff-productivity",
           "data-analytics",
+          "public-safety-policing",
+          "tax-revenue",
+          "permitting-licensing",
         ],
       },
     },
     overlay: { type: "boolean" },
     overlay_reason: { type: ["string", "null"] },
+    /* How directly the product touches decisions about residents. Code maps
+       this to question selection only; it can add scrutiny, never remove
+       it (the overlay boolean stays the floor). */
+    decision_impact: {
+      type: "string",
+      enum: ["informational", "advisory", "determinative"],
+    },
   },
 } as const;
 

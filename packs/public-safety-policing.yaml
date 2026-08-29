@@ -1,0 +1,876 @@
+# Sector pack: public-safety-policing (v1 DRAFT). ELEVATED SCRUTINY.
+# Authoring rules: packs/pack-spec.md. This draft includes two fields that
+# are new to the schema: signal_lexicon (string list for the code-side
+# classifier fallback) and a per-question select block (base / claim_types /
+# finding_ids / elevated / tiers / weight).
+# Lint note: the banned-language list includes the standalone word
+# "criminal", so this pack refers to the FBI policy only by its acronym
+# ("CJIS Security Policy") and never expands it. See known_gaps.
+pack_id: public-safety-policing
+pack_name: Public Safety & Policing AI
+
+definition: >-
+  AI sold to police departments, sheriffs' offices, prosecutors, courts,
+  corrections agencies, and emergency management: gunshot detection, facial
+  recognition and other biometric identification, automated license plate
+  readers, predictive policing and crime analytics, real-time crime centers
+  and video analytics, report-drafting assistants, and risk scores used in
+  bail, sentencing, supervision, or custody decisions. Outputs here can lead
+  to stops, arrests, charges, and custody decisions, so every claim gets the
+  strictest evidence bar. Not this pack alone: 911 phone automation (see
+  call-center), records digitization that never feeds enforcement decisions
+  (see document-processing), and population-level dashboards with no person
+  or place targeting (see data-analytics).
+
+inclusion_test:
+  - >-
+    Does the pitch offer detection, identification, prediction, scoring, or
+    monitoring aimed at people or places for policing, prosecution, courts,
+    corrections, or community supervision (gunshot detection, face or plate
+    recognition, predictive policing, risk scores)?
+  - >-
+    Does it offer to draft, summarize, or auto-fill police reports, warrant
+    applications, incident narratives, or other records that could enter a
+    court case?
+  - >-
+    Does it sell cameras, sensors, or analytics whose data is shared across
+    agencies or through a vendor-operated network?
+  - >-
+    Does it offer real-time crime center, video analytics, or emergency-call
+    triage capability to a public safety agency?
+  - >-
+    Does any other pack's pitch describe outputs that could feed decisions
+    about stops, arrests, charges, bail, sentencing, supervision, or custody?
+    (This is the overlay trigger.)
+
+scrutiny_tier: elevated
+
+signal_lexicon:
+  - gunshot detection
+  - shotspotter
+  - license plate reader
+  - alpr
+  - facial recognition
+  - biometric identification
+  - predictive policing
+  - crime analytics
+  - real-time crime center
+  - body-worn camera
+  - risk score
+  - pretrial assessment
+  - report writing
+  - video analytics
+  - computer-aided dispatch
+
+incumbent_landscape: >-
+  Platforms: Axon dominates body cameras, digital evidence, and conducted
+  energy weapons, and now sells the Draft One report-drafting assistant and
+  real-time crime center tooling (it acquired Fusus in early 2024; terms were
+  not disclosed at announcement, and Axon's annual filing later put the price
+  near $241 million:
+  https://www.prnewswire.com/news-releases/axon-accelerates-real-time-operations-solution-with-strategic-acquisition-of-fusus-302050184.html).
+  Motorola Solutions sells dispatch, records, video, and the Vigilant license
+  plate ecosystem. NEC and Idemia supply large-scale biometric matching.
+  Palantir sells investigative data integration. Specialists: SoundThinking
+  sells ShotSpotter gunshot detection (about 250 agencies, vendor-reported)
+  and absorbed staff and patents from Geolitica, the PredPol maker that
+  ceased operations at the end of 2023 (Techdirt, Oct 2, 2023:
+  https://www.techdirt.com/2023/10/02/shotspotter-looking-to-compound-bad-cop-tech-ideas-by-acquiring-predictive-policing-software-company/).
+  Flock Safety sells subscription license plate cameras with a shared
+  national search network; one documented 2025 search reached more than
+  83,000 cameras across state lines (404 Media, May 29, 2025). Clearview AI
+  sells face search built on scraped web images and operates under 2022
+  settlement restrictions from Illinois BIPA litigation. DataWorks Plus
+  supplies the face recognition interface used by Michigan agencies in the
+  Detroit wrongful-arrest litigation. equivant (formerly Northpointe) sells
+  the COMPAS assessment contested in State v. Loomis; the
+  nonprofit-supported PSA is the main alternative pretrial instrument
+  (https://advancingpretrial.org/psa/about/). Context that matters for
+  buyers: flagship products in this market have been retired by their own
+  government customers after oversight review. Chicago ended ShotSpotter in
+  September 2024 and decommissioned its person-based risk scores in 2019
+  after an OIG advisory; Santa Cruz banned predictive policing in 2020;
+  Pasco County ended its intelligence-led policing program in a 2024
+  settlement. A vendor's appearance here is a market-map fact and never a
+  safety signal. AI also arrives inside incumbent bundles (report drafting
+  inside the body-camera contract, analytics inside the camera
+  subscription), so a routine renewal can carry a new AI system that never
+  went through procurement review.
+
+established_vendors:
+  - name: Axon
+    tier: platform
+    one_liner: >-
+      Body cameras, digital evidence, conducted energy weapons, and the
+      Draft One report-drafting assistant; acquired real-time crime center
+      vendor Fusus in early 2024. EFF documented agency use of Draft One
+      in July 2025.
+    gov_evidence_url: https://www.eff.org/deeplinks/2025/07/axons-draft-one-designed-defy-transparency
+  - name: Motorola Solutions
+    tier: platform
+    one_liner: >-
+      Dispatch, records management, video, and the Vigilant license plate
+      reader ecosystem, sold across state and local government.
+    gov_evidence_url: null
+  - name: NEC
+    tier: platform
+    one_liner: >-
+      Large-scale biometric matching vendor and long-standing participant in
+      NIST face recognition evaluations.
+    gov_evidence_url: null
+  - name: Idemia
+    tier: platform
+    one_liner: >-
+      Biometrics supplier to state identification and driver-license
+      systems; NIST evaluation participant.
+    gov_evidence_url: null
+  - name: SoundThinking
+    tier: specialist
+    one_liner: >-
+      ShotSpotter gunshot detection (about 250 agencies, vendor-reported).
+      Chicago's OIG reviewed the deployment in 2021 and the city ended the
+      contract in September 2024; the company also acquired Geolitica assets
+      in 2023.
+    gov_evidence_url: https://igchicago.org/2021/08/24/oig-finds-that-shotspotter-alerts-rarely-lead-to-evidence-of-a-gun-related-crime-and-that-presence-of-the-technology-changes-police-behavior/
+  - name: Flock Safety
+    tier: specialist
+    one_liner: >-
+      Subscription license plate reader networks with cross-agency search;
+      the Norfolk, VA deployment is the subject of active Fourth Amendment
+      litigation.
+    gov_evidence_url: https://www.courthousenews.com/judge-holds-norfolks-license-plate-reader-use-constitutional/
+  - name: Clearview AI
+    tier: specialist
+    one_liner: >-
+      Face search built on billions of scraped web images, sold to law
+      enforcement; operates under the May 2022 Illinois BIPA settlement's
+      nationwide restrictions.
+    gov_evidence_url: https://www.aclu-il.org/cases/aclu-v-clearview-ai/
+  - name: DataWorks Plus
+    tier: specialist
+    one_liner: >-
+      Face recognition interface used by Michigan State Police and Detroit;
+      the Williams v. City of Detroit wrongful-arrest case ran through this
+      system.
+    gov_evidence_url: https://clearinghouse.net/case/44401/
+  - name: equivant
+    tier: specialist
+    one_liner: >-
+      Court, pretrial, and corrections software; its COMPAS assessment was
+      the tool at issue in State v. Loomis (2016) and the 2016 ProPublica
+      analysis, both of which the vendor has contested.
+    gov_evidence_url: https://www.wicourts.gov/sc/opinion/DisplayDocument.pdf?content=pdf&seqNo=171690
+
+failure_modes:
+  - title: Alerts that rarely produce evidence (Chicago ShotSpotter)
+    description: >-
+      Chicago's Office of Inspector General analyzed 50,176 confirmed
+      ShotSpotter alerts (Jan 2020 to May 2021) and found 9.1% of police
+      responses produced evidence of a gun-related offense. The OIG also
+      found the technology changed how officers interacted with residents,
+      including stops justified by aggregate alert frequency. The city's
+      contract expired on September 22, 2024, and the department stopped
+      using the system the next morning.
+    named_incident: >-
+      Chicago OIG ShotSpotter analysis (Aug 24, 2021); contract expired
+      Sept 22, 2024
+    source_url: https://igchicago.org/2021/08/24/oig-finds-that-shotspotter-alerts-rarely-lead-to-evidence-of-a-gun-related-crime-and-that-presence-of-the-technology-changes-police-behavior/
+  - title: Predictions that almost never matched crimes (Geolitica, Plainfield NJ)
+    description: >-
+      The Markup analyzed 23,631 Geolitica (PredPol) predictions for
+      Plainfield, NJ in 2018: 0.6% of robbery and aggravated assault
+      predictions and 0.1% of burglary predictions matched a crime later
+      reported in the predicted window. The department stopped using it, and
+      Geolitica ceased operations at the end of 2023.
+    named_incident: >-
+      The Markup analysis of Geolitica predictions in Plainfield, NJ (Oct 2,
+      2023)
+    source_url: https://themarkup.org/prediction-bias/2023/10/02/predictive-policing-software-terrible-at-predicting-crimes
+  - title: Person-based risk scores decommissioned after oversight (Chicago SSL)
+    description: >-
+      Chicago's Strategic Subject List and successor model scored more than
+      300,000 people, disproportionately people of color, for likelihood of
+      involvement in violence. The OIG's January 2020 advisory documented
+      unreliable scores, poorly trained personnel, weak access controls, and
+      consequences attached to arrests that never led to convictions. CPD
+      decommissioned the program on November 1, 2019.
+    named_incident: >-
+      Chicago OIG advisory on CPD predictive risk models (Jan 23, 2020)
+    source_url: https://igchicago.org/2020/01/23/advisory-concerning-the-chicago-police-departments-predictive-risk-models/
+  - title: Wrongful arrest from a face recognition lead (Williams v. Detroit)
+    description: >-
+      Robert Williams was arrested after a face recognition search wrongly
+      identified him; department policy already called matches investigative
+      leads. The June 28, 2024 settlement paid $300,000 and bound Detroit to
+      the strictest big-city rules in the country: no arrest and no photo
+      lineup from a face match alone, plus officer training on the
+      technology's risks and an audit of every case since 2017 in which a
+      face search helped obtain an arrest warrant.
+    named_incident: >-
+      Williams v. City of Detroit settlement (June 28, 2024)
+    source_url: https://www.aclu.org/press-releases/civil-rights-advocates-achieve-the-nations-strongest-police-department-policy-on-facial-recognition-technology
+  - title: Biometric data collected without consent (Clearview AI, Illinois BIPA)
+    description: >-
+      Clearview AI built its face search on scraped web images without
+      consent. The May 2022 settlement of ACLU v. Clearview AI under the
+      Illinois Biometric Information Privacy Act permanently barred sales of
+      the faceprint database to most private entities nationwide and
+      restricted access in Illinois for five years.
+    named_incident: ACLU v. Clearview AI settlement (May 2022)
+    source_url: https://www.aclu-il.org/cases/aclu-v-clearview-ai/
+  - title: Risk scores at sentencing with contested validity (COMPAS, Loomis)
+    description: >-
+      ProPublica's May 2016 analysis of COMPAS scores in Broward County, FL
+      found Black defendants who did not reoffend were labeled higher risk
+      at nearly twice the rate of white defendants; the vendor disputed the
+      methodology. Weeks later, the Wisconsin Supreme Court in State v.
+      Loomis (July 13, 2016) allowed sentencing use only with written
+      cautions, including that the score may inform a sentence and may never
+      determine it, and noted no Wisconsin cross-validation study existed.
+    named_incident: >-
+      ProPublica COMPAS analysis (May 23, 2016) and State v. Loomis, 2016 WI
+      68
+    source_url: https://www.propublica.org/article/machine-bias-risk-assessments-in-criminal-sentencing
+  - title: AI-drafted reports without an audit trail (Axon Draft One)
+    description: >-
+      EFF's July 2025 review found Draft One does not retain the original
+      AI-generated draft, by design, so no one can later show which parts of
+      a report the model wrote. In September 2024, King County, WA
+      prosecutors told police they would not accept AI-assisted narratives,
+      citing an example report that referenced an officer who was not at
+      the scene (memo:
+      https://pceinc.org/wp-content/uploads/2025/01/20240920-Email-to-Police-Chiefs-re-Axon-Draft-One-King-County-Prosecuting-Attorney-Dan-Clark.pdf).
+    named_incident: >-
+      EFF Draft One investigation (July 10, 2025); King County prosecutor
+      memo (Sept 2024)
+    source_url: https://www.eff.org/deeplinks/2025/07/axons-draft-one-designed-defy-transparency
+  - title: Shared camera networks searched beyond the local purpose (Flock)
+    description: >-
+      Two 404 Media reports in May 2025 documented the reach of shared
+      camera networks: audit data from Danville, IL showed more than 4,000
+      lookups tied to immigration purposes performed for federal authorities
+      through local accounts, and a Texas officer searched more than 83,000
+      cameras nationwide for a woman who had an abortion
+      (https://www.404media.co/a-texas-cop-searched-license-plate-cameras-nationwide-for-a-woman-who-got-an-abortion/).
+      The network effect means one town's cameras answer other
+      jurisdictions' queries.
+    named_incident: >-
+      404 Media reporting on nationwide Flock lookups (May 2025)
+    source_url: https://www.404media.co/ice-taps-into-nationwide-ai-enabled-camera-network-data-shows/
+  - title: A prosecution built on sensor evidence that collapsed (Michael Williams)
+    description: >-
+      Michael Williams spent nearly a year in Cook County jail on a 2020
+      murder charge that rested on a ShotSpotter alert. Prosecutors
+      dismissed the case rather than defend the evidence, telling the court
+      they had insufficient evidence to proceed. Chicago settled his federal
+      suit for $500,000 in March 2026.
+    named_incident: >-
+      Williams v. City of Chicago; $500K settlement (Mar 2026)
+    source_url: https://www.macarthurjustice.org/case/williams-v-city-of-chicago/
+  - title: Targeting programs ended by settlement (Pasco County ILP)
+    description: >-
+      Pasco County, FL's intelligence-led policing program generated
+      repeated home visits and code-enforcement pressure on people its
+      models flagged. In a December 2024 settlement of
+      an Institute for Justice suit, the sheriff's office acknowledged the
+      program interfered with residents' First, Fourth, and Fourteenth
+      Amendment rights, paid $105,000, and agreed never to restart it.
+    named_incident: >-
+      Pasco County intelligence-led policing settlement (Dec 2024)
+    source_url: https://ij.org/press-release/case-closed-pasco-sheriff-admits-predictive-policing-program-violated-constitution/
+
+skepticism_triggers:
+  - claim_pattern: >-
+      "Detects over 90% of gunfire" or similar detection-accuracy claims
+    threshold: >-
+      Any detection-accuracy claim offered without a field evidence rate
+      from an independent review
+    why: >-
+      Detection accuracy and street outcomes are different numbers.
+      Chicago's OIG found 9.1% of police responses to alerts produced
+      evidence of a gun-related offense.
+    source_url: https://igchicago.org/2021/08/24/oig-finds-that-shotspotter-alerts-rarely-lead-to-evidence-of-a-gun-related-crime-and-that-presence-of-the-technology-changes-police-behavior/
+  - claim_pattern: '"Reduces crime by X%" or "prevents crime before it happens"'
+    threshold: Any percentage crime-reduction claim
+    why: >-
+      Independent evaluations in this category have repeatedly failed to
+      find the claimed effects. In Plainfield, NJ, prediction match rates
+      were 0.6% and 0.1%.
+    source_url: https://themarkup.org/prediction-bias/2023/10/02/predictive-policing-software-terrible-at-predicting-crimes
+  - claim_pattern: '"CJIS certified"'
+    threshold: Any use of the phrase as a credential
+    why: >-
+      The FBI does not certify vendors, and state vendor programs state
+      plainly that no certification is conferred. The honest phrasing
+      describes alignment with the CJIS Security Policy plus named state
+      audits and signed addenda.
+    source_url: https://gbi.georgia.gov/services/cjis-vendor-compliance-program
+  - claim_pattern: '"99%+ accurate" face or biometric matching'
+    threshold: >-
+      Any accuracy claim without NIST FRTE results under the vendor's own
+      name, at an operational gallery size, with demographic breakouts
+    why: >-
+      NIST's 2019 study of 189 algorithms found false positive rates 10 to
+      100 times higher for some demographic groups, and the gap varies
+      widely by vendor.
+    source_url: https://www.nist.gov/news-events/news/2019/12/nist-study-evaluates-effects-race-age-sex-face-recognition-software
+  - claim_pattern: '"It is only an investigative lead"'
+    threshold: >-
+      Lead-only framing paired with real-time alerts pushed to patrol
+      officers or booking workflows
+    why: >-
+      The documented wrongful arrests happened in agencies whose policies
+      already said lead-only. Ask what product controls prevent an arrest
+      from a match alone; Detroit's settlement shows what enforceable
+      controls look like.
+    source_url: https://www.aclu.org/press-releases/civil-rights-advocates-achieve-the-nations-strongest-police-department-policy-on-facial-recognition-technology
+  - claim_pattern: '"Officers save X hours per report"'
+    threshold: >-
+      Time-savings claims for report drafting without draft retention,
+      edit history, and per-report disclosure
+    why: >-
+      Time saved is only measurable against the review burden. King County,
+      WA prosecutors declined AI-assisted narratives in 2024 over accuracy
+      concerns.
+    source_url: https://www.eff.org/deeplinks/2024/10/prosecutors-washington-state-warn-police-dont-use-gen-ai-write-reports
+  - claim_pattern: '"Your data always belongs to you"'
+    threshold: >-
+      Data-ownership claims from a vendor operating a cross-agency search
+      network
+    why: >-
+      Ownership language says little about who can search the data. Audit
+      logs from one Illinois town showed more than 4,000 outside lookups
+      tied to immigration purposes in under a year.
+    source_url: https://www.404media.co/ice-taps-into-nationwide-ai-enabled-camera-network-data-shows/
+  - claim_pattern: '"Trusted by thousands of agencies"'
+    threshold: Customer counts offered in place of named, callable references
+    why: >-
+      Adoption breadth has not predicted survival or performance in this
+      market. PredPol's maker had customers across the country and ceased
+      operations at the end of 2023.
+    source_url: https://themarkup.org/prediction-bias/2023/10/02/predictive-policing-software-terrible-at-predicting-crimes
+  - claim_pattern: Free pilot, grant-financed trial, or hardware at no cost
+    threshold: >-
+      Any free or grant-financed pilot with auto-renewal terms or
+      data-sharing conditions
+    why: >-
+      The subscription and network model makes departure costly later. Get
+      exit terms, deletion certification, and data-sharing defaults in
+      writing before the pilot starts.
+    source_url: null
+  - claim_pattern: '"Deploy in weeks"'
+    threshold: >-
+      Deployment promises under 90 days in a jurisdiction with a
+      surveillance-oversight ordinance or council-approval requirement
+    why: >-
+      Community approval processes and CJIS agreements take longer than
+      that. A speed pitch can mean the approval step is being skipped.
+    source_url: null
+
+diligence_questions:
+  - id: public-safety-policing-q01
+    question: >-
+      Can any alert, match, score, or output from your system, on its own,
+      be the reason for a stop, an arrest, or a charge? Show us the product
+      screens and the written policy language that require independent
+      corroboration first.
+    good_answer: >-
+      A clear statement that every output is an investigative lead requiring
+      independent corroboration, with product screens and model policy
+      language that enforce it. Detroit's settlement terms (no arrest from a
+      face match alone, and no photo lineup from a face match without
+      independent evidence linking the suspect to the crime) are the
+      reference standard.
+    red_flag: >-
+      Hedging, "configurable," or field examples where an alert alone drove
+      enforcement action.
+    source_url: https://www.aclu.org/press-releases/civil-rights-advocates-achieve-the-nations-strongest-police-department-policy-on-facial-recognition-technology
+    select:
+      base: true
+      weight: 10
+  - id: public-safety-policing-q02
+    question: >-
+      What independent testing of your system exists under field conditions,
+      and what are the denominators? For face or biometric systems: which
+      NIST FRTE submissions are yours, at what gallery size, and with what
+      demographic breakouts?
+    good_answer: >-
+      Named independent evaluations with defined denominators, and NIST FRTE
+      entries under the company's own name at operational gallery sizes.
+    red_flag: >-
+      Lab or marketing accuracy numbers with no field validation. Chicago's
+      OIG found 9.1% of responses to gunshot alerts produced evidence of a
+      gun-related offense.
+    source_url: https://pages.nist.gov/frvt/html/frvt11.html
+    select:
+      base: true
+      claim_types: [performance]
+      finding_ids: ["perf-*"]
+      weight: 9
+  - id: public-safety-policing-q03
+    question: >-
+      If your output ends up in a court case, exactly what can you produce
+      for discovery: raw sensor data, model version, confidence values,
+      human review steps, and change logs? Will you commit in writing never
+      to assert trade secrets against a defense subpoena or court order?
+    good_answer: >-
+      Yes in the contract, plus a named case where the materials were
+      actually produced.
+    red_flag: >-
+      Trade-secret carve-outs over evidence. In Chicago, prosecutors
+      dismissed a murder case rather than defend the sensor evidence in
+      court, and the city later paid $500,000 (Williams v. City of
+      Chicago).
+    source_url: https://www.macarthurjustice.org/case/williams-v-city-of-chicago/
+    select:
+      base: true
+      elevated: true
+      weight: 9
+  - id: public-safety-policing-q04
+    question: >-
+      Where is our CJIS-covered data stored and processed, who at your
+      company can access it, and which agreements (CJIS Security Addendum,
+      state audits) have you completed in other states? If your materials
+      say "CJIS certified," what do you mean, given that the FBI does not
+      certify vendors?
+    good_answer: >-
+      Specific architecture answers, signed addenda and passed audits in
+      named states, and honest wording about alignment with the CJIS
+      Security Policy.
+    red_flag: >-
+      The phrase "CJIS certified" offered as a credential. No federal CJIS
+      certification exists.
+    source_url: https://le.fbi.gov/cjis-division/cjis-security-policy-resource-center
+    select:
+      base: true
+      claim_types: [compliance]
+      finding_ids: [cert-vocab]
+      weight: 8
+  - id: public-safety-policing-q05
+    question: >-
+      Who outside our agency can search, receive, or get alerts from data
+      our deployment collects? Show us the default sharing settings, the
+      opt-out process, and a sample audit log of outside searches.
+    good_answer: >-
+      Sharing off by default, granular controls, exportable audit logs, and
+      written limits on federal and out-of-state access.
+    red_flag: >-
+      Default-on national sharing with no audit review. Records from one
+      Illinois town showed more than 4,000 outside lookups tied to
+      immigration purposes in under a year, and one 2025 Texas search
+      reached more than 83,000 cameras across state lines.
+    source_url: https://www.404media.co/ice-taps-into-nationwide-ai-enabled-camera-network-data-shows/
+    select:
+      base: true
+      weight: 8
+  - id: public-safety-policing-q06
+    question: >-
+      Your materials say the system reduces crime or improves outcomes.
+      Which independent studies support that, in which cities, and what did
+      they find?
+    good_answer: >-
+      Named independent or peer-reviewed evaluations, including any with
+      null results, and honest framing of what the tool can and cannot do.
+    red_flag: >-
+      Only vendor case studies. In Plainfield, NJ, 0.6% of robbery and
+      assault predictions and 0.1% of burglary predictions matched a later
+      reported crime (The Markup, Oct 2023).
+    source_url: https://themarkup.org/prediction-bias/2023/10/02/predictive-policing-software-terrible-at-predicting-crimes
+    select:
+      claim_types: [performance]
+      finding_ids: ["perf-*"]
+      weight: 8
+  - id: public-safety-policing-q07
+    question: >-
+      What are your false positive rates broken out by race, sex, and age at
+      our expected image quality and gallery size, and will you support our
+      own pre-deployment testing on our data?
+    good_answer: >-
+      Published breakouts (for face recognition, NIST demographic results)
+      plus support for independent local testing before go-live.
+    red_flag: >-
+      A "bias-free AI" claim with no data. NIST's 2019 study of 189
+      algorithms found false positive rates 10 to 100 times higher for some
+      demographic groups.
+    source_url: https://www.nist.gov/news-events/news/2019/12/nist-study-evaluates-effects-race-age-sex-face-recognition-software
+    select:
+      claim_types: [performance]
+      elevated: true
+      weight: 8
+  - id: public-safety-policing-q08
+    question: >-
+      Give us three agencies of our size that have run this product in
+      production for two years or more, with named contacts we can call.
+      Also name agencies that ended or did not renew deployments, and tell
+      us why.
+    good_answer: >-
+      Callable references plus a candid list of departures. Chicago ended
+      gunshot detection in 2024 and Santa Cruz banned predictive policing in
+      2020, so ended deployments are a normal part of this market's record.
+    red_flag: >-
+      Logo lists with no callable contact, or no acknowledgment of any
+      ended deployment.
+    source_url: https://abc7chicago.com/post/chicago-shotspotter-contract-ends-sunday-city-begin-dismantling-gunshot-detection-technology-monday/15341343/
+    select:
+      claim_types: [customer]
+      finding_ids: [customers]
+      tiers: [3]
+      weight: 6
+  - id: public-safety-policing-q09
+    question: >-
+      Which of these do you hold, under which exact product name: FedRAMP
+      authorization, GovRAMP status, TX-RAMP, SOC 2 Type II? We will verify
+      each on the official marketplace.
+    good_answer: >-
+      Exact statuses that match the marketplace listings. "Authorized" only
+      when the listing says authorized.
+    red_flag: >-
+      "Compliant" used in place of "authorized," or statuses that do not
+      appear on the marketplace.
+    source_url: https://marketplace.fedramp.gov/
+    select:
+      claim_types: [compliance]
+      finding_ids: [fedramp_marketplace, govramp, txramp, cert-vocab]
+      weight: 6
+  - id: public-safety-policing-q10
+    question: >-
+      For report-drafting AI: is the original AI draft retained, along with
+      every edit and the audit log? Does every generated report carry a
+      disclosure, and how do you meet Utah SB 180 and California SB 524
+      where they apply?
+    good_answer: >-
+      Draft retention on by default, complete edit history, per-report
+      disclosure, and a written compliance mapping for state AI report
+      laws.
+    red_flag: >-
+      Drafts deleted by design. EFF documented in July 2025 that one major
+      product does not retain original drafts, and King County, WA
+      prosecutors said in 2024 they would not accept AI-assisted
+      narratives.
+    source_url: https://www.eff.org/deeplinks/2025/07/axons-draft-one-designed-defy-transparency
+    select:
+      elevated: true
+      tiers: [3, 4]
+      weight: 9
+  - id: public-safety-policing-q11
+    question: >-
+      What data trained the models we would use, do you have documented
+      rights to that data, and is any of our data used to train models for
+      other customers?
+    good_answer: >-
+      Documented provenance and written no-training terms for agency data.
+    red_flag: >-
+      Scraped-at-scale training data with unresolved legal exposure.
+      Clearview AI settled Illinois BIPA litigation in 2022 with nationwide
+      limits on private sales of its database.
+    source_url: https://www.aclu-il.org/cases/aclu-v-clearview-ai/
+    select:
+      claim_types: [identity, compliance]
+      weight: 7
+  - id: public-safety-policing-q12
+    question: >-
+      List every statute, ordinance, and policy that applies to this
+      deployment in our jurisdiction: state biometric or facial recognition
+      laws, surveillance-oversight ordinances, retention rules, and any
+      council approval we need. Provide your statute map for our state.
+    good_answer: >-
+      A current, state-specific legal mapping and demonstrated experience
+      with public approval processes (Washington's SB 6280 regime is a
+      useful test case).
+    red_flag: >-
+      "Legal compliance is the agency's responsibility," with no mapping
+      offered.
+    source_url: https://app.leg.wa.gov/billsummary?BillNumber=6280&Year=2019
+    select:
+      tiers: [3, 4]
+      weight: 7
+  - id: public-safety-policing-q13
+    question: >-
+      If we end this contract, what happens? Walk us through data return
+      and deletion with certification, hardware removal, evidence export in
+      open formats, and the timeline, and put all of it in the contract.
+    good_answer: >-
+      Contractual exit terms with deletion certification and no-cost
+      evidence export. Chicago's 2024 wind-down ran on a 60-day
+      decommissioning clock; ask for your own equivalent.
+    red_flag: >-
+      Silence on exit, export fees, or evidence locked in proprietary
+      formats.
+    source_url: https://abc7chicago.com/post/chicago-police-longer-using-shotspotter-gunshot-detection-technology-mayor-brandon-johnson-exploring-other-options/15342988/
+    select:
+      tiers: [3, 4]
+      weight: 6
+  - id: public-safety-policing-q14
+    question: >-
+      If our agency is sued over an action taken from your system's output,
+      what liability do you accept, and will you agree to indemnification
+      and audit-rights clauses in the contract?
+    good_answer: >-
+      Negotiated indemnification, audit rights, and evidence of insurance.
+    red_flag: >-
+      All liability left on the agency. Cities have paid the settlements
+      tied to these tools: Detroit paid $300,000 (2024) and Chicago paid
+      $500,000 (2026).
+    source_url: https://news.wttw.com/2026/03/04/chicago-man-was-charged-murder-based-shotspotter-alert-now-city-will-pay-him-500k
+    select:
+      tiers: [4]
+      weight: 7
+  - id: public-safety-policing-q15
+    question: >-
+      If your product scores people for bail, sentencing, supervision, or
+      custody decisions: can the person, their lawyer, and the court see
+      the inputs and factor weights, and what validation exists on our
+      population?
+    good_answer: >-
+      Full input and factor transparency, local validation studies, and
+      written acknowledgment of the Loomis cautions (a score may inform a
+      sentence and may never determine it).
+    red_flag: >-
+      Proprietary factors withheld from courts, or one national validation
+      offered for every population. ProPublica's 2016 analysis found higher
+      false positive rates for Black defendants on one widely used tool;
+      the vendor disputed the methodology.
+    source_url: https://www.wicourts.gov/sc/opinion/DisplayDocument.pdf?content=pdf&seqNo=171690
+    select:
+      elevated: true
+      weight: 8
+
+elevated_scrutiny_rules:
+  - condition: Any match on this pack
+    action: >-
+      The output floor is the "enhanced review" band. The lightest band is
+      unavailable until the corroboration question (q01) is answered with
+      product and policy evidence.
+  - condition: >-
+      Any claim that an output alone can support a stop, arrest, charge, or
+      use-of-force decision
+    action: Strongest caution band, always.
+  - condition: A face recognition or other biometric identification pitch
+    action: >-
+      Require NIST FRTE participation evidence (q02, q07) before any demo
+      stage, and surface the state biometric and facial recognition law
+      items from legal_context.
+  - condition: >-
+      A risk-scoring pitch for bail, sentencing, supervision, or custody
+      decisions
+    action: >-
+      Treat as an adverse-action system: add the eligibility-case-mgmt
+      overlay (its questions q01, q02, q03 and its "Why this category is
+      different" block) alongside this pack's q15.
+  - condition: A report-drafting or narrative-generation pitch
+    action: >-
+      Question q10 (draft retention and disclosure) must be answered in
+      writing before any pilot. Surface the King County prosecutor guidance
+      and the Utah and California statutes.
+  - condition: A shared-network camera or sensor pitch
+    action: >-
+      Question q05 (outside access and audit logs) must be answered with a
+      real audit log sample before contract signature.
+
+reference_deployments:
+  - agency: City of Chicago (cautionary)
+    vendor_stack: SoundThinking ShotSpotter
+    what: >-
+      Citywide gunshot detection, reviewed by the Office of Inspector
+      General and ended by the city in 2024
+    metric: >-
+      9.1% of police responses to 50,176 alerts (Jan 2020 to May 2021)
+      produced evidence of a gun-related offense; contract expired Sept 22,
+      2024
+    metric_source_type: oversight
+    source_url: https://igchicago.org/2021/08/24/oig-finds-that-shotspotter-alerts-rarely-lead-to-evidence-of-a-gun-related-crime-and-that-presence-of-the-technology-changes-police-behavior/
+  - agency: Plainfield, NJ Police Division (cautionary)
+    vendor_stack: Geolitica (PredPol)
+    what: Place-based crime prediction subscription, later discontinued
+    metric: >-
+      0.6% of robbery and aggravated assault predictions and 0.1% of
+      burglary predictions matched a later reported crime, across 23,631
+      predictions in 2018
+    metric_source_type: independent-press
+    source_url: https://themarkup.org/prediction-bias/2023/10/02/predictive-policing-software-terrible-at-predicting-crimes
+  - agency: Detroit Police Department (cautionary, now under settlement policy)
+    vendor_stack: DataWorks Plus face recognition
+    what: >-
+      Face recognition investigative searches, now governed by the Williams
+      settlement's binding limits
+    metric: >-
+      $300,000 settlement (June 28, 2024) plus rules: no arrest and no
+      photo lineup from a face match alone, with an audit of past cases and
+      four years of court oversight
+    metric_source_type: independent-press
+    source_url: https://www.aclu.org/press-releases/civil-rights-advocates-achieve-the-nations-strongest-police-department-policy-on-facial-recognition-technology
+  - agency: City of Norfolk, VA (contested in litigation)
+    vendor_stack: Flock Safety license plate readers
+    what: >-
+      Citywide network of about 176 cameras, challenged under the Fourth
+      Amendment in Schmidt v. City of Norfolk
+    metric: >-
+      Court filings showed one plaintiff's vehicle logged 526 times in
+      about four months; the district court granted summary judgment for
+      the city in early 2026 and the residents appealed to the Fourth
+      Circuit
+    metric_source_type: independent-press
+    source_url: https://www.courthousenews.com/judge-holds-norfolks-license-plate-reader-use-constitutional/
+  - agency: Pasco County, FL Sheriff's Office (cautionary)
+    vendor_stack: In-house intelligence-led policing models
+    what: >-
+      Person-based targeting program ended by a federal settlement
+    metric: >-
+      $105,000 paid (Dec 2024); the office acknowledged interference with
+      residents' First, Fourth, and Fourteenth Amendment rights and agreed
+      never to restart the program
+    metric_source_type: independent-press
+    source_url: https://ij.org/press-release/case-closed-pasco-sheriff-admits-predictive-policing-program-violated-constitution/
+
+registries_to_check:
+  - name: NIST Face Recognition Technology Evaluation (FRTE)
+    url: https://pages.nist.gov/frvt/html/frvt11.html
+    what_it_proves: >-
+      Whether a face recognition vendor submits its algorithms for public
+      federal testing, under its own name, and how accuracy and demographic
+      differentials compare across vendors. Absence from FRTE is a fair
+      question to ask about.
+  - name: FBI CJIS Security Policy Resource Center
+    url: https://le.fbi.gov/cjis-division/cjis-security-policy-resource-center
+    what_it_proves: >-
+      The actual policy text vendors must align with. Note what it does not
+      prove: the FBI does not certify vendors, so "CJIS certified" is
+      marketing vocabulary.
+  - name: FedRAMP Marketplace
+    url: https://marketplace.fedramp.gov/
+    what_it_proves: >-
+      Whether a specific product holds a federal cloud authorization, and at
+      what level. "In process" is different from "authorized."
+  - name: GovRAMP Authorized Product List
+    url: https://govramp.org/
+    what_it_proves: >-
+      State-oriented cloud security verification. Formerly StateRAMP; the
+      name changed in February 2025.
+  - name: Atlas of Surveillance (EFF)
+    url: https://atlasofsurveillance.org/
+    what_it_proves: >-
+      Which agencies already use which surveillance technologies, by vendor
+      and type. Useful for finding real reference agencies to call,
+      including ones the vendor did not offer.
+  - name: AI Incident Database
+    url: https://incidentdatabase.ai/
+    what_it_proves: >-
+      A public log of AI system failures. Search the vendor and product
+      name before any demo.
+
+legal_context: |-
+  ## Why this category is different
+
+  Outputs in this category feed decisions about stops, arrests, charges,
+  bail, sentencing, and custody. When they are wrong, the documented results
+  include wrongful arrests (Detroit; $300,000 settlement, June 2024),
+  nearly a year in jail on a case prosecutors later dismissed (Chicago;
+  $500,000 settlement, March 2026), and targeting programs a sheriff agreed to end
+  under court supervision (Pasco County, December 2024). Discovery
+  obligations run to the agency and the prosecution, so a vendor's
+  trade-secret posture becomes the agency's courtroom problem. This pack
+  therefore floors its output at enhanced review, and treats any claim that
+  an output alone can justify enforcement action as the strongest caution
+  band.
+
+  ## Controlling law and policy
+
+  - Brady v. Maryland, 373 U.S. 83 (1963): the prosecution's disclosure
+    obligations reach material evidence, which is why question q03 asks for
+    written discovery commitments up front.
+  - State v. Loomis, 2016 WI 68 (Wis., July 13, 2016): risk scores may be
+    used at sentencing only with written cautions, and may never be the
+    determinative factor
+    (https://www.wicourts.gov/sc/opinion/DisplayDocument.pdf?content=pdf&seqNo=171690).
+  - Illinois Biometric Information Privacy Act (740 ILCS 14, enacted 2008):
+    written consent before collecting biometric identifiers; basis of the
+    May 2022 Clearview AI settlement
+    (https://www.aclu-il.org/cases/aclu-v-clearview-ai/).
+  - Washington SB 6280 (signed Mar 31, 2020 with partial veto; effective
+    Jul 1, 2021): regulates state and local government use of facial
+    recognition services
+    (https://app.leg.wa.gov/billsummary?BillNumber=6280&Year=2019).
+  - Utah SB 180 (signed Mar 25, 2025; effective May 7, 2025): law
+    enforcement agencies must adopt generative-AI policies; AI-assisted
+    reports must carry a disclaimer and an author accuracy certification
+    (https://le.utah.gov/~2025/bills/static/SB0180.html).
+  - California SB 524 (signed Oct 10, 2025; effective Jan 1, 2026):
+    AI-assisted police reports must carry disclosures; agencies must retain
+    first drafts and audit trails; vendors are barred from selling or
+    sharing the data agencies provide to the AI
+    (https://www.eff.org/deeplinks/2025/10/victory-california-requires-transparency-ai-police-reports).
+  - FBI CJIS Security Policy: binding on access to CJIS systems through
+    signed agreements, addenda, and state audits; there is no federal
+    vendor certification
+    (https://le.fbi.gov/cjis-division/cjis-security-policy-resource-center).
+  - Fourth Amendment litigation over camera networks: Schmidt v. City of
+    Norfolk (filed Oct 2024; summary judgment for the city in early 2026;
+    appeal filed with the Fourth Circuit). Verify current status before
+    citing
+    (https://www.courthousenews.com/judge-holds-norfolks-license-plate-reader-use-constitutional/).
+  - Williams v. City of Detroit settlement (June 28, 2024): binding
+    face recognition limits enforceable for four years; the current
+    strictest big-city standard
+    (https://www.aclu.org/press-releases/civil-rights-advocates-achieve-the-nations-strongest-police-department-policy-on-facial-recognition-technology).
+  - Local surveillance-oversight ordinances: many cities require council
+    approval and annual reporting before new surveillance technology is
+    acquired. Check your own municipal code before any pilot.
+
+realistic_pricing: |-
+  Published anchors exist for the two most commoditized product lines:
+
+  - Gunshot detection: about $65,000 to $90,000 per square mile per year in
+    direct cost (Manhattan Institute brief, Robert VerBruggen, October 2025:
+    https://media4.manhattan-institute.org/wp-content/uploads/thinking-through-the-shotspotter-debate.pdf).
+    Multiply by coverage area before the demo; a mid-size city covering 10
+    square miles is agreeing to roughly $650K to $900K per year.
+  - License plate readers: Flock publishes no list price and quotes bundled
+    subscriptions (https://www.flocksafety.com/pricing). Public city
+    contracts commonly land near $3,000 per camera per year plus a one-time
+    installation fee (practitioner estimate from published municipal
+    contracts; verify against your own quote).
+  - Place-based prediction software has sold for as little as $20,500 per
+    year (Plainfield, NJ's Geolitica subscription, per The Markup, Oct
+    2023), a reminder that a low price does not settle the evidence
+    questions.
+  - Report-drafting AI: no public list price; it is typically sold inside
+    body-camera and digital-evidence bundles. Ask for line-item pricing so
+    the AI component can be declined at renewal without losing the rest of
+    the bundle.
+
+  Heuristic: per-unit subscription pricing compounds quietly. Ask for the
+  five-year total cost of ownership, including installation, network
+  charges, and every bundled AI feature, and compare it against the anchors
+  above. If a quote is several times these anchors, ask what specifically
+  justifies the difference.
+
+last_updated: "2026-08-29"
+refresh_cadence: monthly
+
+known_gaps: |-
+  - The lint's banned list includes the first word of the CJIS acronym's
+    expansion, so this pack refers to the FBI policy only as the CJIS
+    Security Policy and rewrites around that word family throughout. A
+    carve-out similar to the existing bare-noun program-integrity rule may
+    be needed for this sector's ordinary vocabulary.
+  - SoundThinking's agency count (about 250) is vendor-reported and was not
+    independently verified this cycle.
+  - The AP's August 2021 investigation of ShotSpotter evidence in courts
+    could not be fetched directly (host blocks retrieval); the Michael
+    Williams facts are sourced through the MacArthur Justice Center case
+    page and WTTW instead.
+  - State facial recognition statutes beyond Illinois and Washington
+    (Maine's 2021 law, Massachusetts, Virginia, Montana, Vermont) were not
+    re-verified this cycle and are omitted from legal_context.
+  - Clearview AI's later enforcement history (the 2025 class-action
+    settlement structure, UK ICO litigation) was not verified this cycle
+    and is omitted.
+  - Schmidt v. City of Norfolk is fast-moving: the district court ruled for
+    the city in 2026 and an appeal was announced. Verify before citing.
+  - LAPD Operation LASER, the NYPD gang database, and other person-based
+    program retirements are omitted pending URL capture.
+  - Axon Draft One has no public list price; no pricing anchor exists for
+    report-drafting AI.
+  - Emergency-management and 911-triage AI (Carbyne, Prepared, RapidSOS)
+    is in scope by definition but has no named incident in this draft;
+    candidates should be researched next cycle.

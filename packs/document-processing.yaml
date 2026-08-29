@@ -24,6 +24,23 @@ inclusion_test:
     Does it claim an "automation rate" or "straight-through processing," or
     use per-page or per-document pricing?
 
+# Classifier-fallback terms, lowercase substring-matched against the pitch
+# (>= 2 distinct hits = a match; see _shared/sector-lexicon.ts).
+signal_lexicon:
+  - document processing
+  - intelligent document
+  - ocr
+  - data extraction
+  - document extraction
+  - handwriting
+  - redaction
+  - mailroom
+  - document classification
+  - straight-through
+  - form processing
+  - scanned documents
+  - document intake
+
 scrutiny_tier: standard
 
 incumbent_landscape: >-
@@ -264,6 +281,11 @@ skepticism_triggers:
 
 diligence_questions:
   - id: document-processing-q01
+    select:
+      claim_types: [performance]
+      finding_ids: ["perf-*"]
+      elevated: true
+      weight: 5
     question: >-
       What field-level accuracy do you achieve on documents like ours, and
       will you demonstrate it in a pilot on 250–1,000 of our real documents,
@@ -276,6 +298,10 @@ diligence_questions:
       instead of your documents.
     source_url: https://airparser.com/blog/ai-document-extraction-accuracy-benchmarks/
   - id: document-processing-q02
+    select:
+      claim_types: [performance]
+      finding_ids: ["perf-*"]
+      weight: 4
     question: >-
       Is that character, field, or document accuracy? Define the denominator.
     good_answer: >-
@@ -284,6 +310,10 @@ diligence_questions:
     red_flag: The vendor cannot or will not say what the denominator is.
     source_url: https://airparser.com/blog/ai-document-extraction-accuracy-benchmarks/
   - id: document-processing-q03
+    select:
+      claim_types: [performance]
+      finding_ids: [automation]
+      weight: 3
     question: >-
       What straight-through-processing rate do your government customers
       achieve in production, and how do you define STP?
@@ -293,6 +323,8 @@ diligence_questions:
     red_flag: Claims above 90% before any pilot on your documents.
     source_url: https://statetechmagazine.com/article/2025/04/state-and-local-agencies-deploy-artificial-intelligence-document-processing
   - id: document-processing-q04
+    select:
+      base: true
     question: >-
       Show the human review workflow: how do confidence scores route
       low-confidence fields, who staffs the queue, and what does that labor
@@ -305,6 +337,8 @@ diligence_questions:
       level.
     source_url: null
   - id: document-processing-q05
+    select:
+      claim_types: [performance]
     question: >-
       If we sample 100 fields you marked at 90% confidence or higher, how many
       will be wrong?
@@ -316,6 +350,8 @@ diligence_questions:
       signals it has never been measured.
     source_url: null
   - id: document-processing-q06
+    select:
+      claim_types: [pricing]
     question: >-
       What is the all-in price per 1,000 pages at our real volume: API or
       license fees, feature add-ons, review tooling, integration, and
@@ -327,6 +363,8 @@ diligence_questions:
       once features stack.
     source_url: https://aws.amazon.com/textract/pricing/
   - id: document-processing-q07
+    select:
+      base: true
     question: >-
       Where is our data processed and stored, is it used to train your models
       or any third party's, and what is the deletion timeline? We need this in
@@ -340,6 +378,8 @@ diligence_questions:
       defaults.
     source_url: https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_ai-opt-out.html
   - id: document-processing-q08
+    select:
+      finding_ids: [model-transparency]
     question: >-
       Which underlying OCR or extraction engine or foundation model do you
       use, and which subprocessors touch our documents?
@@ -351,6 +391,10 @@ diligence_questions:
       on.
     source_url: null
   - id: document-processing-q09
+    select:
+      claim_types: [compliance]
+      finding_ids: [cert-vocab, fedramp_marketplace, govramp, txramp]
+      weight: 2
     question: >-
       Which authorizations do you hold: FedRAMP (at what level), GovRAMP, SOC
       2 Type II? Can you support IRS Pub 1075, HIPAA, or SNAP confidentiality
@@ -363,6 +407,8 @@ diligence_questions:
       authorizations that exist only company-wide.
     source_url: https://marketplace.fedramp.gov/
   - id: document-processing-q10
+    select:
+      claim_types: [performance]
     question: >-
       For redaction: give us precision and recall separately. What percentage
       of PII do you miss, and what QA catches misses before records go public?
@@ -372,6 +418,10 @@ diligence_questions:
     red_flag: One blended "success rate." A missed SSN is a disclosure incident.
     source_url: https://statetechmagazine.com/article/2025/04/state-and-local-agencies-deploy-artificial-intelligence-document-processing
   - id: document-processing-q11
+    select:
+      claim_types: [customer]
+      finding_ids: [customers]
+      weight: 3
     question: >-
       Name three government references at agencies our size, in production 12
       or more months, including one where the rollout was hard.
@@ -382,6 +432,8 @@ diligence_questions:
     red_flag: '"References are confidential."'
     source_url: null
   - id: document-processing-q12
+    select:
+      base: true
     question: >-
       What per-document audit trail exists (model version, confidence score,
       every human touch), exportable for QC and inspector-general staff? What
@@ -393,6 +445,9 @@ diligence_questions:
       this category (GAO-26-109137).
     source_url: https://www.gao.gov/products/gao-26-109137
   - id: document-processing-q13
+    select:
+      base: true
+      tiers: [3, 4]
     question: >-
       What are the exit terms: can we export our trained models, templates,
       and labeled data at contract end, and at what cost?
@@ -402,6 +457,8 @@ diligence_questions:
       vendor.
     source_url: null
   - id: document-processing-q14
+    select:
+      elevated: true
     question: >-
       Which languages do you support, as a named list matched to our
       limited-English-proficiency population, not an adjective?
@@ -544,7 +601,7 @@ realistic_pricing: |-
   conflicted across sources this cycle; check the live pricing page rather
   than a quoted number.
 
-last_updated: "2026-08-28"
+last_updated: "2026-08-29"
 refresh_cadence: quarterly
 
 known_gaps: |-

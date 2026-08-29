@@ -130,7 +130,10 @@ function ReportView({
       <QuestionPack report={report} />
       <ManualCheckCards checks={report.manual_checks} />
       <LeadsList leads={report.leads ?? []} />
-      <NextSteps steps={report.next_steps} />
+      <NextSteps
+        steps={report.next_steps}
+        stateItems={report.sector.state_items}
+      />
       <SourcesList sources={report.sources} />
 
       <div className="mx-auto max-w-5xl px-5 pb-14 sm:px-8">

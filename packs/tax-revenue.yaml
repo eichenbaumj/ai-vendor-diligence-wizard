@@ -1,0 +1,837 @@
+# Sector pack: tax-revenue (v1 draft). ELEVATED SCRUTINY.
+#
+# Scrutiny tier rationale: this pack is elevated, not standard. Most of what
+# is sold here produces adverse actions against individual residents: a
+# higher assessment is a bigger tax bill enforceable by lien and foreclosure
+# (Detroit's over-assessment era fed tax foreclosures); a fraud or refund
+# flag freezes money a household is owed (IRS filters ran a documented 81%
+# false-positive rate in 2018); collections prioritization decides whose
+# wages and bank accounts get pursued; and the two landmark automated-
+# government failures of the last decade, Michigan MiDAS and the Dutch
+# childcare benefits scandal, were both run by revenue-side agencies. The
+# adverse-action logic that makes eligibility-case-mgmt elevated applies
+# with equal force, so any fraud, refund, or delinquency scoring pitch here
+# also triggers that pack's overlay.
+#
+# NOTE for maintainers: signal_lexicon and the per-question select blocks
+# are NEW fields (classifier fallback + question-selection metadata). The
+# current packs-types.ts / validate-packs.ts schema is strict and does not
+# know them yet; land the schema change in the same wave as this pack.
+# Authoring rules: packs/pack-spec.md.
+pack_id: tax-revenue
+pack_name: Tax, Assessment & Revenue AI
+
+definition: >-
+  AI sold to tax assessors, collectors, treasurers, and revenue departments:
+  mass-appraisal and automated valuation models, reassessment support,
+  appeals triage, exemption auditing, collections prioritization,
+  delinquency prediction, refund and return screening, audit selection, and
+  taxpayer-facing chatbots. Outputs here change what residents owe, whether
+  a refund arrives, and whether a lien or garnishment follows, so most of
+  this pack is adverse-action territory. Not this pack alone: benefits
+  eligibility and program-integrity systems (eligibility-case-mgmt, which
+  this pack triggers as an overlay for any fraud or refund screening
+  pitch), pure document extraction (document-processing), and
+  general-purpose dashboards (data-analytics).
+
+inclusion_test:
+  - >-
+    Does the pitch mention property assessment, mass appraisal, CAMA,
+    automated valuation models, or reassessment for an assessor or
+    appraisal district?
+  - >-
+    Does it mention tax collections, delinquency prediction, revenue
+    recovery, payment-plan targeting, or lien and garnishment workflows?
+  - >-
+    Does it mention refund screening, return scoring, audit selection, or
+    fraud detection for a tax or revenue agency?
+  - >-
+    Does it mention exemption auditing (homestead, senior, veteran) or
+    appeals triage for a tax office?
+  - >-
+    Does it offer a taxpayer-facing chatbot or virtual assistant for a
+    revenue department, collector, or treasurer?
+
+scrutiny_tier: elevated
+
+# NEW FIELD: lowercase domain terms for the code-side classifier fallback.
+signal_lexicon:
+  - mass appraisal
+  - cama
+  - avm
+  - assessment roll
+  - ratio study
+  - reassessment
+  - homestead exemption
+  - appeals triage
+  - collections prioritization
+  - delinquency prediction
+  - refund screening
+  - audit selection
+  - integrated tax system
+  - revenue recovery
+  - tax gap
+
+incumbent_landscape: >-
+  The core systems are decades-old COTS suites. Fast Enterprises' GenTax
+  runs state integrated tax systems in Wisconsin, New Hampshire, Idaho, and
+  other states (Government Technology:
+  https://www.govtech.com/computing/tax-system-upgrades-increase-speed-efficiency-for-residents);
+  Indiana signed a 10-year, $77.7 million GenTax contract in 2018
+  (Indianapolis Business Journal). RSI's Government Premier (formerly
+  Revenue Premier) holds state integrated-tax contracts, including Rhode
+  Island's.
+  On the property side, Tyler Technologies' iasWorld / Enterprise
+  Assessment & Tax is the largest CAMA and tax-billing suite (clients in 26
+  states per Tyler's own materials; Tyler also ran Delaware's
+  court-ordered statewide reassessment, Businesswire, Oct 21, 2021).
+  Fraud-analytics is a distinct lane: Thomson Reuters acquired Pondera
+  (FraudCaster) in 2020, and EPIC's public-records project found the actual
+  scope of Pondera's government footprint hard to establish even through
+  records requests (https://epic.org/pondera-surveillance/). SAS and Fast
+  Enterprises were the MiDAS-era vendors and were sued alongside the state
+  in the Cahoo litigation, so incumbency is no safety signal here. The AI-native newcomers sell narrow wedges: TrueRoll
+  monitors homestead-exemption eligibility for county tax offices
+  (customers in Texas, Florida, Illinois, and Washington, per Government
+  Technology). Critical context for any transparency claim: Cook County's
+  assessor has published its residential valuation model code and data
+  since 2019 (https://github.com/ccao-data/model-res-avm), which means "our
+  model must stay secret" is a vendor choice, and the public sector's own
+  benchmark says otherwise. Expect general-purpose LLM chatbots rebranded
+  as "taxpayer assistants" to arrive through the same channel as every
+  other sector.
+
+established_vendors:
+  - name: Fast Enterprises
+    tier: platform
+    one_liner: >-
+      GenTax integrated tax system, in production in Wisconsin, New
+      Hampshire, and Idaho (Government Technology) and Indiana ($77.7M
+      contract, 2018, IBJ). Sued alongside SAS in the MiDAS-era Cahoo
+      litigation; a listing here is no safety signal.
+    gov_evidence_url: https://www.govtech.com/computing/tax-system-upgrades-increase-speed-efficiency-for-residents
+  - name: RSI (Revenue Solutions, Inc.)
+    tier: platform
+    one_liner: >-
+      Government Premier (formerly Revenue Premier) integrated tax
+      platform; state contracts include Rhode Island's integrated tax
+      system.
+    gov_evidence_url: https://www.prnewswire.com/news-releases/revenue-solutions-inc-and-the-state-of-rhode-island-division-of-taxation-partner-to-implement-a-commercial-off-the-shelf-cots-integrated-tax-system-its-220379091.html
+  - name: Tyler Technologies
+    tier: platform
+    one_liner: >-
+      iasWorld / Enterprise Assessment & Tax, the largest CAMA and
+      appraisal-tax suite; conducted Delaware's court-ordered statewide
+      reassessment (Businesswire, Oct 21, 2021).
+    gov_evidence_url: null
+  - name: Thomson Reuters (Pondera)
+    tier: specialist
+    one_liner: >-
+      FraudCaster risk scoring for tax and benefits programs, acquired
+      2020. EPIC found the true scope of its government use hard to verify
+      through public-records requests; treat any scoring pitch as an
+      adverse-action system.
+    gov_evidence_url: https://epic.org/pondera-surveillance/
+  - name: SAS
+    tier: platform
+    one_liner: >-
+      Analytics platform sold to revenue and integrity programs; a
+      MiDAS-era vendor sued in the Cahoo litigation (see BTAH case study).
+    gov_evidence_url: https://www.btah.org/case-study/michigan-unemployment-insurance-false-fraud-determinations.html
+  - name: TrueRoll
+    tier: startup-verified
+    one_liner: >-
+      Homestead-exemption monitoring for county tax offices; customers in
+      Texas, Florida, Illinois, and Washington (Government Technology, Jun
+      2020). Vendor-reported footprint claims are larger; verify.
+    gov_evidence_url: https://www.govtech.com/biz/Startup-Aims-to-Modernize-the-Property-Tax-Exemption-Audit.html
+
+failure_modes:
+  - title: Regressive mass appraisal that shifted the tax burden (Cook County)
+    description: >-
+      The Chicago Tribune and ProPublica Illinois "Tax Divide"
+      investigation, with a University of Chicago study, found Cook
+      County's residential assessments overvalued low-priced homes and
+      undervalued high-priced ones, shifting at least $2.2 billion in
+      property taxes onto lower-value homeowners between 2011 and 2015. The
+      assessor's office was not running the standard statistical checks
+      that would have caught it. Any vendor valuation model can reproduce
+      this failure if nobody checks ratio statistics by price tier.
+    named_incident: >-
+      Cook County "Tax Divide" investigation; $2.2 billion property tax
+      shift, 2011-2015 (Pulitzer finalist, 2018)
+    source_url: https://www.propublica.org/article/cook-county-property-tax-shift-regressive-assessments
+  - title: Over-assessment at scale with foreclosure consequences (Detroit)
+    description: >-
+      A 2020 Detroit News investigation found Detroit overtaxed homeowners
+      by at least $600 million between roughly 2010 and 2016, assessing
+      many properties far above Michigan's constitutional cap of 50 percent
+      of market value. The Citizens Research Council's 2021 analysis ties
+      the failure to mass-appraisal practice: values were not brought down
+      as the market fell, and the lowest-value homes bore the worst errors,
+      feeding tax foreclosures. Assessment error at this scale takes homes.
+    named_incident: >-
+      Detroit $600 million over-assessment, 2010-2016 (Detroit News, Jan
+      2020; CRC of Michigan analysis, Nov 2021)
+    source_url: https://crcmich.org/understanding-how-detroits-property-tax-assessment-process-contributed-to-the-600-million-over-assessment
+  - title: Automated fraud adjudication without human review (Michigan MiDAS)
+    description: >-
+      Michigan's MiDAS system auto-adjudicated unemployment-insurance
+      fraud with no human review. A state review found its determinations
+      were wrong more than 90 percent of the time; roughly 40,000 people
+      were accused, with garnishments and bankruptcies that followed, and
+      the state paid a $20 million settlement in 2022. The vendors, SAS and
+      Fast Enterprises, were sued alongside the state in the Cahoo
+      litigation
+      (https://www.btah.org/case-study/michigan-unemployment-insurance-false-fraud-determinations.html).
+      MiDAS is the canonical revenue-side automation failure.
+    named_incident: >-
+      Michigan MiDAS false fraud determinations; $20M civil-rights
+      settlement (2022)
+    source_url: https://www.michigan.gov/ag/news/press-releases/2022/10/20/som-settlement-of-civil-rights-class-action-alleging-false-accusations-of-unemployment-fraud
+  - title: Refund screening that flags mostly legitimate taxpayers (IRS)
+    description: >-
+      The National Taxpayer Advocate's 2018 Annual Report to Congress
+      found the false-positive rate of the IRS's non-identity-theft refund
+      fraud filters was 81 percent (63 percent for identity-theft filters)
+      between January and October 2018. The filters protected about $7.6
+      billion in revenue while delaying almost $20 billion in legitimate
+      refunds. This is the base-rate problem every refund-screening pitch
+      must answer: at low fraud prevalence, even a good model flags mostly
+      innocent people.
+    named_incident: >-
+      IRS refund fraud filters, 81% false-positive rate (National Taxpayer
+      Advocate, 2018 Annual Report, MSP #5)
+    source_url: https://www.taxpayeradvocate.irs.gov/wp-content/uploads/2020/07/ARC18_Volume1_MSP_05_FalsePositiveRates.pdf
+  - title: A tax authority's risk model that scored nationality (Netherlands)
+    description: >-
+      The Dutch tax administration's risk-classification model for
+      childcare benefit claims used nationality as a risk factor. Tens of
+      thousands of parents were wrongly accused of fraud and ordered to
+      repay large sums; families went bankrupt and the Dutch cabinet
+      resigned over the scandal in January 2021. Amnesty International's
+      "Xenophobic Machines" report (Oct 25, 2021) documents the model's
+      design and the discrimination that resulted.
+    named_incident: >-
+      Dutch childcare benefits scandal (toeslagenaffaire); cabinet
+      resignation, Jan 2021
+    source_url: https://www.amnesty.org/en/documents/eur35/4686/2021/en/
+  - title: Opaque cross-agency risk profiling struck down in court (SyRI)
+    description: >-
+      The District Court of The Hague ruled on February 5, 2020 that the
+      Netherlands' SyRI system, which combined agency data to flag people
+      for benefits and tax fraud risk, violated Article 8 of the European
+      Convention on Human Rights. The court's core findings were opacity
+      (no insight into the risk indicators or model) and disproportionate
+      data collection. It is the clearest judicial statement that secret
+      government risk scoring fails legal scrutiny.
+    named_incident: >-
+      NJCM et al. v. the Netherlands (SyRI), Hague District Court, Feb 5,
+      2020
+    source_url: https://www.escr-net.org/caselaw/2020/nederlands-juristen-comite-voor-mensenrechten-et-al-v-netherlands-eclinlrbdha20201878/
+  - title: Automated debt raising at national scale (Robodebt)
+    description: >-
+      Australia's Robodebt scheme used automated income averaging to raise
+      unlawful welfare debts at national scale; the class-action settlement
+      was valued at about A$1.8 billion, covering roughly 430,000 wrongly
+      raised debts, and a 2023 Royal Commission found the scheme neither
+      fair nor legal. It is the collections-side cautionary case: an
+      automated formula generated debts, the burden of disproof fell on
+      residents, and the human review layer never really existed.
+    named_incident: Australia Robodebt Royal Commission (2023)
+    source_url: https://clcs.org.au/robodebt-royal-commission-report-unravels-systemic-injustice-and-recommends-urgent-reform/
+  - title: An official chatbot that invented the rules (NYC MyCity)
+    description: >-
+      NYC's MyCity chatbot, an official city channel for business owners,
+      confidently invented rules and told users to break the law (The
+      Markup, Mar 29, 2024). A taxpayer chatbot that misstates a filing
+      deadline or a penalty rule creates real liabilities for residents
+      who reasonably relied on an official government answer.
+    named_incident: NYC MyCity chatbot (The Markup, Mar 29, 2024)
+    source_url: https://themarkup.org/artificial-intelligence/2024/03/29/nycs-ai-chatbot-tells-businesses-to-break-the-law
+  - title: LLM-specific failure patterns in tax work
+    description: >-
+      Near-term patterns specific to language models in revenue offices: a
+      generated paragraph is not a legally sufficient assessment notice or
+      deficiency explanation; automation bias turns "an appraiser reviews
+      every value" into rubber-stamping at Detroit scale; extraction errors
+      from deeds, renditions, and returns propagate silently into values
+      and bills; and models are sycophantic toward an auditor's hypothesis
+      about a taxpayer. The IRS's own rules-plus-models screening history
+      (NTA 2018) shows how layered filters compound false positives.
+    named_incident: >-
+      IRS DDb/RRP layered screening, 81% false-positive rate (NTA 2018
+      Annual Report, MSP #5)
+    source_url: https://www.taxpayeradvocate.irs.gov/wp-content/uploads/2020/07/ARC18_Volume1_MSP_05_FalsePositiveRates.pdf
+
+skepticism_triggers:
+  - claim_pattern: >-
+      "Recovers $X million" / "found revenue" / "uncovers unpaid taxes"
+    threshold: >-
+      Any recovery figure without the matching false-positive rate,
+      appeal-overturn rate, and the share actually collected
+    why: >-
+      Recovery claims count flags rather than sustained outcomes. St. Johns
+      County's exemption audit placed almost $800K in liens but had
+      collected about $200K (Government Technology, 2020), and MiDAS
+      "recoveries" were repaid with a $20M settlement on top.
+    source_url: https://www.govtech.com/biz/Startup-Aims-to-Modernize-the-Property-Tax-Exemption-Audit.html
+  - claim_pattern: Contingency or percentage-of-recovery pricing
+    threshold: >-
+      Any fee tied to added assessed value, denied refunds, removed
+      exemptions, or collected debt
+    why: >-
+      The fee structure pays the vendor to over-flag, and residents bear
+      the appeal burden for every error. Ask for flat pricing or walk the
+      claim back to a pilot with independent error measurement.
+    source_url: null
+  - claim_pattern: '"99% accuracy" for fraud, refund, or audit screening'
+    threshold: >-
+      Any accuracy claim without a false-positive rate at your fraud
+      prevalence and volumes
+    why: >-
+      At low prevalence, high accuracy still means most flagged taxpayers
+      are innocent. The IRS's own filters ran an 81% false-positive rate
+      in 2018 while "protecting revenue."
+    source_url: https://www.taxpayeradvocate.irs.gov/wp-content/uploads/2020/07/ARC18_Volume1_MSP_05_FalsePositiveRates.pdf
+  - claim_pattern: >-
+      "Fully automated" or "touchless" determinations, liens, offsets, or
+      garnishments
+    threshold: Any such claim applied to an adverse action
+    why: >-
+      Presumptively disqualifying. This is the MiDAS and Robodebt pattern:
+      auto-adjudication was wrong more than 90 percent of the time in
+      Michigan.
+    source_url: https://www.michigan.gov/ag/news/press-releases/2022/10/20/som-settlement-of-civil-rights-class-action-alleging-false-accusations-of-unemployment-fraud
+  - claim_pattern: '"Proprietary model; we cannot disclose the factors"'
+    threshold: >-
+      Any trade-secret posture over valuation or scoring logic that faces
+      an appeal or public-records request
+    why: >-
+      The Hague court struck down SyRI for exactly this opacity, and Cook
+      County publishes its own valuation model code, so secrecy is a
+      vendor choice, and the public sector's own benchmark refutes the
+      claim that it is necessary.
+    source_url: https://github.com/ccao-data/model-res-avm
+  - claim_pattern: '"Defensible values" or "fewer appeals" for assessment models'
+    threshold: >-
+      No ratio-study statistics (COD, PRD/PRB) broken out by neighborhood
+      and price tier
+    why: >-
+      Cook County's regressivity hid inside county-wide averages. IAAO
+      ratio standards exist precisely so uniformity is checked by tier;
+      a vendor who will not produce them has not measured equity.
+    source_url: https://www.iaao.org/wp-content/uploads/Standard_on_Ratio_Studies.pdf
+  - claim_pattern: >-
+      "AI identifies improper exemptions" or "finds delinquents" for
+      collections targeting
+    threshold: >-
+      No documented notice-and-cure process and no published error rate
+      before liens or removals issue
+    why: >-
+      A false flag here becomes a lien on a qualified homeowner, often
+      elderly or disabled (homestead and senior exemptions are the ones
+      being audited). The process design matters more than the model.
+    source_url: null
+  - claim_pattern: '"Trusted by X states" or a long agency logo wall'
+    threshold: >-
+      References that cannot be tied to named, callable production
+      deployments
+    why: >-
+      Even EPIC, using public-records requests, could not establish the
+      true scope of Pondera's government footprint. Call the named
+      agencies and ask what is actually in production.
+    source_url: https://epic.org/pondera-surveillance/
+  - claim_pattern: >-
+      "FedRAMP/GovRAMP compliant" or vague "IRS-grade security" for systems
+      touching federal tax information
+    threshold: >-
+      The word "compliant" instead of "authorized," or no answer on IRS
+      Publication 1075
+    why: >-
+      Verify authorization on the marketplaces directly; "in process" is
+      not "authorized." Any system touching federal tax information must
+      meet Pub 1075 safeguarding requirements, and 26 U.S.C. 6103 attaches
+      serious statutory penalties to unauthorized disclosure.
+    source_url: https://marketplace.fedramp.gov/
+  - claim_pattern: A taxpayer chatbot that answers legal or filing questions
+    threshold: >-
+      No grounding in your statutes and forms, no accuracy measurement,
+      and no correction pipeline
+    why: >-
+      NYC's MyCity chatbot invented rules on an official channel and told
+      businesses to break the law. Wrong deadline or penalty answers
+      create liabilities for residents who relied on them.
+    source_url: https://themarkup.org/artificial-intelligence/2024/03/29/nycs-ai-chatbot-tells-businesses-to-break-the-law
+
+diligence_questions:
+  # select: NEW question-selection metadata. base = default slate;
+  # claim_types fire on matching pitch claims; finding_ids fire on wizard
+  # check findings; elevated joins when elevated scrutiny fires; tiers are
+  # contract/reference/demo-stage; weight 0-10.
+  - id: tax-revenue-q01
+    question: >-
+      Does your system ever finalize an assessed value, deny a refund, file
+      a lien, garnish wages, remove an exemption, or flag a taxpayer for
+      fraud on its own, or does a named human make every adverse decision?
+    good_answer: >-
+      An unambiguous "a named human makes every adverse decision," with UI
+      evidence showing where the human acts and what they see.
+    red_flag: >-
+      "Configurable," "auto-finalize," "straight-through processing," or
+      any hedging. This question has no acceptable middle answer.
+    source_url: https://www.michigan.gov/ag/news/press-releases/2022/10/20/som-settlement-of-civil-rights-class-action-alleging-false-accusations-of-unemployment-fraud
+    select:
+      base: true
+      elevated: true
+      weight: 10
+  - id: tax-revenue-q02
+    question: >-
+      For fraud, refund, or audit screening: what is your false-positive
+      rate at our volumes and our fraud prevalence, how was it measured,
+      and what happens to a taxpayer's money while they are flagged?
+    good_answer: >-
+      A measured false-positive rate with a denominator and time-to-release
+      data for flagged refunds, or an honest "we have not measured that."
+    red_flag: >-
+      An accuracy percentage with no false-positive rate. The IRS's own
+      filters ran 81% false positives in 2018; a vendor who has not
+      measured theirs has not confronted the base-rate problem.
+    source_url: https://www.taxpayeradvocate.irs.gov/wp-content/uploads/2020/07/ARC18_Volume1_MSP_05_FalsePositiveRates.pdf
+    select:
+      base: true
+      claim_types: [performance]
+      weight: 9
+  - id: tax-revenue-q03
+    question: >-
+      For valuation models: show ratio-study results (COD, PRD or PRB) by
+      neighborhood and price tier from a jurisdiction like ours, and will
+      you support an independent ratio study on our parcels before any
+      value you produce reaches a tax bill?
+    good_answer: >-
+      IAAO-standard statistics broken out by tier and geography, plus a
+      yes on the independent pre-deployment study.
+    red_flag: >-
+      County-wide averages only, or no ratio statistics at all. Cook
+      County's $2.2 billion shift hid inside averages.
+    source_url: https://www.iaao.org/wp-content/uploads/Standard_on_Ratio_Studies.pdf
+    select:
+      base: true
+      claim_types: [performance]
+      weight: 9
+  - id: tax-revenue-q04
+    question: >-
+      When a resident appeals a value or contests a flag, exactly what will
+      you disclose about how the number was produced, to us, to the
+      appellant, and in a public-records request? Is anything withheld as a
+      trade secret?
+    good_answer: >-
+      A written commitment that model factors, inputs, and the specific
+      basis for the individual decision are disclosable, with an example
+      appeal packet. Cook County publishes its whole model; that is the
+      benchmark.
+    red_flag: >-
+      Any trade-secret carve-out over decision logic. Courts struck down
+      SyRI for opacity, and secret formulas do not survive appeals.
+    source_url: https://github.com/ccao-data/model-res-avm
+    select:
+      base: true
+      elevated: true
+      weight: 9
+  - id: tax-revenue-q05
+    question: >-
+      What data sources feed your model, and which resident
+      characteristics, or stand-ins for them like neighborhood, are used as
+      inputs? What testing exists for uneven error rates across price
+      tiers, neighborhoods, and, where lawful, race and ethnicity?
+    good_answer: >-
+      A complete input list, an explanation of proxy handling, and
+      shareable disparate-performance results, plus support for our own
+      testing. The Dutch tax authority scored nationality; that is the
+      failure to rule out.
+    red_flag: >-
+      "Our AI is bias-free" with no data, or refusal to enumerate inputs.
+    source_url: https://www.amnesty.org/en/documents/eur35/4686/2021/en/
+    select:
+      elevated: true
+      weight: 8
+  - id: tax-revenue-q06
+    question: >-
+      Before any lien, exemption removal, or assessment increase your
+      system drives, what notice does the resident get, in what languages,
+      and how do they fix an error without hiring a lawyer or an appraiser?
+    good_answer: >-
+      A documented notice-and-cure workflow with real timelines, plain
+      language templates, and a no-cost correction path, shown in the
+      product.
+    red_flag: >-
+      Notice happens "through your existing process" with no vendor
+      support, or cure requires a formal appeal for every error.
+    source_url: null
+    select:
+      base: true
+      weight: 8
+  - id: tax-revenue-q07
+    question: >-
+      How are you paid? Is any part of your fee contingent on added
+      assessed value, removed exemptions, denied refunds, or collected
+      debt, and will you show us the full fee schedule?
+    good_answer: >-
+      Flat or volume-based pricing with a published schedule, and a clear
+      no on contingency fees for adverse actions.
+    red_flag: >-
+      Percentage-of-recovery pricing. It pays the vendor to over-flag and
+      leaves residents carrying the appeal burden for every error.
+    source_url: null
+    select:
+      claim_types: [pricing]
+      weight: 7
+  - id: tax-revenue-q08
+    question: >-
+      Name three tax or revenue agencies of our size where this is in
+      production rather than a pilot, that we can call. What independent
+      evaluations of the product exist?
+    good_answer: >-
+      Named production references with callable contacts, plus any
+      independent evaluation or oversight review.
+    red_flag: >-
+      Logo walls, pilots presented as production, or "references under
+      NDA." EPIC could not verify one major vendor's claimed footprint
+      even through public-records requests.
+    source_url: https://epic.org/pondera-surveillance/
+    select:
+      claim_types: [customer, identity]
+      finding_ids: [customers]
+      weight: 7
+  - id: tax-revenue-q09
+    question: >-
+      Where does taxpayer data live, who can see it, and is any of it used
+      to train models or shared with affiliates? If the system touches
+      federal tax information, how do you meet IRS Publication 1075, and
+      which of FedRAMP, GovRAMP, or a state RAMP authorization do you
+      actually hold?
+    good_answer: >-
+      Written no-training terms, a Pub 1075 answer that names controls and
+      audits, and authorizations you can verify at
+      https://marketplace.fedramp.gov/ and https://govramp.org/. "In
+      process" is not "authorized."
+    red_flag: >-
+      "Compliant" phrasing, verbal assurances, or a vendor who has never
+      heard of Pub 1075 asking for return data.
+    source_url: https://www.irs.gov/pub/irs-pdf/p1075.pdf
+    select:
+      claim_types: [compliance]
+      finding_ids: [fedramp_marketplace, govramp, txramp, cert-vocab]
+      weight: 8
+  - id: tax-revenue-q10
+    question: >-
+      What is your measured accuracy on OUR state's tax rules and forms,
+      evaluated against our statutes and historically adjudicated appeals
+      or audits, and what is the denominator?
+    good_answer: >-
+      State-specific evaluation results with a defined denominator, or an
+      honest "we have not measured that yet."
+    red_flag: >-
+      A generic number from another state or a demo corpus. Tax rules,
+      exemption criteria, and assessment cycles differ by state; accuracy
+      does not transfer.
+    source_url: null
+    select:
+      claim_types: [performance]
+      finding_ids: ["perf-*"]
+      weight: 7
+  - id: tax-revenue-q11
+    question: >-
+      What is the realistic review burden for our staff: items per reviewer
+      per day, and what override rates do you see in production?
+    good_answer: >-
+      Real numbers: plausible per-item review time and a nonzero override
+      rate from a named deployment.
+    red_flag: >-
+      No override data, or flag volumes that make genuine review
+      impossible. Near-zero overrides means the human is a rubber stamp,
+      which is how MiDAS-scale harm happens under a nominal review layer.
+    source_url: https://www.btah.org/case-study/michigan-unemployment-insurance-false-fraud-determinations.html
+    select:
+      elevated: true
+      weight: 7
+  - id: tax-revenue-q12
+    question: >-
+      If we discover a systematic error, wrong values in one neighborhood,
+      a filter flagging a group of taxpayers, how fast can you identify
+      every affected parcel or account, and how do you support corrected
+      notices, refunds, and interest?
+    good_answer: >-
+      A concrete plan: affected-record queries, correction and refund
+      workflows, notification templates, and committed timelines. Detroit
+      shows what unremediated assessment error costs residents.
+    red_flag: >-
+      No answer here means no deployment. "That would be a change order"
+      is a no.
+    source_url: https://crcmich.org/understanding-how-detroits-property-tax-assessment-process-contributed-to-the-600-million-over-assessment
+    select:
+      elevated: true
+      tiers: [3, 4]
+      weight: 8
+  - id: tax-revenue-q13
+    question: >-
+      Who bears the cost when a system error produces a wrongful lien,
+      denied refund, or inflated bill, and will you accept indemnification
+      and audit-rights clauses in the contract?
+    good_answer: >-
+      Contractual acceptance of indemnification and audit rights, in
+      writing.
+    red_flag: >-
+      Liability pushed entirely onto the agency. Vendor accountability
+      was contested all the way through the MiDAS litigation; settle it in
+      the contract rather than in court.
+    source_url: https://www.btah.org/case-study/michigan-unemployment-insurance-false-fraud-determinations.html
+    select:
+      tiers: [3, 4]
+      weight: 7
+  - id: tax-revenue-q14
+    question: >-
+      For taxpayer chatbots: how is every answer grounded in our current
+      statutes, forms, and deadlines; how do you measure answer accuracy;
+      and what is the correction pipeline when it gets one wrong?
+    good_answer: >-
+      Retrieval grounded in your published sources with citations shown to
+      the user, a measured accuracy number on a tax-question test set, an
+      escalation path to staff, and a same-week correction process.
+    red_flag: >-
+      "It's trained on tax data" with no grounding, no measurement, and no
+      correction pipeline. NYC's chatbot invented rules on an official
+      channel.
+    source_url: https://themarkup.org/artificial-intelligence/2024/03/29/nycs-ai-chatbot-tells-businesses-to-break-the-law
+    select:
+      tiers: [3, 4]
+      weight: 6
+  - id: tax-revenue-q15
+    question: >-
+      Who updates the system when our statutes, rates, exemption criteria,
+      or assessment calendar change, how fast, and how is each change
+      tested before it touches values or bills?
+    good_answer: >-
+      A named update process with turnaround commitments and regression
+      testing against prior-year outcomes.
+    red_flag: >-
+      No update pipeline, or updates only at annual release. Tax law
+      changes mid-cycle; a model scoring against last year's rules
+      produces wrong bills quietly.
+    source_url: null
+    select:
+      tiers: [3, 4]
+      weight: 6
+
+elevated_scrutiny_rules:
+  - condition: Any match on this pack
+    action: >-
+      The output floor is the "enhanced review" band. The "established
+      vendor, proceed to demo" band is unavailable until the
+      human-decides-adverse-actions question (q01) is answered.
+  - condition: >-
+      A fraud-detection, refund-screening, audit-selection, or
+      delinquency-scoring pitch
+    action: >-
+      Classify as an adverse-action system regardless of framing, and
+      trigger the eligibility-case-mgmt overlay: prepend its "Why this
+      category is different" block and add its q01, q02, q03, and q12.
+      MiDAS and the Dutch childcare scandal were both revenue-side
+      systems.
+  - condition: >-
+      A claim of automated liens, garnishments, offsets, exemption
+      removals, or assessment finalization
+    action: Strongest caution band, always.
+  - condition: >-
+      A valuation-model pitch with no ratio-study statistics by price tier
+    action: >-
+      Raise to enhanced review and require q03 and q04 answers before any
+      demo-stage evaluation; regressivity is invisible in averages.
+  - condition: >-
+      A taxpayer chatbot or staff copilot with a named human making every
+      decision and no adverse-action output
+    action: >-
+      May be evaluated on standard merits, with q01, q04, q14, and q15
+      still included.
+
+reference_deployments:
+  - agency: Cook County Assessor's Office (IL)
+    vendor_stack: In-house open-source residential AVM (ccao-data)
+    what: >-
+      Publishes its residential valuation model code and data publicly;
+      initial assessed values generated by a documented, replicable model
+    metric: Model code and data public since 2019
+    metric_source_type: government-page
+    source_url: https://github.com/ccao-data/model-res-avm
+  - agency: Wisconsin Department of Revenue
+    vendor_stack: Fast Enterprises GenTax
+    what: Integrated tax system consolidating 35+ legacy systems
+    metric: >-
+      Averages 1 million transactions per day across about 100 tax account
+      types, as reported by Government Technology
+    metric_source_type: independent-press
+    source_url: https://www.govtech.com/computing/tax-system-upgrades-increase-speed-efficiency-for-residents
+  - agency: Indiana Department of Revenue
+    vendor_stack: Fast Enterprises
+    what: Statewide tax administration modernization
+    metric: >-
+      $77.7 million, 10-year contract signed 2018 (Indianapolis Business
+      Journal)
+    metric_source_type: independent-press
+    source_url: https://www.ibj.com/articles/70354-state-signs-77m-contract-to-upgrade-tax-administration-technology
+  - agency: >-
+      St. Johns County, FL (exemption audits; note the flag-to-collection
+      gap)
+    vendor_stack: TrueRoll
+    what: Machine-learning homestead-exemption eligibility monitoring
+    metric: >-
+      Phase one: questionnaires to 5,500 properties, almost $800K in liens
+      placed, just over $200K collected (Government Technology, Jun 2020)
+    metric_source_type: independent-press
+    source_url: https://www.govtech.com/biz/Startup-Aims-to-Modernize-the-Property-Tax-Exemption-Audit.html
+  - agency: "Michigan UIA (cautionary: MiDAS)"
+    vendor_stack: MiDAS-era stack (SAS, Fast Enterprises)
+    what: >-
+      Auto-adjudicated unemployment fraud determinations, later found
+      wrong more than 90% of the time
+    metric: >-
+      Roughly 40,000 people accused; $20M settlement (Michigan AG, Oct
+      2022)
+    metric_source_type: oversight
+    source_url: https://www.michigan.gov/ag/news/press-releases/2022/10/20/som-settlement-of-civil-rights-class-action-alleging-false-accusations-of-unemployment-fraud
+
+registries_to_check:
+  - name: FedRAMP Marketplace
+    url: https://marketplace.fedramp.gov/
+    what_it_proves: >-
+      Whether this specific product holds a federal cloud authorization,
+      and at what level. "In process" is not "authorized."
+  - name: GovRAMP Authorized Product List
+    url: https://govramp.org/
+    what_it_proves: >-
+      State-oriented cloud security verification. Formerly StateRAMP; the
+      name changed in February 2025.
+  - name: AI Incident Database
+    url: https://incidentdatabase.ai/
+    what_it_proves: >-
+      A public log of AI system failures. Search the vendor and product
+      name.
+  - name: Benefits Tech Advocacy Hub case library
+    url: https://www.btah.org/case-studies.html
+    what_it_proves: >-
+      A negative registry of documented harms from automated government
+      systems, including the MiDAS record that anchors this pack.
+  - name: Cook County Assessor open model repositories
+    url: https://github.com/ccao-data
+    what_it_proves: >-
+      What full valuation-model transparency looks like in production
+      government use. A useful benchmark against any "must stay
+      proprietary" claim.
+  - name: IAAO Standard on Ratio Studies
+    url: https://www.iaao.org/wp-content/uploads/Standard_on_Ratio_Studies.pdf
+    what_it_proves: >-
+      The professional standard for measuring assessment accuracy and
+      uniformity (COD, PRD, PRB). The statistics a credible valuation
+      vendor should already report, by price tier and geography.
+
+legal_context: |-
+  - 26 U.S.C. 6103 (current): tax returns and return information are
+    confidential, with penalties for unauthorized disclosure. Any vendor
+    architecture that moves return data must be evaluated against it
+    (https://www.law.cornell.edu/uscode/text/26/6103).
+  - IRS Publication 1075 (current edition): safeguarding requirements for
+    federal tax information held by state and local agencies and their
+    contractors, including cloud and contractor-access rules
+    (https://www.irs.gov/pub/irs-pdf/p1075.pdf).
+  - IAAO Standard on Ratio Studies: the professional standard for
+    assessment level and uniformity statistics (COD, PRD, PRB). Many
+    states embed these thresholds in equalization law; a valuation model
+    that cannot produce them cannot show it treats price tiers evenly
+    (https://www.iaao.org/wp-content/uploads/Standard_on_Ratio_Studies.pdf).
+  - State constitutional and statutory assessment limits: Michigan's
+    constitution caps assessments at 50 percent of market value, the cap
+    Detroit's 2010-2016 assessments exceeded (CRC of Michigan, Nov 2021:
+    https://crcmich.org/understanding-how-detroits-property-tax-assessment-process-contributed-to-the-600-million-over-assessment).
+    Check your own state's uniformity clause and appeal deadlines.
+  - Michigan MiDAS settlement (Oct 2022) and the Cahoo litigation:
+    automated adverse determinations without meaningful review produced a
+    $20M settlement, and the MiDAS contractors were sued alongside the
+    state
+    (https://www.btah.org/case-study/michigan-unemployment-insurance-false-fraud-determinations.html).
+  - NJCM v. the Netherlands (SyRI), Hague District Court, Feb 5, 2020:
+    opaque government risk profiling for benefits and tax enforcement
+    violated ECHR Article 8
+    (https://www.escr-net.org/caselaw/2020/nederlands-juristen-comite-voor-mensenrechten-et-al-v-netherlands-eclinlrbdha20201878/).
+  - OMB M-25-21 (2025): fraud detection and adjudication uses of AI are
+    presumptively high-impact for federal agencies, requiring testing,
+    human oversight, and remedies; a useful bar to hold state-level
+    vendors to
+    (https://www.whitehouse.gov/wp-content/uploads/2025/02/M-25-21-Accelerating-Federal-Use-of-AI-through-Innovation-Governance-and-Public-Trust.pdf).
+  - Taxpayer Bill of Rights, IRC 7803(a)(3): the right to be informed, to
+    quality service, and to a fair and just tax system framed the National
+    Taxpayer Advocate's false-positive findings; state taxpayer-rights
+    statutes commonly mirror it.
+  - Colorado AI Act (delayed to Jun 30, 2026) and Texas TRAIGA (effective
+    Jan 1, 2026) reach consequential government decisions. Verify current
+    status before citing.
+
+realistic_pricing: |-
+  Published anchors are thin in this category; treat labeled items as
+  practitioner estimates rather than quotes.
+
+  - Statewide integrated tax systems are eight-figure, multi-year
+    programs: Indiana signed a 10-year, $77.7 million contract with Fast
+    Enterprises in 2018 (Indianapolis Business Journal:
+    https://www.ibj.com/articles/70354-state-signs-77m-contract-to-upgrade-tax-administration-technology).
+    An "AI module" quoted anywhere near ITS scale for a bolt-on tool
+    deserves the question "what exactly are we buying?"
+  - County CAMA replacements and reassessment services typically run six
+    to seven figures depending on parcel count (practitioner estimate; no
+    reliable public anchor captured this cycle).
+  - Narrow AI wedges (exemption monitoring, scoring add-ons) are rarely
+    priced publicly; comparable SaaS runs five to low six figures per
+    year at county scale (practitioner estimate). Decline
+    percentage-of-recovery structures regardless of the sticker price;
+    the incentive problem is the cost.
+  - Any pricing conversation for fraud, refund, or delinquency scoring is
+    premature until questions q01, q02, and q04 pass.
+
+last_updated: "2026-08-29"
+refresh_cadence: quarterly
+
+known_gaps: |-
+  - The City of Detroit's own memo confirming the $600M over-taxation
+    (detroitmi.gov) is bot-blocked to automated fetches (HTTP 403); the
+    figure is carried on the Citizens Research Council analysis instead.
+    Re-verify the primary memo manually next cycle.
+  - The Library of Congress summary of the SyRI ruling returns 403 to
+    automated fetches; the ESCR-Net case page is used instead.
+  - Tyler Technologies' Delaware statewide reassessment (Businesswire, Oct
+    21, 2021) could not be re-fetched (403); the citation is retained by
+    outlet and date, and the contract value was not verified. Tyler's
+    "clients in 26 states" figure comes from Tyler's own product page and
+    is not independently verified.
+  - TrueRoll's 2026 claim of "150+ government offices in 10+ states" is
+    vendor-reported (Apr 2026 press release) and was not independently
+    verified; the pack carries only the 2020 Government Technology
+    reporting.
+  - The current production scope of Thomson Reuters Pondera in state tax
+    agencies specifically (as opposed to unemployment and benefits
+    programs) could not be established; EPIC's records project is cited
+    for the opacity itself.
+  - Cahoo vendor claims had mixed outcomes: the district court granted
+    SAS Institute's motion to dismiss (2018), and the 2023 Sixth Circuit
+    opinion notes claims against two private defendants were then still
+    pending. The pack therefore says the vendors were "sued," and does not
+    claim liability was established. Verify final disposition next cycle.
+  - No public price anchor was captured for county CAMA contracts or
+    AI bolt-on subscriptions; those lines are labeled practitioner
+    estimates.
+  - Colorado AI Act and Texas TRAIGA status not re-verified beyond the
+    eligibility pack's Aug 2026 review; verify before citing.
+  - Robodebt totals vary by source (A$1.73-1.76B raised; 433,000-526,000
+    people depending on counting method); the pack carries only the
+    settlement-anchored figures (about A$1.8 billion, roughly 430,000
+    debts) that its cited source and the class-action record support.
+  - An RSI Pennsylvania desk-enforcement contract claim was cut in
+    verification: no public source found. Only Rhode Island is carried.

@@ -21,6 +21,22 @@ inclusion_test:
     back-office functions (HR, finance, records)?
   - Is the user the employee, not the resident?
 
+# Classifier-fallback terms, lowercase substring-matched against the pitch
+# (>= 2 distinct hits = a match; see _shared/sector-lexicon.ts).
+signal_lexicon:
+  - copilot
+  - meeting transcription
+  - meeting notes
+  - notetaker
+  - drafting assistant
+  - writing assistant
+  - internal search
+  - enterprise search
+  - knowledge management
+  - email drafting
+  - workflow automation
+  - staff productivity
+
 scrutiny_tier: standard
 
 incumbent_landscape: >-
@@ -163,6 +179,8 @@ skepticism_triggers:
 
 diligence_questions:
   - id: staff-productivity-q01
+    select:
+      base: true
     question: >-
       We already license (or can nearly freely add) Microsoft 365 Copilot or
       Gemini. What specifically does your product do that they do not, and
@@ -174,6 +192,8 @@ diligence_questions:
       Generic productivity claims that the bundled incumbent already covers.
     source_url: null
   - id: staff-productivity-q02
+    select:
+      base: true
     question: >-
       Can our records officers search, retrieve, export, and verifiably
       delete every prompt, output, transcript, and summary you hold, in a
@@ -185,6 +205,8 @@ diligence_questions:
       professional-services engagement.
     source_url: https://mrsc.org/stay-informed/mrsc-insight/july-2024/public-records-and-ai
   - id: staff-productivity-q03
+    select:
+      base: true
     question: >-
       Can retention be set to match our schedules, and is there any content
       (chat history, telemetry, backups) we cannot control?
@@ -196,6 +218,8 @@ diligence_questions:
       control.
     source_url: null
   - id: staff-productivity-q04
+    select:
+      base: true
     question: >-
       Contractually: is our data used to train your models or any third
       party's? Where does it reside? What happens at contract end?
@@ -206,6 +230,8 @@ diligence_questions:
       Silence on subprocessors, or "we may use data to improve services."
     source_url: null
   - id: staff-productivity-q05
+    select:
+      base: true
     question: >-
       How does the tool obtain affirmative consent from every participant,
       including non-users and the public, in all-party-consent states? What
@@ -218,6 +244,8 @@ diligence_questions:
       litigated in Brewer v. Otter.ai.
     source_url: https://natlawreview.com/article/ai-notetaking-tools-under-fire-lessons-otterai-class-action-complaint
   - id: staff-productivity-q06
+    select:
+      elevated: true
     question: >-
       Can we technically block the tool from closed sessions,
       attorney-client calls, HR meetings, and juvenile or health matters, or
@@ -227,6 +255,10 @@ diligence_questions:
     red_flag: Reliance on staff remembering to turn it off.
     source_url: null
   - id: staff-productivity-q07
+    select:
+      claim_types: [compliance]
+      finding_ids: [cert-vocab, fedramp_marketplace, govramp, txramp]
+      weight: 3
     question: >-
       What FedRAMP level, GovRAMP status, and SOC 2 Type II do you hold, is
       the tool CJIS-compatible, and in which cloud does our tenant run?
@@ -236,6 +268,11 @@ diligence_questions:
     red_flag: Commercial cloud offered for CJIS or FTI workloads.
     source_url: https://learn.microsoft.com/en-us/microsoft-copilot-studio/requirements-licensing-gcc
   - id: staff-productivity-q08
+    select:
+      claim_types: [performance]
+      finding_ids: ["perf-*"]
+      elevated: true
+      weight: 2
     question: >-
       What is the measured error rate for summaries and drafts, and what
       does the UI do to force human review (such as source-linking) before
@@ -248,6 +285,8 @@ diligence_questions:
       unreviewed.
     source_url: null
   - id: staff-productivity-q09
+    select:
+      base: true
     question: >-
       What usage logs do we get, and can we audit misuse without creating a
       workforce-surveillance problem?
@@ -256,6 +295,10 @@ diligence_questions:
     red_flag: Either no logs at all, or workforce surveillance by default.
     source_url: null
   - id: staff-productivity-q10
+    select:
+      claim_types: [performance]
+      finding_ids: ["perf-*"]
+      weight: 4
     question: >-
       Are your time-savings claims self-reported user estimates (like
       Pennsylvania's 95 minutes per day) or independently measured? Show the
@@ -266,6 +309,8 @@ diligence_questions:
     red_flag: Self-reported figures presented as measured savings.
     source_url: https://digitalgovernmenthub.org/library/lessons-from-pennsylvanias-generative-ai-pilot-with-chatgpt/
   - id: staff-productivity-q11
+    select:
+      tiers: [3, 4]
     question: >-
       On termination, how do we get every record out, and how do you certify
       deletion?
@@ -274,6 +319,10 @@ diligence_questions:
     red_flag: No deletion certification.
     source_url: null
   - id: staff-productivity-q12
+    select:
+      claim_types: [customer]
+      finding_ids: [customers]
+      weight: 3
     question: >-
       Which government customers at our scale have completed a
       public-records request or a litigation hold involving your product's
@@ -376,7 +425,7 @@ realistic_pricing: |-
   seat per month effective. A standalone tool priced above that baseline
   needs a named differentiator to justify the difference.
 
-last_updated: "2026-08-28"
+last_updated: "2026-08-29"
 refresh_cadence: quarterly
 
 known_gaps: |-

@@ -1,0 +1,850 @@
+# Sector pack: permitting-licensing (v1 draft). STANDARD SCRUTINY.
+#
+# Scrutiny tier call (researched): standard. Every documented US municipal
+# deployment in this category (Austin, Los Angeles, Honolulu, Seattle,
+# Louisville, Denver) keeps final permit decisions with named staff, and the
+# dominant harms on record are delay, cost overrun, and accuracy gaps rather
+# than automated deprivation at scale (Stateline/Route Fifty, Aug 2026).
+# The exceptions that DO carry deprivation risk (automated denial, license
+# revocation, detection-driven violation notices, occupied-property
+# surveillance) are handled by elevated_scrutiny_rules below, which floor
+# those pitches at enhanced review and, where outputs could touch a person's
+# benefits, trigger the eligibility-case-mgmt overlay.
+#
+# NOTE for integrators: signal_lexicon and diligence_questions[].select are
+# new fields for the classifier-fallback and question-selection work; the
+# current strict zod schema in scripts/validate-packs.ts will reject them
+# until packs-types.ts adds them. Everything else follows pack-spec.md.
+pack_id: permitting-licensing
+pack_name: Permitting, Licensing & Code Enforcement AI
+
+definition: >-
+  AI sold to building departments, planning and development services, code
+  enforcement, and business or professional licensing programs: automated
+  plan review and code-compliance pre-checks, permit intake triage and
+  completeness screening, permitting and licensing chatbots, inspection
+  scheduling and routing, and detection tools that scan imagery or rental
+  listings for violations. Not this pack alone: general document extraction
+  (see document-processing), constituent chatbots with no permit or license
+  function (see public-comms), and any pitch whose outputs could deny,
+  reduce, or flag a person's public benefits, which triggers the
+  eligibility-case-mgmt overlay.
+
+inclusion_test:
+  - >-
+    Does the pitch mention plan review, plan check, permit approvals, permit
+    intake, or code compliance for a building, planning, or development
+    services department?
+  - >-
+    Does it mention business licensing, professional licensing, or license
+    applications and renewals for a city, county, or state board?
+  - >-
+    Does it mention code enforcement, violation detection, or scanning
+    imagery, rental listings, or street video to find unpermitted work,
+    short-term rentals, or blight?
+  - >-
+    Does it mention inspection scheduling, inspection routing, or field
+    inspection automation?
+  - >-
+    Does it offer a chatbot or assistant that answers zoning, building code,
+    or licensing questions for applicants?
+
+scrutiny_tier: standard
+
+signal_lexicon:
+  - plan review
+  - plan check
+  - permit intake
+  - building permit
+  - zoning compliance
+  - code enforcement
+  - business license
+  - professional license
+  - inspection scheduling
+  - certificate of occupancy
+  - completeness check
+  - prescreen
+  - accessory dwelling unit
+  - solar permit
+  - shot clock
+
+incumbent_landscape: >-
+  Layer one is the permitting and licensing system of record: Accela, Tyler
+  Technologies (Enterprise Permitting and Licensing, formerly EnerGov),
+  OpenGov, Clariti (Salesforce-based), CentralSquare, and Granicus. Most
+  cities buy AI as an add-on to one of these, and the costliest documented
+  failures in this market are conventional replacements of these systems,
+  before any AI: Portland's ITAP project was halted after years of overruns,
+  and Honolulu's 2025 HNL Build launch drew almost universally negative
+  staff feedback. Layer two is the AI plan-review and pre-check specialists:
+  Archistar (Austin, Los Angeles, Vancouver, Surrey), CivCheck (Honolulu,
+  Seattle, Denver; reported by Stateline in August 2026 as now part of
+  Clariti), Symbium (statutory instant solar permitting in California under
+  SB 379), and Govstream.ai. GreenLite sells AI-assisted private plan
+  review, in which third-party reviewers act in place of city review where
+  state law allows; we could not verify a named government deployment for it
+  in public sources. Layer three is detection-driven enforcement: Deckard
+  Technologies (Rentalscape) and Granicus (Host Compliance) monitor
+  short-term rental listings, with jurisdiction counts that are
+  vendor-reported, and San Jose piloted vehicle-mounted cameras for blight
+  detection, then dropped encampment and graffiti detection over privacy
+  concerns. Layer four is hyperscalers and free public tools: Microsoft
+  behind Kelowna's grant-funded permit assistant, and NREL's free SolarAPP+
+  for instant residential solar permits. In every documented deployment,
+  final permit decisions stay with staff. A listing here is a market-map
+  signal and carries no endorsement.
+
+established_vendors:
+  - name: Accela
+    tier: platform
+    one_liner: >-
+      Major permitting and licensing system of record for US state and local
+      governments.
+    gov_evidence_url: null
+  - name: Tyler Technologies
+    tier: platform
+    one_liner: >-
+      Enterprise Permitting and Licensing platform (formerly EnerGov);
+      acquired ARInspect, an AI field-inspection product, in October 2023.
+    gov_evidence_url: https://www.govtech.com/biz/tylers-new-ai-acquisition-focuses-on-government-field-work
+  - name: OpenGov
+    tier: platform
+    one_liner: Permitting and licensing suite widely sold to US local governments.
+    gov_evidence_url: null
+  - name: Clariti
+    tier: platform
+    one_liner: >-
+      Salesforce-based permitting and licensing platform (acquired Camino in
+      2023); Honolulu's HNL Build runs on it, and the launch record there was
+      contested (see failure modes).
+    gov_evidence_url: https://www.hawaiipublicradio.org/local-news/2024-03-28/honolulu-permitting-department-entering-digital-age-new-software-suite-clariti
+  - name: CentralSquare
+    tier: platform
+    one_liner: Community development permitting suite for local governments.
+    gov_evidence_url: null
+  - name: Granicus
+    tier: platform
+    one_liner: >-
+      Government service platform whose Host Compliance product monitors
+      short-term rental listings for local enforcement programs.
+    gov_evidence_url: null
+  - name: Archistar
+    tier: specialist
+    one_liner: >-
+      AI plan-review pre-check (AI PreCheck, formerly eCheck) used by Austin,
+      Los Angeles City and County, Vancouver, and Surrey; advisory reports,
+      with staff decisions retained.
+    gov_evidence_url: https://www.gov.ca.gov/2025/04/30/governor-newsom-announces-launch-of-new-ai-tool-to-supercharge-the-approval-of-building-permits-and-speed-recovery-from-los-angeles-fires/
+  - name: CivCheck
+    tier: startup-verified
+    one_liner: >-
+      AI pre-application code screening used by Honolulu (mandatory for
+      residential intake starting September 1, 2026) and piloted in Seattle
+      and Denver; reported in August 2026 as part of Clariti.
+    gov_evidence_url: https://www.govtech.com/artificial-intelligence/honolulu-launches-ai-assisted-fast-track-permit-review
+  - name: Symbium
+    tier: startup-verified
+    one_liner: >-
+      Automated instant permitting for prescriptive project types (solar,
+      storage, EV chargers) under California SB 379; used by cities
+      including Santa Clarita and Bakersfield.
+    gov_evidence_url: https://www.canarymedia.com/articles/solar/ai-powered-permitting-is-speeding-up-solar-deployments-in-california
+
+failure_modes:
+  - title: Official licensing chatbot invented rules (NYC MyCity)
+    description: >-
+      New York City's MyCity chatbot, built to answer business owners'
+      questions about licenses and regulations, told businesses on an
+      official city channel that unlawful practices were allowed (for
+      example, that employers could take workers' tips) and gave
+      contradictory answers to identical questions. The city's technology
+      office characterized it as a pilot that would improve and kept it
+      online after the errors were reported. This is the canonical record
+      for any permitting or licensing chatbot pitch.
+    named_incident: NYC MyCity chatbot (The Markup, Mar 29, 2024)
+    source_url: https://themarkup.org/artificial-intelligence/2024/03/29/nycs-ai-chatbot-tells-businesses-to-break-the-law
+  - title: >-
+      Permitting system replacement that slowed permits at launch (Honolulu
+      HNL Build; conventional IT, not AI)
+    description: >-
+      Clearly labeled context, not an AI failure: Honolulu's $7.3 million
+      HNL Build system (Clariti platform, Speridian implementation) replaced
+      the 1990s-era POSSE system in August 2025. In an anonymous survey of
+      more than 150 employees weeks after launch, staff feedback was almost
+      universally negative, one engineer called it a complete failure, and
+      reporters documented that staff could bypass certain reviews and that
+      permit version history was hard to audit, in a department where a
+      bribery scandal had sent six people to prison. The base rate for
+      permitting modernization projects is the context any AI add-on pitch
+      sits inside.
+    named_incident: >-
+      Honolulu HNL Build launch backlash (Honolulu Civil Beat, Oct 2025)
+    source_url: https://www.civilbeat.org/2025/10/complete-failure-honolulu-permit-workers-say-tech-upgrade-is-a-bust/
+  - title: >-
+      Permitting modernization project halted after overruns (Portland ITAP;
+      conventional IT, not AI)
+    description: >-
+      Clearly labeled context, not an AI failure: Portland's Information
+      Technology Advancement Project to digitize permitting was budgeted at
+      $8.2 million in 2012, was re-estimated at $11.8 million by 2014 as its
+      oversight committee flagged faulty planning assumptions and contractor
+      turnover (14 of 15 contractor staff replaced), and the city later cut
+      ties with the contractor and halted the project on a consultant's
+      recommendation before finishing it years later as a new effort.
+    named_incident: >-
+      Portland ITAP permitting project overruns and halt (AGC Oregon-Columbia
+      / Technology Oversight Committee record, 2014-2017)
+    source_url: https://www.agc-oregon.org/government-affairs/costs-run-high-for-portlands-digital-permitting-efforts/
+  - title: Detection error rates in automated enforcement (French pool tax AI)
+    description: >-
+      France's tax authority used aerial imagery AI (built with Google and
+      Capgemini) to find undeclared swimming pools, identifying 20,356 of
+      them; earlier reporting put the software's error rate around 30
+      percent, including solar panels mistaken for pools. The program shows
+      both that imagery-based detection can find real violations at scale
+      and that raw detection outputs carry error rates far too high to send
+      notices without human verification.
+    named_incident: >-
+      French tax authority AI pool detection, 20,356 pools found, roughly 30%
+      error rate reported in earlier testing (2022)
+    source_url: https://www.theregister.com/2022/08/30/frances_tax_department_used_ai/
+  - title: >-
+      Code-enforcement camera pilot scaled back over privacy (San Jose)
+    description: >-
+      San Jose piloted vehicle-mounted AI cameras to detect potholes,
+      illegal dumping, graffiti, and lived-in vehicles, in what was reported
+      as a first-of-its-kind program. Reported accuracy was about 70 percent
+      for lived-in RVs and only 10 to 15 percent for lived-in cars, and
+      advocates warned detections could drive sweeps and towing of vehicles
+      people live in. The city's own pilot memo later removed encampment and
+      graffiti detection, citing capacity limitations and privacy concerns.
+      Detection aimed at occupied property is where code-enforcement AI
+      acquires surveillance and civil-liberties stakes.
+    named_incident: >-
+      San Jose vehicle-mounted AI detection pilot; encampment and graffiti
+      detection later removed (San Jose Spotlight via Governing, 2024; city
+      council memo)
+    source_url: https://www.governing.com/urban/san-jose-is-using-ai-to-detect-homeless-camps-will-it-work
+
+skepticism_triggers:
+  - claim_pattern: '"Instant permits" or "same-day approval" for any review type'
+    threshold: >-
+      Any instant or automatic issuance claim beyond narrow prescriptive
+      project types that a statute expressly authorizes
+    why: >-
+      Lawful automated issuance in the US is anchored to statutes like
+      California SB 379, which requires real-time online permitting for
+      residential solar in most cities and counties. Structural,
+      discretionary, and land-use reviews have no such authorization, and
+      every documented city deployment keeps staff decisions. Ask which
+      statute authorizes automated issuance here.
+    source_url: https://www.energy.ca.gov/programs-and-topics/programs/residential-solar-permit-reporting-program-sb-379/residential-solar
+  - claim_pattern: '"Cuts review time by X%"'
+    threshold: >-
+      Any speed claim without the denominator: staff review time or calendar
+      days, which permit types, and how many completed applications
+    why: >-
+      Honolulu's widely cited 73-day-to-32.5-day improvement was based on 19
+      completed applications when announced. Real numbers exist in this
+      market; insist on the sample size and permit mix behind them.
+    source_url: https://www.govtech.com/artificial-intelligence/honolulu-launches-ai-assisted-fast-track-permit-review
+  - claim_pattern: Accuracy percentages for plan review or completeness checks
+    threshold: >-
+      Any accuracy figure not measured against your jurisdiction's adopted
+      codes and local amendments
+    why: >-
+      Seattle's pilot published task-level numbers (87% on completeness, 92%
+      on design compliance), so jurisdiction-specific measurement is an
+      achievable ask, and model-code accuracy does not transfer to local
+      amendments.
+    source_url: https://www.route-fifty.com/artificial-intelligence/2026/08/cities-turn-ai-speed-housing-permitting/415564/
+  - claim_pattern: '"The AI approves plans" or "touchless permitting"'
+    threshold: Any claim that the system takes final action on its own
+    why: >-
+      Documented US deployments (Austin, Los Angeles, Honolulu, Seattle,
+      Louisville, Denver) all describe the AI as a pre-check or support tool
+      with staff making final decisions. A vendor claiming otherwise is
+      claiming something no named peer jurisdiction has accepted.
+    source_url: https://www.route-fifty.com/artificial-intelligence/2026/08/cities-turn-ai-speed-housing-permitting/415564/
+  - claim_pattern: A chatbot that answers code or licensing questions
+    threshold: >-
+      No per-answer citation to the code section relied on, and no designed
+      refusal path for questions it cannot answer
+    why: >-
+      NYC's MyCity chatbot answered business-regulation questions wrongly on
+      an official channel and stayed online afterward. Citation and refusal
+      design are the difference between a lookup tool and a liability.
+    source_url: https://themarkup.org/artificial-intelligence/2024/03/29/nycs-ai-chatbot-tells-businesses-to-break-the-law
+  - claim_pattern: >-
+      Violation detection from aerial imagery, street cameras, or scraped
+      listings
+    threshold: >-
+      Any detection claim without a measured false-positive rate and a human
+      verification step before any notice or fine
+    why: >-
+      France's pool-detection AI found 20,356 real violations, and earlier
+      reporting put its error rate near 30 percent, with solar panels read
+      as pools. Treat detection output as a lead that a person verifies
+      before any notice goes out.
+    source_url: https://www.theregister.com/2022/08/30/frances_tax_department_used_ai/
+  - claim_pattern: '"Replaces plan reviewers" or headcount-savings framing'
+    threshold: Any staffing-reduction promise
+    why: >-
+      Named deployments describe support tools that clear intake noise so
+      reviewers can work complex cases, and planning-association reviewers
+      caution that AI does not replicate judgment on community context.
+      Staff adoption also decides these rollouts: Honolulu's system launch
+      showed how quickly negative staff sentiment can define one.
+    source_url: https://www.route-fifty.com/artificial-intelligence/2026/08/cities-turn-ai-speed-housing-permitting/415564/
+  - claim_pattern: '"Used by hundreds of jurisdictions"'
+    threshold: >-
+      Any jurisdiction count without a named, callable list and the stage of
+      each deployment (pilot, voluntary, mandatory, production)
+    why: >-
+      Jurisdiction counts in this market are usually vendor-reported and mix
+      free pilots with production use. Honolulu moved from voluntary to
+      mandatory in stages; stage matters to what a reference can tell you.
+    source_url: https://www.constructiondive.com/news/austin-honolulu-los-angeles-permit-ai/751085/
+  - claim_pattern: '"Trained on your local codes"'
+    threshold: >-
+      No named process, turnaround, and regression test for when your
+      council amends the code
+    why: >-
+      Codes and local amendments change constantly. A tool with no update
+      pipeline drifts wrong quietly, the failure pattern documented on NYC's
+      official chatbot.
+    source_url: https://themarkup.org/artificial-intelligence/2024/03/29/nycs-ai-chatbot-tells-businesses-to-break-the-law
+  - claim_pattern: >-
+      "FedRAMP compliant," "StateRAMP compliant," or certification vocabulary
+      without the word "authorized"
+    threshold: The word "compliant" standing in for a verifiable authorization
+    why: >-
+      Verify status directly on the FedRAMP Marketplace, GovRAMP, and
+      TX-RAMP lists. "In process" is not "authorized."
+    source_url: https://marketplace.fedramp.gov/
+  - claim_pattern: A low fixed price for a full system replacement
+    threshold: >-
+      A quote far below the documented range for permitting system work, or
+      an implementation timeline under six months for a system of record
+    why: >-
+      Honolulu's system replacement cost $7.3 million between platform and
+      implementation, and Portland's ITAP grew from $8.2 million to $11.8
+      million before it was halted. Implementation, configuration, and data
+      migration are where permitting projects fail, with or without AI.
+    source_url: https://www.civilbeat.org/2025/10/complete-failure-honolulu-permit-workers-say-tech-upgrade-is-a-bust/
+
+diligence_questions:
+  - id: permitting-licensing-q01
+    question: >-
+      Does your system ever approve or deny a permit or license, or issue a
+      violation notice, on its own? If anything is issued automatically,
+      which statute authorizes that, and for which project types?
+    good_answer: >-
+      A clear statement that outputs are advisory and named staff take every
+      final action, shown in the product. Automated issuance is credible
+      only for narrow prescriptive types with express statutory backing,
+      like California SB 379 solar permits.
+    red_flag: >-
+      "Configurable auto-approval," "touchless," or hedging. No named US
+      city deployment gives AI final decision authority on plan review.
+    source_url: https://www.route-fifty.com/artificial-intelligence/2026/08/cities-turn-ai-speed-housing-permitting/415564/
+    select:
+      base: true
+      weight: 10
+  - id: permitting-licensing-q02
+    question: >-
+      Our codes include local amendments to the model codes. Which exact
+      code editions and local amendments does your system check against
+      today? Who updates it when our council changes the rules, how fast,
+      and how is the change tested?
+    good_answer: >-
+      A named encoding and update process with a turnaround commitment and
+      regression testing, demonstrated on one of your actual local
+      amendments during the demo.
+    red_flag: >-
+      Trained on model IBC/IRC text only, or no update pipeline. Rules that
+      drift out of date produce confident wrong answers.
+    source_url: null
+    select:
+      base: true
+      weight: 9
+  - id: permitting-licensing-q03
+    question: >-
+      What are your measured false-pass and false-fail rates on our permit
+      types, checked against decisions our own reviewers made? What was the
+      sample size?
+    good_answer: >-
+      Task-level numbers with a defined denominator, like Seattle's
+      published 87% completeness and 92% design-compliance accuracy, or an
+      honest "we have not measured that in your jurisdiction yet."
+    red_flag: >-
+      A single blended accuracy number from another market or a demo
+      corpus, or no false-fail data at all.
+    source_url: https://www.route-fifty.com/artificial-intelligence/2026/08/cities-turn-ai-speed-housing-permitting/415564/
+    select:
+      claim_types: [performance]
+      finding_ids: ["perf-*"]
+      weight: 8
+  - id: permitting-licensing-q04
+    question: >-
+      When you say the tool cuts review time, what exactly is measured:
+      staff review hours or calendar days? Which permit types, and how many
+      completed applications are behind the number?
+    good_answer: >-
+      A precise denominator. Honest vendors distinguish staff time from
+      calendar time and disclose small samples, the way Honolulu's early
+      Priority Review numbers rested on 19 completed applications.
+    red_flag: >-
+      A percentage with no permit mix, no sample size, and no distinction
+      between staff time and end-to-end time.
+    source_url: https://www.govtech.com/artificial-intelligence/honolulu-launches-ai-assisted-fast-track-permit-review
+    select:
+      claim_types: [performance]
+      finding_ids: ["perf-*"]
+      weight: 7
+  - id: permitting-licensing-q05
+    question: >-
+      When your tool wrongly flags a compliant plan, what does the applicant
+      see, and what is their path around it? Do you measure how often that
+      happens, and does a wrong flag cost the applicant a resubmission fee
+      or a review cycle?
+    good_answer: >-
+      A visible override or appeal path to a human reviewer, tracked
+      false-flag rates, and a commitment that tool errors do not burn the
+      applicant's paid review cycles.
+    red_flag: >-
+      No path except resubmitting, or no measurement of false flags. The
+      cost of tool errors then lands on residents and small builders.
+    source_url: null
+    select:
+      base: true
+      weight: 8
+  - id: permitting-licensing-q06
+    question: >-
+      Name three comparable jurisdictions using this in production, and tell
+      us the stage in each: pilot, voluntary, mandatory, or full production.
+      Who can we call?
+    good_answer: >-
+      Named agencies with callable contacts and honest staging. The public
+      record (Austin, Honolulu, Los Angeles, Seattle) shows what real
+      references look like in this market.
+    red_flag: >-
+      Logos without contacts, pilots presented as production, or references
+      that turn out to be unpaid trials.
+    source_url: https://www.constructiondive.com/news/austin-honolulu-los-angeles-permit-ai/751085/
+    select:
+      base: true
+      claim_types: [identity, customer]
+      finding_ids: [customers, domain-age, email, leadership, excl]
+      weight: 8
+  - id: permitting-licensing-q07
+    question: >-
+      If the product answers code or licensing questions in plain language:
+      does every answer cite the specific code section it relied on, and
+      what does it do when it does not know? Show us your wrong-answer
+      monitoring.
+    good_answer: >-
+      Per-answer citations to the adopted code, a designed refusal path,
+      logged answers, and routine sampling of answers for accuracy.
+    red_flag: >-
+      No citations and no refusal design. NYC's MyCity chatbot answered
+      business-rule questions wrongly on an official channel and stayed
+      online afterward.
+    source_url: https://themarkup.org/artificial-intelligence/2024/03/29/nycs-ai-chatbot-tells-businesses-to-break-the-law
+    select:
+      claim_types: [performance, availability]
+      weight: 8
+  - id: permitting-licensing-q08
+    question: >-
+      Where do our plan files and applicant data go? Are they used to train
+      your models or shared with third parties? Which of these do you hold,
+      verifiable on the public lists: FedRAMP or GovRAMP authorization,
+      TX-RAMP certification, SOC 2 Type II?
+    good_answer: >-
+      Written no-training terms and authorizations you can confirm yourself
+      at the FedRAMP Marketplace, GovRAMP, and TX-RAMP lists. "In process"
+      is not "authorized."
+    red_flag: >-
+      Verbal assurances, "compliant" phrasing, or training rights buried in
+      the terms of service.
+    source_url: https://marketplace.fedramp.gov/
+    select:
+      base: true
+      claim_types: [compliance]
+      finding_ids: [fedramp_marketplace, govramp, txramp, cert-vocab]
+      weight: 8
+  - id: permitting-licensing-q09
+    question: >-
+      Our state has deadlines for permit decisions. How does your tool
+      record when an application was received and when it was deemed
+      complete, and can we audit those timestamps? What happens if the tool
+      mislabels a complete application as incomplete?
+    good_answer: >-
+      Immutable, exportable timestamps for receipt and completeness, plus an
+      acknowledgment that completeness determinations carry legal weight
+      under statutes like Texas HB 14 (2023), which lets applicants hire
+      third-party reviewers when deadlines are missed.
+    red_flag: >-
+      No audit trail for the clock, or a vendor unaware that completeness
+      triage interacts with statutory deadlines at all.
+    source_url: https://capitol.texas.gov/tlodocs/88R/analysis/html/HB00014E.htm
+    select:
+      elevated: true
+      tiers: [3, 4]
+      weight: 7
+  - id: permitting-licensing-q10
+    question: >-
+      How does this integrate with our permitting system of record (Accela,
+      Tyler, Clariti, OpenGov, or other)? Which system holds the official
+      record, and what happens when the two disagree?
+    good_answer: >-
+      A named, tested integration with the official record staying in the
+      system of record, and a defined reconciliation path for conflicts.
+    red_flag: >-
+      A side system holding its own copy of permit records, or "we can
+      build that integration."
+    source_url: null
+    select:
+      tiers: [3, 4]
+      weight: 6
+  - id: permitting-licensing-q11
+    question: >-
+      If the product detects possible violations from imagery, cameras, or
+      scraped listings: what is the measured false-positive rate, broken out
+      by neighborhood, and does a person verify every detection before any
+      notice or fine goes out?
+    good_answer: >-
+      A measured false-positive rate with geographic breakouts, mandatory
+      human verification before any enforcement action, and a stated policy
+      against detection aimed at occupied property such as encampments or
+      lived-in vehicles.
+    red_flag: >-
+      No error data, notices generated from raw detections, or occupancy
+      detection features. France's pool AI ran near a 30 percent error rate
+      in early reporting, and San Jose removed encampment and graffiti
+      detection from its camera pilot amid privacy concerns.
+    source_url: https://www.theregister.com/2022/08/30/frances_tax_department_used_ai/
+    select:
+      elevated: true
+      claim_types: [performance]
+      weight: 9
+  - id: permitting-licensing-q12
+    question: >-
+      If AI-assisted review passes a plan that later fails inspection or is
+      built with a code violation, who is responsible? Will you accept that
+      allocation in the contract, and do you carry errors-and-omissions
+      coverage for review work?
+    good_answer: >-
+      A direct answer in writing, E&O coverage for any review the vendor
+      performs, and clarity on whether their reviews carry legal weight
+      under your state's third-party review law.
+    red_flag: >-
+      Liability pushed entirely onto the jurisdiction while the marketing
+      claims the tool "ensures compliance."
+    source_url: null
+    select:
+      tiers: [3, 4]
+      weight: 7
+  - id: permitting-licensing-q13
+    question: >-
+      What did this change for the staff who use it in your reference
+      cities: how often do reviewers override the tool, and how much review
+      time does it actually save per application? What did staff say in
+      surveys?
+    good_answer: >-
+      Real override rates and per-application time data, plus honesty about
+      adoption friction. Honolulu's system launch drew almost universally
+      negative staff feedback in an anonymous survey; a vendor who has
+      never seen resistance has not deployed at scale.
+    red_flag: >-
+      No override telemetry, or a claim that staff love it everywhere with
+      nothing to show.
+    source_url: https://www.civilbeat.org/2025/10/complete-failure-honolulu-permit-workers-say-tech-upgrade-is-a-bust/
+    select:
+      elevated: true
+      weight: 6
+  - id: permitting-licensing-q14
+    question: >-
+      What is the total five-year cost for our volume, including
+      implementation, configuration of our local codes, integration, and
+      support? Is pricing per permit, per seat, or flat, and who pays:
+      the city or the applicant?
+    good_answer: >-
+      A full five-year number against public anchors: Austin pays up to $6
+      million over five years for citywide residential AI plan review;
+      Los Angeles City and County received Archistar free through a
+      state-philanthropic arrangement. Applicant-funded models should be
+      disclosed up front.
+    red_flag: >-
+      A low headline subscription with implementation, code configuration,
+      and integration sold separately later, the classic overrun pattern.
+    source_url: https://www.kut.org/housing/2024-10-11/austin-tx-artificial-intelligence-building-applications-permits-construction
+    select:
+      claim_types: [pricing]
+      finding_ids: [sourcewell]
+      tiers: [3, 4]
+      weight: 6
+  - id: permitting-licensing-q15
+    question: >-
+      Permit records and review logs are public records in our state. Can we
+      export every record, AI report, and decision log in an open format at
+      any time, and what is the transition plan when the contract ends?
+    good_answer: >-
+      Full export in documented open formats, AI outputs treated as records
+      the jurisdiction owns and can produce for records requests, and a
+      written exit plan with data migration support.
+    red_flag: >-
+      Proprietary formats, export fees, or silence on records-law
+      obligations. Cities replacing decades-old permit systems are living
+      with the cost of lock-in right now.
+    source_url: null
+    select:
+      tiers: [3, 4]
+      weight: 7
+
+elevated_scrutiny_rules:
+  - condition: >-
+      Any claim that the system takes final action on a permit, license, or
+      violation on its own, without express statutory authorization for that
+      project type
+    action: >-
+      Floor the output at the enhanced review band and require q01 to be
+      answered before any lower band is available.
+  - condition: >-
+      Detection-driven enforcement (imagery, cameras, scraped listings) that
+      can generate violation notices, fines, or enforcement referrals
+    action: >-
+      Treat as an adverse-action system regardless of framing: strongest
+      caution band, and add q01, q05, and q11 to the question slate.
+  - condition: >-
+      AI influencing denial, suspension, or revocation of a business or
+      professional license
+    action: >-
+      Floor at enhanced review. License holders have due process rights
+      before suspension (Bell v. Burson; Barry v. Barchi), so ask q01, q05,
+      and q09, and route counsel to the legal context block.
+  - condition: >-
+      A chatbot answering code, permit, or licensing questions on an
+      official government channel
+    action: >-
+      Add q07 to the slate and cite the NYC MyCity record in the output.
+  - condition: >-
+      Detection aimed at occupied property or people: encampments, lived-in
+      vehicles, occupancy inference
+    action: >-
+      Strongest caution band, plus the San Jose pilot record
+      (https://www.governing.com/urban/san-jose-is-using-ai-to-detect-homeless-camps-will-it-work)
+      rendered in the output.
+  - condition: >-
+      Any output that could deny, reduce, or flag a person's public benefits
+      (for example, licensing status feeding a benefits system)
+    action: >-
+      Trigger the eligibility-case-mgmt overlay per that pack's rules.
+
+reference_deployments:
+  - agency: City of Austin Development Services
+    vendor_stack: Archistar (AI PreCheck / eCheck)
+    what: >-
+      Citywide AI pre-check for residential building plan review; council
+      approved the contract in August 2024 and the city adopted the tool in
+      October 2024 after a three-month pilot
+    metric: >-
+      Contract of $3.5 million over three years, with a renewal option
+      taking it to $6 million over five; city staff said the pilot flagged
+      inconsistencies with roughly 75% accuracy, with tree and flood rules
+      the hardest cases
+    metric_source_type: independent-press
+    source_url: https://www.kut.org/housing/2024-10-11/austin-tx-artificial-intelligence-building-applications-permits-construction
+  - agency: Los Angeles City and County (fire rebuild)
+    vendor_stack: Archistar, funded free via LA Rises and Steadfast LA with Autodesk and Amazon
+    what: >-
+      Free AI pre-check for Eaton and Palisades fire rebuild permits,
+      launched April 30, 2025
+    metric: >-
+      State reported average staff review time down 54% for like-for-like
+      rebuilds in LA County, and more than 36% for other rebuilds (Dec 2025)
+    metric_source_type: government-page
+    source_url: https://www.gov.ca.gov/2025/12/23/governor-and-la-rises-announce-new-online-resource-to-further-help-la-fire-survivors-navigate-rebuilding/
+  - agency: City and County of Honolulu DPP
+    vendor_stack: CivCheck (with Clariti HNL Build as system of record)
+    what: >-
+      AI pre-application screening, launched December 2025; Priority Review
+      fast track July 2026; mandatory for residential intake starting
+      September 1, 2026 (announced August 2026)
+    metric: >-
+      Average review time 73 days down to 32.5, review cycles 3.4 down to
+      1.4, based on 19 completed applications at announcement
+    metric_source_type: independent-press
+    source_url: https://www.govtech.com/artificial-intelligence/honolulu-launches-ai-assisted-fast-track-permit-review
+  - agency: City of Seattle (pilot)
+    vendor_stack: CivCheck
+    what: AI completeness and design-compliance pre-checks in a pilot
+    metric: >-
+      87% accuracy on completeness checks, 92% on design-compliance checks,
+      50% reduction in intake review days, 35% fewer correction cycles
+    metric_source_type: independent-press
+    source_url: https://www.route-fifty.com/artificial-intelligence/2026/08/cities-turn-ai-speed-housing-permitting/415564/
+  - agency: City of Bakersfield
+    vendor_stack: Symbium
+    what: >-
+      Automated instant permitting for solar, EV chargers, reroofs, and HVAC
+      under California's SB 379 framework
+    metric: >-
+      More than 500 permits processed in six months of piloting, with the
+      city manager saying a full permit takes 10 to 15 minutes (city
+      figures, via local press)
+    metric_source_type: independent-press
+    source_url: https://www.turnto23.com/news/in-your-neighborhood/bakersfield/no-lines-no-paperwork-bakersfield-permits-go-digital
+  - agency: City of Kelowna, British Columbia
+    vendor_stack: Microsoft Azure OpenAI
+    what: >-
+      AI permit assistant answering zoning and permit-application questions,
+      built with a provincial grant
+    metric: $350,000 provincial Local Government Development Approvals grant
+    metric_source_type: independent-press
+    source_url: https://www.biv.com/news/real-estate/kelowna-turns-artificial-intelligence-help-housing-backlog-8294907
+  - agency: >-
+      City and County of Honolulu DPP (cautionary: system replacement, not AI)
+    vendor_stack: Clariti on Salesforce, implemented by Speridian
+    what: >-
+      HNL Build system-of-record replacement, August 2025: the documented
+      base rate for permitting modernization that any AI add-on rides on
+    metric: >-
+      $7.3 million in federal and city funds across platform and
+      implementation; an anonymous survey of more than 150 staff weeks
+      after launch was almost universally negative
+    metric_source_type: independent-press
+    source_url: https://www.civilbeat.org/2025/10/complete-failure-honolulu-permit-workers-say-tech-upgrade-is-a-bust/
+
+registries_to_check:
+  - name: FedRAMP Marketplace
+    url: https://marketplace.fedramp.gov/
+    what_it_proves: >-
+      Whether this specific product holds a federal cloud authorization, and
+      at what level. "In process" is not "authorized."
+  - name: GovRAMP Authorized Product List
+    url: https://govramp.org/
+    what_it_proves: >-
+      State-oriented cloud security verification. Formerly StateRAMP; the
+      organization renamed in 2025.
+  - name: TX-RAMP (Texas DIR)
+    url: https://dir.texas.gov/information-security/texas-risk-and-authorization-management-program-tx-ramp
+    what_it_proves: >-
+      Whether a cloud product is certified to handle Texas state agency
+      data; many local Texas buyers also key off this list.
+  - name: AI Incident Database
+    url: https://incidentdatabase.ai/
+    what_it_proves: >-
+      A public log of AI system failures. Search the vendor and product
+      name before any demo.
+  - name: California Residential Solar Permit Dashboard (SB 379)
+    url: https://www.energy.ca.gov/programs-and-topics/programs/residential-solar-permit-reporting-program-sb-379/residential-solar
+    what_it_proves: >-
+      Which California jurisdictions actually run compliant automated solar
+      permitting, a check on any "instant permitting" claim in that lane.
+
+legal_context: |-
+  ## What the law already says here
+
+  - Due process attaches to licenses. Bell v. Burson, 402 U.S. 535 (1971)
+    held a driver's license cannot be suspended without due process, and
+    Barry v. Barchi, 443 U.S. 55 (1979) applied similar limits to an
+    occupational license
+    (https://www.law.cornell.edu/supremecourt/text/402/535;
+    https://www.law.cornell.edu/supremecourt/text/443/55). AI-influenced
+    denials, suspensions, or revocations of business and professional
+    licenses inherit these obligations. No court ruling on AI in permit or
+    license adjudication was found in public sources as of this review.
+  - Permit shot clocks are statutory. California's Permit Streamlining Act
+    (Gov. Code section 65920 and following, 1977) sets decision deadlines
+    for development permits. Texas HB 14 (effective Sept 1, 2023) lets
+    applicants engage third-party reviewers when a regulatory authority
+    misses review deadlines
+    (https://capitol.texas.gov/tlodocs/88R/analysis/html/HB00014E.htm). A
+    tool's completeness determinations and timestamps carry legal weight
+    inside these frameworks.
+  - Automated issuance is legal where statute says so. California SB 379
+    (2022) requires most cities and counties to run online platforms that
+    verify code compliance and issue residential solar permits in real time,
+    tracked on a state dashboard
+    (https://www.energy.ca.gov/programs-and-topics/programs/residential-solar-permit-reporting-program-sb-379/residential-solar).
+    This is the template for what legislatively authorized automation looks
+    like: prescriptive project types, defined scope, public reporting.
+  - Colorado's AI law (SB 24-205) treated access to essential government
+    services as a consequential decision. SB 26-189, signed May 2026,
+    repealed and reenacted those provisions with new automated
+    decision-making requirements effective January 1, 2027; verify current
+    text and applicability before citing (https://coag.gov/ai/).
+  - The International Code Council announced a strategic collaboration
+    making it a reseller of Archistar's eCheck compliance tool, a signal
+    that model-code institutions are engaging with automated review
+    (https://www.iccsafe.org/about/periodicals-and-newsroom/international-code-council-collaborates-with-archistar-to-modernize-permitting-and-accelerate-housing-development/).
+  - Permit files, AI reports, and review logs are generally public records
+    under state records laws; ask your records counsel how AI outputs will
+    be retained and produced.
+
+realistic_pricing: |-
+  Public anchors exist in this category, unusually for government AI:
+
+  - Austin pays Archistar $3.5 million over three years, up to $6 million
+    over five, for citywide residential AI plan-review pre-checks
+    (https://www.kut.org/housing/2024-10-11/austin-tx-artificial-intelligence-building-applications-permits-construction).
+  - Los Angeles City and County received the same vendor's tool free through
+    a state and philanthropic arrangement after the 2025 fires
+    (https://www.gov.ca.gov/2025/04/30/governor-newsom-announces-launch-of-new-ai-tool-to-supercharge-the-approval-of-building-permits-and-speed-recovery-from-los-angeles-fires/).
+  - Kelowna, BC built its permit assistant with Microsoft on a $350,000
+    provincial grant
+    (https://www.biv.com/news/real-estate/kelowna-turns-artificial-intelligence-help-housing-backlog-8294907).
+  - SolarAPP+ is free to jurisdictions for instant residential solar
+    permitting, developed by NREL, with California grant funding available
+    for implementation
+    (https://www.energy.ca.gov/programs-and-topics/programs/residential-solar-permit-reporting-program-sb-379/residential-solar).
+  - For scale on full system replacements (not AI): Honolulu's HNL Build
+    cost $7.3 million across platform and implementation, on a Clariti
+    software selection of $5.6 million
+    (https://www.hawaiipublicradio.org/local-news/2024-03-28/honolulu-permitting-department-entering-digital-age-new-software-suite-clariti),
+    and Portland's ITAP grew from $8.2 million to $11.8 million before
+    being halted.
+
+  If a quote for pre-check software lands at several times Austin's
+  per-year rate for a similar population, ask what accounts for the
+  difference. We could not find published per-permit or small-city SaaS
+  price lists in public sources; treat any figure a vendor quotes for
+  "typical" small-city pricing as unverified until it is in your contract.
+
+last_updated: "2026-08-29"
+refresh_cadence: quarterly
+
+known_gaps: |-
+  - Honolulu's CivCheck contract value was not found in public sources this
+    cycle; the HNL Build figures above cover the Clariti/Speridian system,
+    not CivCheck.
+  - The CivCheck-Clariti relationship ("now part of Clariti Software") is
+    reported by Stateline/Route Fifty (Aug 2026); deal terms and current
+    corporate status were not independently confirmed.
+  - Deckard Technologies' and Granicus Host Compliance's jurisdiction counts
+    are vendor-reported; we could not verify a specific named controversy or
+    a specific named deployment for Deckard in independent sources this
+    cycle, so it appears only in landscape prose.
+  - GreenLite (AI-assisted private plan review) shows significant venture
+    funding but no independently verifiable government deployment in public
+    sources; it is excluded from established_vendors.
+  - Vancouver's Archistar pilot metrics are vendor-published only; no
+    independent evaluation was found.
+  - Kelowna's assistant was verified from 2023 coverage; current status was
+    not re-verified. The $350,000 grant figure is reported by Business in
+    Vancouver and Western Investor; those pages block automated fetchers,
+    so it was confirmed from search metadata across both outlets.
+  - San Jose's removal of encampment and graffiti detection is documented
+    in a city council memo (sanjoseca.gov document 119937) that blocks
+    automated fetchers; the removal language was confirmed from the memo
+    snippet and matching coverage.
+  - Honolulu commercial permit wait trend figures were removed in
+    verification; the cited Civil Beat launch story does not carry them.
+  - Colorado SB 26-189's reenacted requirements were not reviewed in full;
+    the legal_context note is a pointer, not a summary.
+  - Accela, OpenGov, and CentralSquare AI product claims were not
+    individually verified this cycle; their entries are market-map only.
+  - No US court ruling on AI-assisted permit or license adjudication was
+    located; the due process items are the pre-AI baseline, applied by
+    analogy.

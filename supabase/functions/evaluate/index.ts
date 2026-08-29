@@ -928,6 +928,7 @@ async function runPipeline(
   ];
 
   /* --------------------------------------------- deep-mode hand-off */
+  let deepHandoffFailed = false;
   if (opts.deep) {
     const nonce = crypto.randomUUID() + crypto.randomUUID();
     await supabase
@@ -976,6 +977,7 @@ async function runPipeline(
     }).catch(() => null);
     if (handoff?.ok) return; /* deep-research owns the rest of the run */
     console.error(`deep hand-off failed: HTTP ${handoff?.status ?? "network"}`);
+    deepHandoffFailed = true; /* recorded in usage + honesty panel by the tail */
     await emit({
       stage: "research",
       kind: "micro_finding",
@@ -1084,6 +1086,7 @@ async function runPipeline(
       pitchPersonCount,
       pitchCustomerCount,
       siteClaimQuotes,
+      ...(deepHandoffFailed ? { deepHandoffFailed: true } : {}),
     },
   );
 }

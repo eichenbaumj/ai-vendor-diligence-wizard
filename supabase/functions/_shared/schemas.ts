@@ -145,14 +145,28 @@ export const PackId = z.enum([
   "public-comms",
   "staff-productivity",
   "data-analytics",
+  "public-safety-policing",
+  "tax-revenue",
+  "permitting-licensing",
 ]);
 export type PackId = z.infer<typeof PackId>;
+
+export const DecisionImpact = z.enum([
+  "informational", // reference material, drafting help, analytics dashboards
+  "advisory", // recommendations a person reviews before acting
+  "determinative", // produces or heavily steers decisions about residents
+]);
+export type DecisionImpact = z.infer<typeof DecisionImpact>;
 
 export const SectorContext = z.object({
   pack_ids: z.array(PackId).max(3),
   elevated: z.boolean(), // eligibility overlay or elevated-scrutiny rule fired
   overlay_reason: z.string().max(300).nullable(),
   state_items: z.array(z.string().max(400)).max(6), // "your state will require…"
+  /* S4's read on how directly the product touches decisions about
+     residents. Optional: older stored reports predate it, and code treats
+     the `elevated` boolean as the floor either way. */
+  decision_impact: DecisionImpact.optional(),
 });
 export type SectorContext = z.infer<typeof SectorContext>;
 
@@ -221,6 +235,9 @@ export const ReportQuestion = z.object({
   text: z.string().max(900),
   why: z.string().max(400),
   source: QuestionSource,
+  /* Pack-authored "what a disqualifying answer looks like". Shown on
+     screen only — deliberately excluded from the copy-as-email output. */
+  red_flag: z.string().max(300).optional(),
 });
 export type ReportQuestion = z.infer<typeof ReportQuestion>;
 

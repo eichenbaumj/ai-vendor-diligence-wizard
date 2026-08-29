@@ -19,6 +19,17 @@
   - eligibility-case-mgmt must be scrutiny_tier: elevated.
   - A metric described as vendor-reported must carry
     metric_source_type: "vendor-reported".
+  - signal_lexicon required on every pack: 8-15 entries, each a lowercase
+    string of 3-40 chars with no surrounding whitespace.
+  - Question `select` metadata (packs-types.ts QuestionSelect) is optional
+    per question, but once ANY question in a pack carries it the pack is
+    treated as annotated and these apply: 3-6 base:true questions;
+    claim_types values from the ClaimType enum (schemas.ts); every
+    finding_ids entry a valid selector per isValidFindingSelector
+    (finding-ids.ts: exact id or "perf-*"); tiers values 0-4; weight an
+    integer 0-10; overlay_core only in eligibility-case-mgmt and on exactly
+    4 questions there; packs with scrutiny_tier "elevated" carry >= 2
+    elevated:true questions.
 
   Warned (non-fatal): lintObject "style"-kind violations (em dashes,
   AI-tell vocabulary), because pack content may legitimately quote vendor
@@ -34,6 +45,8 @@ import { fileURLToPath } from "node:url";
 import { load } from "js-yaml";
 import { z } from "zod";
 import { lintObject } from "../supabase/functions/_shared/lint.ts";
+import { isValidFindingSelector } from "../supabase/functions/_shared/finding-ids.ts";
+import { ClaimType } from "../supabase/functions/_shared/schemas.ts";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const PACKS_DIR = join(ROOT, "packs");
@@ -44,13 +57,40 @@ const url = z.string().url();
 const urlOrNull = url.nullable();
 const nonEmpty = z.string().trim().min(1);
 
+/* QuestionSelect (packs-types.ts): the typed selection signals the question
+   engine keys on. claim_types reuses the ClaimType enum from schemas.ts so
+   the vocabulary cannot drift; finding_ids is checked against
+   isValidFindingSelector in checkPack (zod can shape it, but the vocabulary
+   lives in finding-ids.ts). */
+const QuestionSelect = z
+  .object({
+    base: z.boolean().optional(),
+    claim_types: z.array(ClaimType).min(1).optional(),
+    finding_ids: z.array(nonEmpty).min(1).optional(),
+    elevated: z.boolean().optional(),
+    overlay_core: z.boolean().optional(),
+    tiers: z.array(z.number().int().min(0).max(4)).min(1).optional(),
+    weight: z.number().int().min(0).max(10).optional(),
+  })
+  .strict();
+
 const PackQuestion = z.object({
   id: nonEmpty,
   question: nonEmpty,
   good_answer: nonEmpty,
   red_flag: nonEmpty,
   source_url: urlOrNull,
+  select: QuestionSelect.optional(),
 });
+
+/* signal_lexicon terms: lowercase substring-matching tokens, so surrounding
+   whitespace and uppercase would silently break matching. */
+const lexiconTerm = z
+  .string()
+  .min(3)
+  .max(40)
+  .refine((s) => s === s.trim(), { message: "no leading/trailing whitespace" })
+  .refine((s) => s === s.toLowerCase(), { message: "must be lowercase" });
 
 const PackVendor = z.object({
   name: nonEmpty,
@@ -104,6 +144,7 @@ const SectorPackSchema = z
     pack_name: nonEmpty,
     definition: nonEmpty,
     inclusion_test: z.array(nonEmpty).min(3).max(6),
+    signal_lexicon: z.array(lexiconTerm).min(8).max(15),
     scrutiny_tier: z.enum(["standard", "elevated"]),
     incumbent_landscape: nonEmpty,
     established_vendors: z.array(PackVendor).min(1),
@@ -195,6 +236,69 @@ function checkPack(file: string, pack: SectorPack): void {
       );
     }
   });
+
+  /* Question-selection metadata. Optional per question, but once any
+     question in the pack carries `select` the pack is annotated (the
+     engine's legacy first-5-as-base fallback no longer applies) and the
+     full invariants hold. */
+  const annotated = pack.diligence_questions.some((q) => q.select);
+  if (annotated) {
+    const baseCount = pack.diligence_questions.filter(
+      (q) => q.select?.base === true,
+    ).length;
+    if (baseCount < 3 || baseCount > 6) {
+      errors.push(
+        where(
+          `annotated pack has ${baseCount} select.base questions (3-6 required)`,
+        ),
+      );
+    }
+
+    pack.diligence_questions.forEach((q, i) => {
+      for (const selector of q.select?.finding_ids ?? []) {
+        if (!isValidFindingSelector(selector)) {
+          errors.push(
+            where(
+              `diligence_questions[${i}].select.finding_ids: "${selector}" is not ` +
+                `a FINDING_IDS entry or a known prefix form like "perf-*"`,
+            ),
+          );
+        }
+      }
+    });
+
+    const overlayCount = pack.diligence_questions.filter(
+      (q) => q.select?.overlay_core === true,
+    ).length;
+    if (pack.pack_id === "eligibility-case-mgmt") {
+      if (overlayCount !== 4) {
+        errors.push(
+          where(
+            `overlay_core must mark exactly 4 questions (found ${overlayCount}); ` +
+              `these are the D7.2 overlay-core questions merged into other packs`,
+          ),
+        );
+      }
+    } else if (overlayCount > 0) {
+      errors.push(
+        where(`overlay_core is only allowed in eligibility-case-mgmt`),
+      );
+    }
+
+    if (pack.scrutiny_tier === "elevated") {
+      const elevatedCount = pack.diligence_questions.filter(
+        (q) => q.select?.elevated === true,
+      ).length;
+      if (elevatedCount < 2) {
+        errors.push(
+          where(
+            `elevated pack has ${elevatedCount} select.elevated questions ` +
+              `(at least 2 required)`,
+          ),
+        );
+      }
+    }
+  }
 
   /* Staleness: last_updated no older than 2x refresh cadence. */
   const limit = STALENESS_DAYS[pack.refresh_cadence];

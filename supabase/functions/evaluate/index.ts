@@ -46,6 +46,7 @@ import { assemble } from "../_shared/assemble.ts";
 import { lintObject, lintText, looseText, tidyProse } from "../_shared/lint.ts";
 import { harvestCitations } from "../_shared/harvest.ts";
 import { inferPrimaryDomain } from "../_shared/domain-inference.ts";
+import { isNamedOrganization } from "../_shared/text-match.ts";
 import {
   UrlIngestError,
   fetchSubmittedUrl,
@@ -444,9 +445,11 @@ async function runPipeline(
        the promise that claims are quoted verbatim. Keep only customers and
        claim quotes that actually appear in the pitch text. */
     const pitchLoose = looseText(pitchText);
-    extract.named_customers = extract.named_customers.filter((c) =>
-      pitchLoose.includes(looseText(c)),
-    );
+    extract.named_customers = extract.named_customers
+      .filter((c) => pitchLoose.includes(looseText(c)))
+      /* Counts and descriptions ("1,600 governments") are scale claims, not
+         customer names: no row, no finding, no search budget spent. */
+      .filter(isNamedOrganization);
     extract.claims = extract.claims.filter((c) =>
       pitchLoose.includes(looseText(c.quote)),
     );

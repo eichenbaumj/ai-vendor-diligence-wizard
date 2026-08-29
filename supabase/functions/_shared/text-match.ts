@@ -52,3 +52,20 @@ export function hostCovers(url: string, subject: string): boolean {
     return false;
   }
 }
+
+/* A named customer must look like a proper organization name, not a count
+   or a description ("1,600 governments", "more than 50 municipalities").
+   Counts carry digits; descriptions carry no capitalized word or are a
+   bare generic noun. A dropped entry gets no ledger row and no finding:
+   scale claims are not customer claims. */
+const GENERIC_CUSTOMER =
+  /^(?:local |state |federal |municipal |public |government )*(?:governments?|municipalities|cities|counties|agencies|districts|customers|clients|organizations|localities|users)$/;
+
+export function isNamedOrganization(s: string): boolean {
+  const t = s.trim();
+  if (t.length < 2) return false;
+  if (/\d/.test(t)) return false;
+  if (!/[A-Z]/.test(t)) return false;
+  if (GENERIC_CUSTOMER.test(norm(t))) return false;
+  return true;
+}

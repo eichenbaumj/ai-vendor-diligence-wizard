@@ -38,6 +38,27 @@ describe("classifyDomain: Class 2 (independent press / academic / archive)", () 
     expect(classifyDomain("https://news.reuters.com/tech/story")).toBe(2);
   });
 
+  it("national business and metro newsrooms are class 2", () => {
+    for (const url of [
+      "https://www.cnbc.com/video/2024/02/28/opengov-ceo.html",
+      "https://www.sfchronicle.com/sf/article/contract-story.html",
+      "https://sfstandard.com/2026/05/13/permitting-story",
+      "https://www.seattletimes.com/seattle-news/story",
+      "https://www.texastribune.org/2026/story/",
+    ]) {
+      expect(classifyDomain(url), url).toBe(2);
+    }
+  });
+
+  it("crowd-edited and self-submitted profiles stay class 3", () => {
+    for (const url of [
+      "https://en.wikipedia.org/wiki/OpenGov",
+      "https://www.crunchbase.com/person/nate-levine",
+    ]) {
+      expect(classifyDomain(url), url).toBe(3);
+    }
+  });
+
   it(".edu -> 2", () => {
     expect(classifyDomain("https://cs.stanford.edu/research/paper")).toBe(2);
     expect(classifyDomain("https://osu.edu/news")).toBe(2);

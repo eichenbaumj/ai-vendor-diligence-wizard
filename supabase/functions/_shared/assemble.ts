@@ -28,6 +28,7 @@ import { canVerify } from "./domain-classes.ts";
 import {
   contentMentions,
   hostCovers,
+  isNamedOrganization,
   norm,
   urlMentions,
 } from "./text-match.ts";
@@ -291,7 +292,13 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
      Leads never count as verified customers. */
   let verifiedCustomers = 0;
   const leadCards: ManualCheck[] = [];
-  for (const customer of extract.named_customers.slice(0, 8)) {
+  /* The pipeline filters counts/descriptions out of named_customers before
+     assembly; the filter repeats here so the invariant holds for every
+     caller of this pure function. */
+  const namedCustomers = extract.named_customers
+    .filter(isNamedOrganization)
+    .slice(0, 8);
+  for (const customer of namedCustomers) {
     const support = citations.find(
       (c) =>
         canVerify(c.domain_class) &&
@@ -359,7 +366,7 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
       }
     }
   }
-  if (extract.named_customers.length > 0 && verifiedCustomers === 0) {
+  if (namedCustomers.length > 0 && verifiedCustomers === 0) {
     findings.push({
       id: "customers",
       dimension: "D2",
@@ -367,8 +374,8 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
       resolved: false,
       detail:
         leadCards.length > 0
-          ? `None of the ${extract.named_customers.length} named government customers could be verified in retrieved public records. Candidate pages on official sites are linked under manual checks for confirmation.`
-          : `None of the ${extract.named_customers.length} named government customers left a public trace we could find.`,
+          ? `None of the ${namedCustomers.length} named government customers could be verified in retrieved public records. Candidate pages on official sites are linked under manual checks for confirmation.`
+          : `None of the ${namedCustomers.length} named government customers left a public trace we could find.`,
     });
   }
 
@@ -738,7 +745,7 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
       questions.push({
         id: "gap-customers",
         source: "gap",
-        text: `Your materials name ${extract.named_customers.slice(0, 3).join(", ")} as customers. For each: is there an active paid contract, a pilot, or individual users? Please provide the contract administrator's name and contact so we may verify.`,
+        text: `Your materials name ${namedCustomers.slice(0, 3).join(", ")} as customers. For each: is there an active paid contract, a pilot, or individual users? Please provide the contract administrator's name and contact so we may verify.`,
         why: "None of the named customers left a public record trace we could find.",
       });
     } else if (f.id.startsWith("perf-")) {

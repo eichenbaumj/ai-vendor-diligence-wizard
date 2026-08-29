@@ -199,3 +199,35 @@ describe("customer-trace verification: grounded rule", () => {
     expect(out.manualChecks.length).toBeLessThanOrEqual(8);
   });
 });
+
+describe("TX-RAMP report assembly (methodology D3.3)", () => {
+  const txrampCheck = (status: string, data: Record<string, unknown> | null) => ({
+    check_id: "txramp",
+    source: "TX-RAMP",
+    status: status as "hit" | "definitive_miss",
+    summary: "TX-RAMP result summary for tests.",
+    evidence_url:
+      "https://dir.texas.gov/resource-library-item/tx-ramp-certified-cloud-products",
+    confidence: null,
+    retrieved_at: AT,
+    data,
+  });
+
+  it("a listing greens D3 with a green-flag fact", () => {
+    const base = input([], []);
+    base.checks = [txrampCheck("hit", { matches: [], claimed: true })];
+    const out = assemble(base);
+    expect(out.tierInputs.green_dimensions).toContain("D3");
+    expect(out.greenFlagFacts.some((g) => g.fact.includes("TX-RAMP"))).toBe(true);
+  });
+
+  it("claimed-but-absent is a HIGH finding, never a tier-1 trigger, with a gap question", () => {
+    const base = input([], []);
+    base.checks = [txrampCheck("definitive_miss", { claimed_but_absent: true, lag_caveat: true, rows_scanned: 5 })];
+    const out = assemble(base);
+    const finding = out.tierInputs.findings.find((f) => f.id === "txramp");
+    expect(finding?.severity).toBe("HIGH");
+    expect(out.tierInputs.t1_triggers.some((t) => t.check_id === "txramp")).toBe(false);
+    expect(out.questions.some((q) => q.id === "gap-txramp")).toBe(true);
+  });
+});

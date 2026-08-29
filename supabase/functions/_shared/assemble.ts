@@ -507,6 +507,29 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
     });
   }
 
+  /* TX-RAMP: the published list is known to lag actual certifications, so a
+     claimed-but-absent result is HIGH, never CRITICAL, and never a tier-1
+     trigger (methodology D3.3). */
+  const txramp = find(checks, "txramp");
+  const txrampData = (txramp?.data ?? {}) as { claimed_but_absent?: boolean };
+  if (txramp?.status === "hit") {
+    greenDims.add("D3");
+    greenFlagFacts.push({
+      fact: `${vendorName} appears on the TX-RAMP certified cloud products list`,
+      source_name: txramp.source,
+      date: dateOf(txramp),
+    });
+  } else if (txrampData.claimed_but_absent) {
+    findings.push({
+      id: "txramp",
+      dimension: "D3",
+      severity: "HIGH",
+      resolved: false,
+      detail:
+        "A TX-RAMP certification described in the pitch is absent from the published TX-RAMP list. That list is known to lag actual certifications.",
+    });
+  }
+
   const sourcewell = find(checks, "sourcewell");
   const sourcewellData = (sourcewell?.data ?? {}) as { claimed_but_absent?: boolean };
   if (sourcewellData.claimed_but_absent) {
@@ -706,6 +729,13 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
         source: "gap",
         text: "Please provide the exact authorization your product holds: the program (FedRAMP or GovRAMP), the status level, the package or listing ID, and the sponsoring agency, so we can confirm it in the public marketplace.",
         why: "The authorization described in the pitch did not match the public feed when we checked.",
+      });
+    } else if (f.id === "txramp") {
+      questions.push({
+        id: "gap-txramp",
+        source: "gap",
+        text: "Please provide your TX-RAMP certification letter, or a confirmation from Texas DIR, naming the level you hold (Level 1, Level 2, or Provisional) and the certified product.",
+        why: "The TX-RAMP certification described in the pitch was not on the published list when we checked, and that list can lag.",
       });
     } else if (f.id === "domain-age") {
       questions.push({

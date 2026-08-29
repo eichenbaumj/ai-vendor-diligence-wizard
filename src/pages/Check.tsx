@@ -344,8 +344,8 @@ export default function Check() {
                   <span className="font-sans text-[15px] font-bold">Deep check</span>
                   <span className="block text-sm text-brand-charcoal-soft">
                     Runs four focused research passes instead of one. Digs much
-                    deeper into customers, claims, and leadership. Takes about 8
-                    minutes.
+                    deeper into customers, claims, and leadership. Takes a few
+                    minutes longer than a standard check.
                   </span>
                 </span>
               </label>

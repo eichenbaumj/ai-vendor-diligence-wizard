@@ -963,7 +963,7 @@ async function runPipeline(
     await emit({
       stage: "research",
       kind: "stage_start",
-      label: "Deep check: extended research starting (about 8 minutes total)",
+      label: "Deep check: four focused research passes starting in parallel",
     });
     const handoff = await fetch(`${env.supabaseUrl}/functions/v1/deep-research`, {
       method: "POST",

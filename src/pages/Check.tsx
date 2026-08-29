@@ -280,15 +280,16 @@ export default function Check() {
             </div>
 
             <p className="mt-6 text-sm text-brand-charcoal-soft">
-              Your paste is used for this check and deleted on the schedule
-              described in{" "}
+              What you share is used for this check and deleted on the
+              schedule described in{" "}
               <Link
                 to="/your-data"
                 className="text-brand-cobalt underline underline-offset-2 hover:text-brand-cobalt-deep"
               >
                 how we handle your data
               </Link>
-              . Nothing you paste trains any model.
+              . PDF files are read for their text; the file itself is not
+              stored. Nothing you share trains any model.
             </p>
 
             {error && (

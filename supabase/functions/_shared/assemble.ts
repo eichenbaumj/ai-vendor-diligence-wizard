@@ -24,6 +24,7 @@ import type {
   SectorContext,
 } from "./schemas.ts";
 import { lintText } from "./lint.ts";
+import { PROGRAMS } from "./claim-status.ts";
 import { computeTier } from "./tier.ts";
 import type { Finding, T1Trigger, TierInputs } from "./tier.ts";
 import type { SectorPack } from "./packs-types.ts";
@@ -515,52 +516,148 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
     }
   }
 
+  /* GovRAMP mirrors the FedRAMP three-branch shape: contradictions, hits,
+     and vague claims all leave a ledger row (methodology section 3 promises
+     contradictions render side by side with the record). */
   const govramp = find(checks, "govramp");
   const govrampData = (govramp?.data ?? {}) as { claimed_but_absent?: boolean };
-  if (govramp?.status === "hit") {
-    greenDims.add("D3");
-    greenFlagFacts.push({
-      fact: `${vendorName} appears on the GovRAMP program participant list`,
-      source_name: govramp.source,
-      date: dateOf(govramp),
-    });
-  } else if (govrampData.claimed_but_absent) {
-    triggers.push({
-      trigger: "compliance_registry_contradiction",
-      check_id: govramp!.check_id,
-      detail: govramp!.summary,
-      evidence_url: govramp!.evidence_url,
-    });
-    findings.push({
-      id: "govramp",
-      dimension: "D3",
-      severity: "CRITICAL",
-      resolved: false,
-      detail: "A GovRAMP status described in the pitch is absent from the GovRAMP participant list.",
-    });
+  const claimsGovramp = extract.claims.some(
+    (c) => c.type === "compliance" && PROGRAMS.govramp.name.test(c.quote),
+  );
+  if (govramp) {
+    if (govrampData.claimed_but_absent) {
+      triggers.push({
+        trigger: "compliance_registry_contradiction",
+        check_id: govramp.check_id,
+        detail: govramp.summary,
+        evidence_url: govramp.evidence_url,
+      });
+      const claim = extract.claims.find(
+        (c) => c.type === "compliance" && PROGRAMS.govramp.name.test(c.quote),
+      );
+      ledger.push({
+        id: uniqueRowId("govramp"),
+        dimension: "D3",
+        claim_quote: claim?.quote ?? null,
+        what_checked: "The GovRAMP program participant list",
+        result: "CONTRADICTED",
+        evidence_tier: "T1",
+        severity: "CRITICAL",
+        sources: src(govramp),
+        note: "",
+        methodology_ref: "d3-2",
+      });
+      findings.push({
+        id: "govramp",
+        dimension: "D3",
+        severity: "CRITICAL",
+        resolved: false,
+        detail: "A GovRAMP status described in the pitch is absent from the GovRAMP participant list.",
+      });
+    } else if (govramp.status === "hit") {
+      greenDims.add("D3");
+      greenFlagFacts.push({
+        fact: `${vendorName} appears on the GovRAMP program participant list`,
+        source_name: govramp.source,
+        date: dateOf(govramp),
+      });
+      ledger.push({
+        id: uniqueRowId("govramp"),
+        dimension: "D3",
+        claim_quote: null,
+        what_checked: "The GovRAMP program participant list",
+        result: "VERIFIED",
+        evidence_tier: "T1",
+        severity: null,
+        sources: src(govramp),
+        note: "",
+        methodology_ref: "d3-2",
+      });
+    } else if (claimsGovramp) {
+      ledger.push({
+        id: uniqueRowId("govramp"),
+        dimension: "D3",
+        claim_quote: extract.claims.find((c) => PROGRAMS.govramp.name.test(c.quote))?.quote ?? null,
+        what_checked: "The GovRAMP program participant list",
+        result: "COULD_NOT_VERIFY",
+        evidence_tier: "T4",
+        severity: "MEDIUM",
+        sources: src(govramp),
+        note: "",
+        methodology_ref: "d3-2",
+      });
+    }
   }
 
   /* TX-RAMP: the published list is known to lag actual certifications, so a
      claimed-but-absent result is HIGH, never CRITICAL, and never a tier-1
-     trigger (methodology D3.3). */
+     trigger (methodology D3.3). Rows mirror the FedRAMP shape otherwise;
+     the contradiction row carries the lag caveat in what_checked because
+     it explains why the severity stops at HIGH. */
   const txramp = find(checks, "txramp");
   const txrampData = (txramp?.data ?? {}) as { claimed_but_absent?: boolean };
-  if (txramp?.status === "hit") {
-    greenDims.add("D3");
-    greenFlagFacts.push({
-      fact: `${vendorName} appears on the TX-RAMP certified cloud products list`,
-      source_name: txramp.source,
-      date: dateOf(txramp),
-    });
-  } else if (txrampData.claimed_but_absent) {
-    findings.push({
-      id: "txramp",
-      dimension: "D3",
-      severity: "HIGH",
-      resolved: false,
-      detail:
-        "A TX-RAMP certification described in the pitch is absent from the published TX-RAMP list. That list is known to lag actual certifications.",
-    });
+  const claimsTxramp = extract.claims.some(
+    (c) => c.type === "compliance" && PROGRAMS.txramp.name.test(c.quote),
+  );
+  if (txramp && txramp.status !== "not_applicable") {
+    if (txrampData.claimed_but_absent) {
+      const claim = extract.claims.find(
+        (c) => c.type === "compliance" && PROGRAMS.txramp.name.test(c.quote),
+      );
+      ledger.push({
+        id: uniqueRowId("txramp"),
+        dimension: "D3",
+        claim_quote: claim?.quote ?? null,
+        what_checked:
+          "The TX-RAMP certified cloud products list, which is known to lag new certifications",
+        result: "CONTRADICTED",
+        evidence_tier: "T1",
+        severity: "HIGH",
+        sources: src(txramp),
+        note: "",
+        methodology_ref: "d3-3",
+      });
+      findings.push({
+        id: "txramp",
+        dimension: "D3",
+        severity: "HIGH",
+        resolved: false,
+        detail:
+          "A TX-RAMP certification described in the pitch is absent from the published TX-RAMP list. That list is known to lag actual certifications.",
+      });
+    } else if (txramp.status === "hit") {
+      greenDims.add("D3");
+      greenFlagFacts.push({
+        fact: `${vendorName} appears on the TX-RAMP certified cloud products list`,
+        source_name: txramp.source,
+        date: dateOf(txramp),
+      });
+      ledger.push({
+        id: uniqueRowId("txramp"),
+        dimension: "D3",
+        claim_quote: null,
+        what_checked: "The TX-RAMP certified cloud products list",
+        result: "VERIFIED",
+        evidence_tier: "T1",
+        severity: null,
+        sources: src(txramp),
+        note: "",
+        methodology_ref: "d3-3",
+      });
+    } else if (claimsTxramp) {
+      ledger.push({
+        id: uniqueRowId("txramp"),
+        dimension: "D3",
+        claim_quote: extract.claims.find((c) => PROGRAMS.txramp.name.test(c.quote))?.quote ?? null,
+        what_checked: "The TX-RAMP certified cloud products list",
+        result: "COULD_NOT_VERIFY",
+        evidence_tier: "T4",
+        severity: "MEDIUM",
+        sources: src(txramp),
+        note: "",
+        methodology_ref: "d3-3",
+      });
+    }
   }
 
   const sourcewell = find(checks, "sourcewell");
@@ -600,6 +697,22 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
       fact: `${vendorName} holds a Sourcewell cooperative contract`,
       source_name: sourcewell.source,
       date: dateOf(sourcewell),
+    });
+    /* A hit earns a VERIFIED row so all four registry checks read alike in
+       the ledger. Dimension D2 to match the green dimension and the D2.2
+       methodology section (the CONTRADICTED row above predates this and
+       keeps its QA-keyed D3 dimension). */
+    ledger.push({
+      id: uniqueRowId("sourcewell"),
+      dimension: "D2",
+      claim_quote: null,
+      what_checked: "The Sourcewell cooperative contract holder list",
+      result: "VERIFIED",
+      evidence_tier: "T1",
+      severity: null,
+      sources: src(sourcewell),
+      note: "",
+      methodology_ref: "d2-2",
     });
   }
 

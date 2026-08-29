@@ -233,6 +233,130 @@ describe("TX-RAMP report assembly (methodology D3.3)", () => {
   });
 });
 
+describe("registry ledger rows (methodology 1.3): every registry check leaves a row", () => {
+  const registryCheck = (
+    check_id: string,
+    source: string,
+    status: string,
+    data: Record<string, unknown> | null,
+  ) => ({
+    check_id,
+    source,
+    status: status as "hit" | "definitive_miss",
+    summary: `${source} result summary for tests.`,
+    evidence_url: `https://example.gov/${check_id}`,
+    confidence: null,
+    retrieved_at: AT,
+    data,
+  });
+
+  const withComplianceClaim = (quote: string): AssembleInput => {
+    const base = input([], []);
+    base.extract.claims = [{ id: "clm-c0", type: "compliance", quote, subject: null }];
+    return base;
+  };
+
+  const row = (out: ReturnType<typeof assemble>, id: string) =>
+    out.ledger.find((r) => r.id === id);
+
+  it("FedRAMP parity: a hit is a VERIFIED T1 row, a contradiction is a CRITICAL CONTRADICTED row with the trigger", () => {
+    const hit = input([], []);
+    hit.checks = [registryCheck("fedramp_marketplace", "FedRAMP Marketplace", "hit", { matches: [] })];
+    const hitRow = row(assemble(hit), "fedramp_marketplace");
+    expect(hitRow?.result).toBe("VERIFIED");
+    expect(hitRow?.evidence_tier).toBe("T1");
+    expect(hitRow?.severity).toBeNull();
+
+    const miss = withComplianceClaim("We are FedRAMP Authorized at the Moderate level.");
+    miss.checks = [registryCheck("fedramp_marketplace", "FedRAMP Marketplace", "definitive_miss", { claimed_but_absent: true })];
+    const out = assemble(miss);
+    const missRow = row(out, "fedramp_marketplace");
+    expect(missRow?.result).toBe("CONTRADICTED");
+    expect(missRow?.severity).toBe("CRITICAL");
+    expect(missRow?.claim_quote).toContain("FedRAMP");
+    expect(out.tierInputs.t1_triggers.some((t) => t.check_id === "fedramp_marketplace")).toBe(true);
+  });
+
+  it("GovRAMP contradiction: CONTRADICTED CRITICAL row at d3-2 with the claim quote, plus trigger and finding", () => {
+    const base = withComplianceClaim("We are StateRAMP Authorized at the Moderate impact level.");
+    base.checks = [registryCheck("govramp", "GovRAMP", "definitive_miss", { claimed_but_absent: true, rows_scanned: 400 })];
+    const out = assemble(base);
+    const r = row(out, "govramp");
+    expect(r?.result).toBe("CONTRADICTED");
+    expect(r?.severity).toBe("CRITICAL");
+    expect(r?.evidence_tier).toBe("T1");
+    expect(r?.methodology_ref).toBe("d3-2");
+    expect(r?.claim_quote).toContain("StateRAMP");
+    expect(r?.sources[0]?.url).toContain("govramp");
+    expect(out.tierInputs.t1_triggers.some((t) => t.check_id === "govramp")).toBe(true);
+    expect(out.tierInputs.findings.some((f) => f.id === "govramp")).toBe(true);
+  });
+
+  it("GovRAMP hit: VERIFIED T1 row alongside the green flag", () => {
+    const base = input([], []);
+    base.checks = [registryCheck("govramp", "GovRAMP", "hit", { matches: [], claimed: false })];
+    const out = assemble(base);
+    const r = row(out, "govramp");
+    expect(r?.result).toBe("VERIFIED");
+    expect(r?.severity).toBeNull();
+    expect(out.tierInputs.green_dimensions).toContain("D3");
+    expect(out.greenFlagFacts.some((g) => g.fact.includes("GovRAMP"))).toBe(true);
+  });
+
+  it("GovRAMP claimed but uncheckable: COULD_NOT_VERIFY T4 MEDIUM row, no trigger", () => {
+    const base = withComplianceClaim("Our platform is GovRAMP certified.");
+    base.checks = [registryCheck("govramp", "GovRAMP", "coverage_limited", { reason: "feed_not_loaded" })];
+    const out = assemble(base);
+    const r = row(out, "govramp");
+    expect(r?.result).toBe("COULD_NOT_VERIFY");
+    expect(r?.evidence_tier).toBe("T4");
+    expect(r?.severity).toBe("MEDIUM");
+    expect(out.tierInputs.t1_triggers.some((t) => t.check_id === "govramp")).toBe(false);
+  });
+
+  it("TX-RAMP contradiction: CONTRADICTED row stays HIGH, carries the lag caveat, still no trigger", () => {
+    const base = withComplianceClaim("TX-RAMP Level 2 certified for Texas agencies.");
+    base.checks = [registryCheck("txramp", "TX-RAMP", "definitive_miss", { claimed_but_absent: true, lag_caveat: true })];
+    const out = assemble(base);
+    const r = row(out, "txramp");
+    expect(r?.result).toBe("CONTRADICTED");
+    expect(r?.severity).toBe("HIGH");
+    expect(r?.methodology_ref).toBe("d3-3");
+    expect(r?.what_checked).toContain("lag");
+    expect(r?.claim_quote).toContain("TX-RAMP");
+    expect(out.tierInputs.t1_triggers.some((t) => t.check_id === "txramp")).toBe(false);
+  });
+
+  it("TX-RAMP hit: VERIFIED T1 row; not_applicable leaves no row", () => {
+    const hit = input([], []);
+    hit.checks = [registryCheck("txramp", "TX-RAMP", "hit", { matches: [], claimed: true })];
+    expect(row(assemble(hit), "txramp")?.result).toBe("VERIFIED");
+
+    const na = input([], []);
+    na.checks = [registryCheck("txramp", "TX-RAMP", "not_applicable", null)];
+    expect(row(assemble(na), "txramp")).toBeUndefined();
+  });
+
+  it("Sourcewell hit: VERIFIED row on D2 at d2-2, matching the green dimension", () => {
+    const base = input([], []);
+    base.checks = [registryCheck("sourcewell", "Sourcewell", "hit", { matches: [] })];
+    const out = assemble(base);
+    const r = row(out, "sourcewell");
+    expect(r?.result).toBe("VERIFIED");
+    expect(r?.dimension).toBe("D2");
+    expect(r?.methodology_ref).toBe("d2-2");
+    expect(out.tierInputs.green_dimensions).toContain("D2");
+  });
+
+  it("a GovRAMP contradiction row flips the GovRAMP honesty item to flag", () => {
+    const base = withComplianceClaim("We are StateRAMP Authorized.");
+    base.checks = [registryCheck("govramp", "GovRAMP", "definitive_miss", { claimed_but_absent: true })];
+    const out = assemble(base);
+    const item = out.honesty.find((h) => h.label === "GovRAMP");
+    expect(item?.status).toBe("flag");
+  });
+});
+
 describe("domain-inference honesty caveat (name-only submissions)", () => {
   it("labels the inferred-domain check with its caveat in the honesty panel", () => {
     const base = input([], []);

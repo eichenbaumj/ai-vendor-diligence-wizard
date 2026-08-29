@@ -1,6 +1,6 @@
 # How This Tool Evaluates AI Vendor Pitches
 
-**Methodology version 1.2** · Effective August 29, 2026 · Licensed [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)
+**Methodology version 1.3** · Effective August 29, 2026 · Licensed [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)
 
 This document describes every check the AI Vendor Diligence Wizard runs, every source it consults, how it grades evidence, and how it decides what to say. It is the complete basis for every report the tool produces. If a check is not described here, the tool does not run it. Checks marked **planned** are documented for transparency but do not run yet; no report relies on them.
 
@@ -118,7 +118,7 @@ Real government contracts leave public traces: payment records, contract lists, 
 **What we look at.** When a pitch claims a cooperative purchasing contract ("available on Sourcewell," "NASPO contract holder"), whether the cooperative's own published list includes the vendor or its named reseller.
 **Public sources.** [Sourcewell contract search](https://www.sourcewell-mn.gov/contract-search); [NASPO ValuePoint contractor list](https://www.naspovaluepoint.org/contractors/); [OMNIA Partners supplier list](https://www.omniapartners.com/what-we-do/suppliers-contracts).
 **How it runs.** Automatic lookup (Sourcewell), AI-assisted web research for the others. We search for the vendor and for common resellers before concluding anything.
-**If adverse.** A claimed cooperative contract absent from the cooperative's own list is weighted Critical. This is a registry contradiction: the kind of deterministic event that can contribute to the harshest verdict tier. A verified contract is a green flag.
+**If adverse.** A claimed cooperative contract absent from the cooperative's own list is weighted Critical. This is a registry contradiction: the kind of deterministic event that can contribute to the harshest verdict tier. A verified contract is a green flag and a verified row in the ledger.
 
 ### D2.3 State and city payment records
 
@@ -179,14 +179,14 @@ Compliance claims come in different kinds: some can be checked against official 
 **What we look at.** Claimed GovRAMP status (the program was formerly named StateRAMP; we treat the names as the same program), checked against the program's published participant list, including the exact status level: Member, Snapshot, Ready, Provisional, or Authorized.
 **Public source.** [GovRAMP program participants](https://govramp.org/program-participants/), refreshed daily.
 **How it runs.** Automatic lookup.
-**If adverse.** A claimed status absent from the list is weighted Critical (registry contradiction). "Member" presented as if it were a security verification is Medium; membership alone verifies nothing, and the report explains what each status actually means.
+**If adverse.** A claimed status absent from the list is weighted Critical (registry contradiction). "Member" presented as if it were a security verification is Medium; membership alone verifies nothing, and the report explains what each status actually means. The check leaves a row in the verification ledger either way: a listing found shows as verified, a claimed status absent from the list shows side by side with the list itself, and a claim we could not check against the list stays unverified.
 
 ### D3.3 TX-RAMP claims
 
 **What we look at.** Claimed TX-RAMP certification, when the vendor is selling into Texas.
 **Public source.** [Texas DIR TX-RAMP certified products list](https://dir.texas.gov/resource-library-item/tx-ramp-certified-cloud-products).
 **How it runs.** Automatic lookup, when the buyer is in Texas or the pitch claims TX-RAMP. For everyone else the check does not apply, and the report says so.
-**If adverse.** A claim absent from the list is weighted High rather than Critical, because the published list is known to lag actual certifications; the report says so and gives the DIR contact for confirmation. "Provisional" presented as "certified" is noted.
+**If adverse.** A claim absent from the list is weighted High rather than Critical, because the published list is known to lag actual certifications; the report says so and gives the DIR contact for confirmation. "Provisional" presented as "certified" is noted. The check leaves a row in the verification ledger either way: a certification found on the list shows as verified, and a claimed certification absent from the list shows side by side with the list, with the lag caveat stated in the row.
 
 ### D3.4 ISO 27001 certificates
 

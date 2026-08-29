@@ -117,7 +117,7 @@ export default function Landing() {
         <div className="relative grid items-center gap-12 lg:grid-cols-[7fr_5fr]">
           <div>
             <p className="font-mono text-[13px] tracking-wide text-white/70">
-              methodology v1.2 · open source · 30+ public-record checks
+              methodology v1.3 · open source · 30+ public-record checks
             </p>
             <h1 className="mt-5 font-serif text-[clamp(2.6rem,5.4vw,4.5rem)] font-bold leading-[1.02] tracking-tight">
               Got an AI vendor pitch? Check it before you spend an hour on it.

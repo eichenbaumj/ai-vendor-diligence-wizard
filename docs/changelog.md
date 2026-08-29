@@ -4,6 +4,24 @@ Every change to checks, weights, tier criteria, or language rules lands here
 with its date and its expected effect on verdicts. The methodology document
 states the current rules; this file records how they got there.
 
+## Version 1.3 (August 29, 2026)
+
+**What changed.** GovRAMP, TX-RAMP, and Sourcewell checks now leave rows in
+the verification ledger the way the FedRAMP check always has. A claimed
+GovRAMP status absent from the participant list shows as a contradiction
+row next to the list itself. A TX-RAMP claim absent from the published list
+shows the same way, weighted High because that list lags new certifications.
+A listing found on any of the three shows as a verified row, and a program
+claim we could not check against its list stays as an unverified row. Two
+knock-on effects of the new rows: a report that claims one of these programs
+while the list is unreachable can gain one consolidated document-request
+question, and a contradiction row flips the matching honesty panel item to
+flagged.
+
+**Expected effect on verdicts: none.** Tier logic is untouched. The same
+contradictions that moved verdicts before still move them; the new rows make
+them visible in the ledger.
+
 ## Version 1.2 (August 29, 2026)
 
 **What changed.** The question pack is now selected by a dedicated engine

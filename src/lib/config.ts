@@ -1,23 +1,23 @@
 /*
-  Runtime configuration.
+  Central configuration. Values here are PUBLIC by design.
 
-  The Supabase URL and anon key are committed by design (fleet pattern): the
-  anon key only grants what Row-Level Security allows, and this schema is
-  deny-all for anon — every data path goes through the edge functions. Vite
-  env vars override the defaults for local/alternative deployments.
-
-  Mock mode (VITE_MOCK=1) runs the app entirely in the browser against the
-  sample fixtures in src/lib/mock.ts — no network calls, no backend needed.
+  The Supabase URL and publishable API key are committed on purpose (fleet
+  pattern): a publishable key is Supabase's browser-safe key class, it only
+  grants what Row-Level Security allows, and this schema is deny-all for
+  client roles — every data path goes through the edge functions. Vite env
+  vars override the defaults for local setups.
 */
 
 const DEFAULT_SUPABASE_URL = "https://eejzmwdjflltzthotean.supabase.co";
-const DEFAULT_SUPABASE_ANON_KEY =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVlanptd2RqZmxsdHp0aG90ZWFuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc5NDg1NTEsImV4cCI6MjEwMzUyNDU1MX0.e3o9xx4BjBg22Uq_xtEOpTrnMWpm1b_sngDf3Iaziis";
+const DEFAULT_SUPABASE_PUBLISHABLE_KEY =
+  "sb_publishable_L5kB5mL8UXrvfYfz4Io3Yw_RW5-Ofbb";
 
 export const SUPABASE_URL: string =
   import.meta.env.VITE_SUPABASE_URL || DEFAULT_SUPABASE_URL;
 export const SUPABASE_ANON_KEY: string =
-  import.meta.env.VITE_SUPABASE_ANON_KEY || DEFAULT_SUPABASE_ANON_KEY;
+  import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
+  import.meta.env.VITE_SUPABASE_ANON_KEY ||
+  DEFAULT_SUPABASE_PUBLISHABLE_KEY;
 /* Turnstile site keys are public identifiers by design. */
 const DEFAULT_TURNSTILE_SITE_KEY = "0x4AAAAAAEfwyRZ62q5OA8kA";
 

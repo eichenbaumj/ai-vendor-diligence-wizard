@@ -55,7 +55,7 @@ npm test             # unit + static red-team suite
 npm run packs:build  # compile packs/*.yaml
 ```
 
-The frontend runs fully mocked until `VITE_SUPABASE_URL` is set. Backend
+Set `VITE_MOCK=1` to run the frontend against the built-in sample fixtures with no backend. Backend
 functions run locally with `supabase start` + `npm run functions:serve`
 (copy `supabase/.env.local.example`).
 

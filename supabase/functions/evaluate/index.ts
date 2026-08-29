@@ -87,7 +87,10 @@ interface Env {
 
 function readEnv(): Env | null {
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
-  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  /* Prefer the new secret API key when set; the platform-injected legacy
+     service-role JWT remains the fallback until legacy keys are disabled. */
+  const serviceKey =
+    Deno.env.get("SB_SECRET_KEY") || Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   const anthropicKey = Deno.env.get("ANTHROPIC_API_KEY");
   if (!supabaseUrl || !serviceKey || !anthropicKey) return null;
   return {

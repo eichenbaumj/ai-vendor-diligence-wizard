@@ -18,13 +18,12 @@
   are publicly fetchable by UUID):
     scripts/eval-harness.ts prints the cleanup SQL at the end.
 */
-import { readFileSync, writeFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
-import { randomUUID } from "node:crypto";
-
-const PROJECT = "eejzmwdjflltzthotean";
-const FUNCTIONS = `https://${PROJECT}.supabase.co/functions/v1`;
-const PUBLISHABLE = "sb_publishable_L5kB5mL8UXrvfYfz4Io3Yw_RW5-Ofbb";
+import { writeFileSync } from "node:fs";
+import {
+  createEvalClient,
+  estimateCost,
+  fixture,
+} from "./lib/eval-client.ts";
 
 const EVAL_TOKEN = process.env.EVAL_BYPASS_TOKEN ?? "";
 const MGMT_TOKEN = process.env.SUPABASE_ACCESS_TOKEN ?? "";
@@ -33,11 +32,7 @@ if (!EVAL_TOKEN || !MGMT_TOKEN) {
   process.exit(1);
 }
 
-const fixture = (name: string) =>
-  readFileSync(
-    fileURLToPath(new URL(`../tests/fixtures/pitches/${name}`, import.meta.url)),
-    "utf8",
-  );
+const client = createEvalClient({ evalToken: EVAL_TOKEN, mgmtToken: MGMT_TOKEN });
 
 const OPENGOV_PITCH = `Subject: Modern budgeting and permitting software for your agency
 
@@ -102,31 +97,6 @@ const LEVELS = ALL_LEVELS.filter((l) => levelNames.some((n) => l.name.startsWith
 const outArg = process.argv.indexOf("--out");
 const OUT = outArg >= 0 ? process.argv[outArg + 1] : "harness-results.md";
 
-async function submit(item: PanelItem, level: Level): Promise<string> {
-  const res = await fetch(`${FUNCTIONS}/evaluate`, {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      apikey: PUBLISHABLE,
-      authorization: `Bearer ${PUBLISHABLE}`,
-      "x-eval-token": EVAL_TOKEN,
-    },
-    body: JSON.stringify({
-      input_kind: item.input_kind,
-      content: item.content,
-      state: null,
-      turnstile_token: null,
-      client_token: randomUUID(),
-      ...level.body,
-    }),
-  });
-  const data = (await res.json()) as { evaluation_id?: string; error?: string };
-  if (!res.ok || !data.evaluation_id) {
-    throw new Error(`submit failed (${res.status}): ${data.error}`);
-  }
-  return data.evaluation_id;
-}
-
 interface RunMetrics {
   id: string;
   status: string;
@@ -143,52 +113,10 @@ interface RunMetrics {
   stages_ms: Record<string, number>;
 }
 
-async function sql(query: string): Promise<Record<string, unknown>[]> {
-  const res = await fetch(
-    `https://api.supabase.com/v1/projects/${PROJECT}/database/query`,
-    {
-      method: "POST",
-      headers: {
-        authorization: `Bearer ${MGMT_TOKEN}`,
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({ query }),
-    },
-  );
-  return (await res.json()) as Record<string, unknown>[];
-}
-
-/* Sonnet-5 pricing ($/MTok): in 2, out 10, cache write 2.5e-6? Keep it to
-   the dominant terms: tokens at blended rates + $10/1k searches. Estimate
-   only — flagged as such in the output. */
-function estimateCost(u: {
-  input_tokens: number;
-  output_tokens: number;
-  cache_creation_input_tokens: number;
-  cache_read_input_tokens: number;
-  web_search_requests: number;
-}): string {
-  const dollars =
-    (u.input_tokens / 1e6) * 2 +
-    (u.cache_creation_input_tokens / 1e6) * 2.5 +
-    (u.cache_read_input_tokens / 1e6) * 0.2 +
-    (u.output_tokens / 1e6) * 10 +
-    (u.web_search_requests / 1000) * 10;
-  return `$${dollars.toFixed(2)}`;
-}
-
 async function waitAndMeasure(id: string, startedAt: number): Promise<RunMetrics> {
-  const deadline = Date.now() + 14 * 60_000;
-  for (;;) {
-    if (Date.now() > deadline) break;
-    await new Promise((r) => setTimeout(r, 15_000));
-    const rows = await sql(
-      `select status from evaluations where id = '${id}'`,
-    );
-    const status = String(rows[0]?.status ?? "missing");
-    if (["complete", "insufficient", "error"].includes(status)) break;
-  }
-  const rows = await sql(`
+  await client.waitForTerminal(id);
+  /* Bespoke to this harness: the comparison table's metrics in one query. */
+  const rows = await client.sql(`
     select status,
            report->'verdict'->>'tier' as tier,
            (report->'verdict'->'checks_met'->>'met') || '/' || (report->'verdict'->'checks_met'->>'total') as checks_met,
@@ -236,7 +164,10 @@ async function main() {
       const settled = await Promise.allSettled(
         chunk.map(async (item) => {
           const t0 = Date.now();
-          const id = await submit(item, level);
+          const id = await client.submit(
+            { input_kind: item.input_kind, content: item.content },
+            level.body,
+          );
           console.log(`  ${item.label}: ${id}`);
           const m = await waitAndMeasure(id, t0);
           return { panel: item.label, level: level.name, m };

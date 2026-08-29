@@ -294,10 +294,87 @@ function claradocsTimeline(): TimelineEntry[] {
   ];
 }
 
+function kestrelTimeline(): TimelineEntry[] {
+  return [
+    { at: 400, event: ev("parse", "stage_start", "Reading the pitch") },
+    {
+      at: 2200,
+      event: ev("parse", "micro_finding", "Vendor identified: Kestrel Permit AI (kestrelpermit.ai)", "hit"),
+    },
+    {
+      at: 3600,
+      event: ev("parse", "micro_finding", "9 checkable claims extracted, including 2 performance claims", "info"),
+    },
+    { at: 5200, event: ev("registry", "stage_start", "Checking registries and records") },
+    {
+      at: 7200,
+      event: ev("registry", "check_result", "Ohio SoS: Kestrel Permit AI, Inc. active, formed June 2024", "hit", "sos_registration", "https://businesssearch.ohiosos.gov/?sample"),
+    },
+    {
+      at: 9600,
+      event: ev("registry", "check_result", "Domain registered February 2024 (RDAP); the pitch describes deployments since 2018", "flag", "rdap_domain_age", "https://rdap.org/domain/kestrelpermit.ai"),
+    },
+    {
+      at: 11800,
+      event: ev("registry", "check_result", "First site capture April 2024 (Wayback Machine)", "flag", "wayback_history"),
+    },
+    {
+      at: 13600,
+      event: ev("registry", "check_result", "No debarment or exclusion match", "hit", "sam_exclusions"),
+    },
+    {
+      at: 15400,
+      event: ev("registry", "check_result", "SAM.gov: no entity record (no federal work claimed; neutral)", "info", "sam_entity"),
+    },
+    { at: 17500, event: ev("research", "stage_start", "Searching for delivery evidence") },
+    {
+      at: 19500,
+      event: ev("research", "micro_finding", "Searching for the claimed 12-state permit footprint…", "searching"),
+    },
+    {
+      at: 23500,
+      event: ev("research", "check_result", "Fairview Heights council minutes approve a Kestrel pilot (March 2026)", "hit", "gov_trace", "https://www.fairviewheights.oh.gov/council/minutes/2026-03-17-sample"),
+    },
+    {
+      at: 26500,
+      event: ev("research", "check_result", "No other city or state deployment found in public sources", "info", "ai_inventory"),
+    },
+    {
+      at: 29500,
+      event: ev("research", "check_result", "The 93 percent zero-error figure: no public source or methodology found", "info", "case_study"),
+    },
+    {
+      at: 32000,
+      event: ev("research", "check_result", "Named CEO: no independent public record found", "info", "leadership"),
+    },
+    {
+      at: 34000,
+      event: ev("research", "check_result", "Proprietary-model claim: no technical documentation found", "info", "product_docs"),
+    },
+    { at: 36000, event: ev("packs", "stage_start", "Matching sector guidance") },
+    {
+      at: 37200,
+      event: ev("packs", "micro_finding", "Document-processing pack selected", "info"),
+    },
+    { at: 38500, event: ev("synthesis", "stage_start", "Writing your report") },
+    {
+      at: 41000,
+      event: ev("synthesis", "micro_finding", "One registry contradiction and two unverified claims logged; applying tier rules…", "searching"),
+    },
+    { at: 43000, event: ev("review", "stage_start", "Reviewing the language") },
+    {
+      at: 44500,
+      event: ev("review", "micro_finding", "Language check passed: dates and sources stated, no accusations", "hit"),
+    },
+    { at: 45500, event: ev("review", "done", "Report ready") },
+  ];
+}
+
 const TIMELINES: Record<SampleId, () => TimelineEntry[]> = {
   meridian: meridianTimeline,
   swiftgov: swiftgovTimeline,
   claradocs: claradocsTimeline,
+  kestrel: kestrelTimeline,
 };
 
 const COMPLETE_AT = 45500;
@@ -310,6 +387,9 @@ function pickSample(content: string): { id: SampleId; matched: boolean } {
   const lower = trimmed.toLowerCase();
   if (lower.includes("swiftgov")) return { id: "swiftgov", matched: true };
   if (lower.includes("claradocs")) return { id: "claradocs", matched: true };
+  if (lower.includes("kestrel") || lower.includes("permit")) {
+    return { id: "kestrel", matched: true };
+  }
   if (lower.includes("meridian")) return { id: "meridian", matched: true };
   /* Unrecognized custom input in mock mode: the live engine is not connected,
      so we replay the established-vendor sample AND flag the run so the UI

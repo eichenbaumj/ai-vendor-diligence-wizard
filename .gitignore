@@ -21,3 +21,6 @@ supabase/.temp/
 # Test artifacts
 coverage/
 tests/redteam/results/
+
+# local QA run output (when QA_PANEL_DIR is unset)
+qa-runs/

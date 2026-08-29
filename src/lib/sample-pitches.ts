@@ -1,10 +1,10 @@
 /*
-  Three fictional sample pitches, matched to the sample reports in
+  Four fictional sample pitches, matched to the sample reports in
   sample-reports.ts. These are teaching fixtures: every company, person,
   address, and number in them is invented.
 */
 
-export type SampleId = "meridian" | "swiftgov" | "claradocs";
+export type SampleId = "meridian" | "swiftgov" | "claradocs" | "kestrel";
 
 export interface SamplePitch {
   id: SampleId;
@@ -76,6 +76,27 @@ Thanks,
 Priya Raman
 Co-founder, ClaraDocs
 claradocs.io`,
+  },
+  {
+    id: "kestrel",
+    label: "Sample: inflated claims",
+    shortLabel: "inflated claims",
+    text: `Subject: Automatic review for routine permit applications
+
+Hi,
+
+I run government sales at Kestrel Permit AI. We built Kestrel to read a permit application the way a senior plans examiner would: check it against your zoning and building code, flag what is missing, and clear the routine ones so your staff can spend their time on the hard ones.
+
+Cities have been running permit reviews on Kestrel since 2018, and today we are processing 40,000 permits a month across 12 states. Kestrel runs on our own permitting model, trained on millions of municipal permit decisions. In production, 93 percent of routine permits are approved automatically with zero errors.
+
+You may know some of our work nearby: the City of Fairview Heights, Ohio approved a Kestrel pilot this spring, and their building department is live today. Our CEO, Rachel Odom, spent nine years running a city permitting counter, so the product is shaped by how counters actually work. We are SOC 2 Type II audited, and your data is never used to train our models.
+
+I would love 20 minutes this week or next to run Kestrel on two or three of your own permit types. Most building officials who see that demo ask to start a pilot before the call ends.
+
+Best,
+Marcus Vale
+Head of Government Sales, Kestrel Permit AI
+kestrelpermit.ai`,
   },
 ];
 

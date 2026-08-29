@@ -11,6 +11,8 @@
     "test:watch": "vitest",
     "packs:build": "tsx scripts/build-packs.ts",
     "packs:validate": "tsx scripts/validate-packs.ts",
+    "qa": "tsx scripts/qa-harness.ts",
+    "qa:validate": "tsx scripts/validate-qa-panel.ts",
     "readability": "tsx scripts/readability-check.ts",
     "functions:serve": "supabase functions serve --env-file supabase/.env.local"
   },

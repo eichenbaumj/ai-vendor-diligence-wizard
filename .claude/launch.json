@@ -12,6 +12,19 @@
       "autoPort": true
     },
     {
+      "name": "wizard-mock",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": [
+        "vite",
+        "--mode",
+        "mock",
+        "--port",
+        "8092"
+      ],
+      "port": 8092,
+      "autoPort": true
+    },
+    {
       "name": "wizard-dev-b",
       "runtimeExecutable": "npm",
       "runtimeArgs": [

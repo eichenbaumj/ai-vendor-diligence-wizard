@@ -1,9 +1,51 @@
+import { Link } from "react-router-dom";
 import {
   Section,
   PillButton,
   MarqueeBand,
   DotField,
+  TierBadge,
 } from "@/components/brand";
+import {
+  ResultChip,
+  EvidenceTierBadge,
+} from "@/components/report/VerificationLedger";
+import { SAMPLE_REPORTS } from "@/lib/sample-reports";
+import type { LedgerRow } from "@/lib/types";
+
+/*
+  The hero specimen is a genuine fragment of the Kestrel sample report
+  (a fictional vendor), rendered with the same components the real report
+  page uses. The row ids are pinned by tests/unit/sample-reports.test.ts.
+*/
+const SPECIMEN_REPORT = SAMPLE_REPORTS.kestrel;
+const SPECIMEN_ROW_IDS = ["kes-L1", "kes-L2", "kes-L3", "kes-L4"];
+/* Below lg, only the two rows that carry the contrast stay visible. */
+const SPECIMEN_MOBILE_ROW_IDS = new Set(["kes-L2", "kes-L3"]);
+
+const SPECIMEN_ROWS = SPECIMEN_ROW_IDS.map((id) =>
+  SPECIMEN_REPORT.ledger.find((row) => row.id === id),
+).filter((row): row is LedgerRow => row !== undefined);
+
+const SPECIMEN_DATE = new Date(SPECIMEN_REPORT.meta.generated_at)
+  .toLocaleDateString("en-US", { month: "short", year: "numeric" })
+  .toUpperCase();
+
+/* The fixture's display name carries a "(sample, fictional)" suffix for the
+   report page; the caption under the card covers that here. */
+const SPECIMEN_NAME = SPECIMEN_REPORT.meta.vendor_display_name
+  .replace(/\s*\(.*\)\s*$/, "")
+  .toUpperCase();
+
+function specimenSourceHost(row: LedgerRow): string | null {
+  const url = row.sources[0]?.url;
+  if (!url) return null;
+  try {
+    return new URL(url).hostname.replace(/^www\./, "").toUpperCase();
+  } catch {
+    return null;
+  }
+}
 
 const MARQUEE_ITEMS = [
   "State business registries",
@@ -96,68 +138,63 @@ export default function Landing() {
             </div>
           </div>
 
-          {/* The specimen: a fragment of a real (fictional-vendor) ledger. */}
-          <div aria-hidden="true" className="hidden select-none lg:block">
-            <div className="rounded-md border border-white/20 bg-white text-brand-charcoal shadow-[0_24px_60px_rgba(10,10,60,0.45)]">
-              <div className="flex items-baseline justify-between border-b border-brand-silver-soft px-5 py-3">
+          {/* The specimen: a genuine fragment of the Kestrel sample report,
+              rendered with the report page's own components. */}
+          <Link
+            to="/check?sample=kestrel"
+            aria-label="Open the full sample report for Kestrel Permit AI, a fictional vendor"
+            className="group block"
+          >
+            <div className="rounded-md border border-white/20 bg-white text-brand-charcoal shadow-soft-lg transition-transform duration-200 group-hover:-translate-y-0.5">
+              <div className="flex items-baseline justify-between gap-4 border-b border-brand-silver-soft px-5 py-3">
                 <span className="font-mono text-[11px] tracking-[0.12em] text-brand-steel">
-                  VERIFICATION LEDGER · MERIDIAN ANALYTICS
+                  VERIFICATION LEDGER · {SPECIMEN_NAME}
                 </span>
-                <span className="font-mono text-[11px] text-brand-steel">
-                  AUG 2026
+                <span className="font-mono text-[11px] tabular-nums text-brand-steel">
+                  {SPECIMEN_DATE}
                 </span>
               </div>
               <ul className="divide-y divide-brand-silver-soft">
-                <li className="flex items-start gap-3 px-5 py-3">
-                  <span className="mt-0.5 font-bold text-status-good">✓</span>
-                  <span className="flex-1 text-[13px] leading-snug">
-                    Registered legal entity
-                    <span className="block font-mono text-[11px] text-brand-steel">
-                      COLORADO SECRETARY OF STATE · T1
-                    </span>
-                  </span>
-                </li>
-                <li className="flex items-start gap-3 px-5 py-3">
-                  <span className="mt-0.5 font-bold text-status-good">✓</span>
-                  <span className="flex-1 text-[13px] leading-snug">
-                    Federal award history
-                    <span className="block font-mono text-[11px] text-brand-steel">
-                      USASPENDING.GOV · T1
-                    </span>
-                  </span>
-                </li>
-                <li className="flex items-start gap-3 px-5 py-3">
-                  <span className="mt-0.5 font-bold text-status-warn">⚠</span>
-                  <span className="flex-1 text-[13px] leading-snug">
-                    "Serving 40 states since 2019"
-                    <span className="block font-mono text-[11px] text-brand-steel">
-                      DOMAIN REGISTERED MAR 2026 · CONTRADICTED
-                    </span>
-                  </span>
-                </li>
-                <li className="flex items-start gap-3 px-5 py-3">
-                  <span className="mt-0.5 font-bold text-brand-charcoal-soft">○</span>
-                  <span className="flex-1 text-[13px] leading-snug">
-                    "98% accuracy" claim
-                    <span className="block font-mono text-[11px] text-brand-steel">
-                      NO PUBLISHED METHODOLOGY · COULD NOT VERIFY
-                    </span>
-                  </span>
-                </li>
+                {SPECIMEN_ROWS.map((row) => (
+                  <li
+                    key={row.id}
+                    className={`px-5 py-3 ${
+                      SPECIMEN_MOBILE_ROW_IDS.has(row.id)
+                        ? ""
+                        : "hidden lg:block"
+                    }`}
+                  >
+                    <div className="flex flex-wrap items-center gap-2">
+                      <ResultChip result={row.result} />
+                      <EvidenceTierBadge tier={row.evidence_tier} />
+                    </div>
+                    <p className="mt-1.5 line-clamp-2 text-[13px] leading-snug">
+                      {row.claim_quote ? (
+                        <>&ldquo;{row.claim_quote}&rdquo;</>
+                      ) : (
+                        row.what_checked
+                      )}
+                    </p>
+                    {specimenSourceHost(row) && (
+                      <p className="mt-1 font-mono text-[11px] tracking-wide text-brand-steel">
+                        {specimenSourceHost(row)}
+                      </p>
+                    )}
+                  </li>
+                ))}
               </ul>
-              <div className="flex items-center justify-between border-t border-brand-silver-soft px-5 py-4">
-                <span className="-rotate-2 whitespace-nowrap rounded border-2 border-status-warn px-3 py-1 font-mono text-[11px] font-bold tracking-[0.12em] text-status-warn">
-                  TIER 2 · SIGNIFICANT GAPS
-                </span>
-                <span className="font-mono text-[11px] text-brand-steel">
-                  MEETS 3 OF 7 CHECKS
+              <div className="flex flex-wrap items-center justify-between gap-3 border-t border-brand-silver-soft px-5 py-4">
+                <TierBadge tier={SPECIMEN_REPORT.verdict.tier} />
+                <span className="font-mono text-[11px] tabular-nums text-brand-steel">
+                  MEETS {SPECIMEN_REPORT.verdict.checks_met.met} OF{" "}
+                  {SPECIMEN_REPORT.verdict.checks_met.total} CHECKS
                 </span>
               </div>
             </div>
             <p className="mt-3 text-center font-mono text-[11px] text-white/60">
-              a report fragment · fictional vendor
+              a report fragment · fictional vendor · open the full sample
             </p>
-          </div>
+          </Link>
         </div>
       </Section>
 

@@ -1,5 +1,5 @@
 /*
-  Three complete sample reports for FICTIONAL vendors. These fixtures power
+  Four complete sample reports for FICTIONAL vendors. These fixtures power
   the sample-pitch feature and mock mode, and they are the design reference
   for the report page. Every company, person, URL path, and number is
   invented. Copy follows the legal-safe language rules in
@@ -1398,10 +1398,432 @@ const claradocsReport: Report = {
   },
 };
 
+/* -------------------------------------------------------------- Kestrel (T2) */
+
+const kestrelReport: Report = {
+  verdict: {
+    tier: 2,
+    label: TIER_LABELS[2],
+    summary:
+      "This vendor is a registered, active Ohio corporation, and one named customer is confirmed in that city's own published council minutes. Two things stand between this pitch and a demo. First, the pitch describes cities using Kestrel since 2018, while the domain was registered in February 2024 and the corporation was formed in June 2024; we found no earlier entity or product. Second, the largest numbers in the pitch have no public source we could find. The questions below resolve both, and a company with the claimed footprint can answer them in a day.",
+    checks_met: { met: 3, total: 7 },
+    rationale: [
+      "Unresolved HIGH finding in D1: the pitch describes cities running permit reviews on Kestrel since 2018, but the domain kestrelpermit.ai was registered in February 2024 (RDAP, checked Aug 28, 2026) and the Ohio corporation was formed in June 2024.",
+      "Unresolved HIGH finding in D6: an absolute performance claim (93 percent of routine permits approved automatically with zero errors) has no published methodology or named deployment behind it.",
+      "Identity resolved on two independent identifiers: an active Ohio corporate registration and the company's operating domain.",
+      "One dimension carries verified green evidence: the City of Fairview Heights pilot appears in the city's own published council minutes (retrieved Aug 28, 2026).",
+    ],
+  },
+  ledger: [
+    {
+      id: "kes-L1",
+      dimension: "D1",
+      claim_quote: null,
+      what_checked: "Corporate registration under the vendor's legal name",
+      result: "OFFICIAL_RECORD_FOUND",
+      evidence_tier: "T1",
+      severity: null,
+      sources: [
+        {
+          url: "https://businesssearch.ohiosos.gov/?sample",
+          title: "Ohio Secretary of State business search",
+          retrieved_at: RETRIEVED,
+        },
+      ],
+      note: "The Ohio Secretary of State shows Kestrel Permit AI, Inc. as an active corporation, formed June 2024, with a Columbus registered agent. The company is real and in good standing. The formation date matters for the track-record claim tested below.",
+      methodology_ref: "d1-1",
+    },
+    {
+      id: "kes-L2",
+      dimension: "D2",
+      claim_quote:
+        "the City of Fairview Heights, Ohio approved a Kestrel pilot this spring",
+      what_checked:
+        "Whether the named customer's own public records confirm the relationship",
+      result: "VERIFIED",
+      evidence_tier: "T1",
+      severity: null,
+      sources: [
+        {
+          url: "https://www.fairviewheights.oh.gov/council/minutes/2026-03-17-sample",
+          title: "City of Fairview Heights council minutes",
+          retrieved_at: RETRIEVED,
+        },
+      ],
+      note: "The March 17, 2026 minutes of the Fairview Heights city council, published on the city's own site, approve a six-month permit-review pilot with Kestrel Permit AI. A customer confirmed in that customer's own public record is strong evidence, and it is the pitch's one named customer.",
+      methodology_ref: "d2-4",
+    },
+    {
+      id: "kes-L3",
+      dimension: "D1",
+      claim_quote:
+        "Cities have been running permit reviews on Kestrel since 2018",
+      what_checked:
+        "Domain registration date and web history against the claimed track record",
+      result: "CONTRADICTED",
+      evidence_tier: "T1",
+      severity: "HIGH",
+      sources: [
+        {
+          url: "https://rdap.org/domain/kestrelpermit.ai",
+          title: "RDAP registration record for kestrelpermit.ai",
+          retrieved_at: RETRIEVED,
+        },
+        {
+          url: "https://web.archive.org/cdx/search/cdx?url=kestrelpermit.ai",
+          title: "Wayback Machine capture index",
+          retrieved_at: RETRIEVED,
+        },
+      ],
+      note: "The domain kestrelpermit.ai was registered in February 2024 (RDAP), the Wayback Machine's first capture of the site is from April 2024, and the Ohio corporation was formed in June 2024. A company can be older than its current domain, but we found no earlier domain, entity, or press record, and these dates sit against the claim that cities have run permit reviews on Kestrel since 2018. The vendor can resolve this by naming the earlier entity and two customers from that period.",
+      methodology_ref: "d1-4",
+    },
+    {
+      id: "kes-L4",
+      dimension: "D6",
+      claim_quote:
+        "93 percent of routine permits are approved automatically with zero errors",
+      what_checked:
+        "Whether a published methodology or independent evaluation supports this number",
+      result: "COULD_NOT_VERIFY",
+      evidence_tier: "T4",
+      severity: "HIGH",
+      sources: [],
+      note: "We searched news coverage, city sites, and the vendor's own materials on Aug 28, 2026 and found no published methodology, named deployment, or independent evaluation behind this figure. The claim includes an error rate of exactly zero, and the pitch names no measurement method that could support that at any volume. Absence of a public source is not proof the figure is wrong; it does mean the figure cannot inform a decision yet.",
+      methodology_ref: "d6-1",
+    },
+    {
+      id: "kes-L5",
+      dimension: "D2",
+      claim_quote: "processing 40,000 permits a month across 12 states",
+      what_checked:
+        "Public traces of the claimed footprint: council agendas, procurement awards, budget documents, news coverage",
+      result: "COULD_NOT_VERIFY",
+      evidence_tier: "T4",
+      severity: null,
+      sources: [],
+      note: "A footprint of 40,000 permits a month across 12 states would normally leave many public traces: council agendas, procurement awards, budget lines, news coverage. We searched these sources on Aug 28, 2026 and confirmed one city, the Fairview Heights pilot approved in March 2026. Absence from public sources is not proof the claim is false; it does mean the footprint beyond that one pilot could not be confirmed.",
+      methodology_ref: "d2-4",
+    },
+    {
+      id: "kes-L6",
+      dimension: "D3",
+      claim_quote: "We are SOC 2 Type II audited",
+      what_checked: "SOC 2 attestation (no public registry exists for SOC 2)",
+      result: "COULD_NOT_VERIFY",
+      evidence_tier: "T4",
+      severity: null,
+      sources: [],
+      note: "There is no public registry of SOC 2 reports, so this cannot be checked from public sources, and that is true for every vendor. Ask for the report under NDA and check three things: the type (Type II covers a period, Type I a single date), the covered period, and whether the scope includes the permitting product.",
+      methodology_ref: "d3-6",
+    },
+    {
+      id: "kes-L7",
+      dimension: "D5",
+      claim_quote:
+        "Our CEO, Rachel Odom, spent nine years running a city permitting counter",
+      what_checked:
+        "Public records for the named CEO independent of the vendor's site",
+      result: "COULD_NOT_VERIFY",
+      evidence_tier: "T4",
+      severity: null,
+      sources: [],
+      note: "We searched news archives and conference programs on Aug 28, 2026 and did not find the named CEO in sources independent of the vendor. People can have thin public footprints, so this is logged as could-not-verify and nothing more. A nine-year permitting career should be easy for the vendor to document; the question pack asks which city and what role.",
+      methodology_ref: "d5-1",
+    },
+    {
+      id: "kes-L8",
+      dimension: "D4",
+      claim_quote:
+        "Kestrel runs on our own permitting model, trained on millions of municipal permit decisions",
+      what_checked:
+        "Public documentation of the claimed proprietary permitting model",
+      result: "COULD_NOT_VERIFY",
+      evidence_tier: "T4",
+      severity: null,
+      sources: [],
+      note: "The vendor's site describes the product but publishes no technical documentation of a proprietary model, and we found no engineering posts or research elsewhere on Aug 28, 2026. Training a model from scratch is a large undertaking for a company formed in 2024. Ask whether this is a model trained from scratch, a tuned commercial model, or a rules layer on top of one. All three can work well; the answer changes your security review and your data-path questions.",
+      methodology_ref: "d4-1",
+    },
+  ],
+  green_flags: [
+    "An active Ohio corporate registration is on file for the exact company name in the pitch.",
+    "The Fairview Heights pilot is confirmed in the city's own published council minutes.",
+    "The pitch was sent from the company's own domain, which has working mail infrastructure.",
+  ],
+  adv_findings: [],
+  honesty_panel: [
+    {
+      check_id: "sos_registration",
+      label: "State corporate registration",
+      status: "pass",
+      reason: null,
+    },
+    {
+      check_id: "sam_entity",
+      label: "SAM.gov entity registration",
+      status: "not_applicable",
+      reason:
+        "No SAM record found. Normal for a vendor that has not pursued federal work; not counted against anyone.",
+    },
+    {
+      check_id: "sam_exclusions",
+      label: "Federal debarment and exclusions",
+      status: "pass",
+      reason: null,
+    },
+    {
+      check_id: "rdap_domain_age",
+      label: "Domain age vs. claimed track record",
+      status: "flag",
+      reason: null,
+    },
+    {
+      check_id: "wayback_history",
+      label: "Web operating history (Wayback Machine)",
+      status: "flag",
+      reason: null,
+    },
+    {
+      check_id: "dns_mx",
+      label: "Email sent from the corporate domain",
+      status: "pass",
+      reason: null,
+    },
+    {
+      check_id: "usaspending",
+      label: "Federal payment records",
+      status: "not_applicable",
+      reason: "No federal customers claimed; the search ran and returned nothing.",
+    },
+    {
+      check_id: "sourcewell",
+      label: "Cooperative contract lists",
+      status: "not_applicable",
+      reason: "No cooperative contract claimed.",
+    },
+    {
+      check_id: "fedramp_feed",
+      label: "FedRAMP Marketplace",
+      status: "not_applicable",
+      reason: "The pitch makes no FedRAMP claim.",
+    },
+    {
+      check_id: "govramp_list",
+      label: "GovRAMP program participants",
+      status: "not_applicable",
+      reason: "No GovRAMP claim made.",
+    },
+    {
+      check_id: "soc2_report",
+      label: "SOC 2 attestation",
+      status: "could_not_check",
+      reason:
+        "No public registry of SOC 2 reports exists. Ask for the report under NDA; the question pack covers what to look for.",
+    },
+    {
+      check_id: "state_checkbook",
+      label: "State and local payment records",
+      status: "could_not_check",
+      reason:
+        "Ohio's checkbook portal requires a manual search, and most city check registers are posted as PDFs. A manual check card is included below.",
+    },
+    {
+      check_id: "ai_inventory",
+      label: "Public state AI inventories",
+      status: "could_not_check",
+      reason:
+        "No Kestrel deployment appears in the public state AI inventories we can read. Inventories are incomplete, so this is recorded as unavailable; the question pack asks for the customer list instead.",
+    },
+    {
+      check_id: "linkedin_headcount",
+      label: "Staff footprint vs. claims",
+      status: "could_not_check",
+      reason:
+        "LinkedIn does not permit automated checks. A 60-second manual check card is included below.",
+    },
+    {
+      check_id: "github_org",
+      label: "Public engineering footprint",
+      status: "could_not_check",
+      reason:
+        "No public engineering artifacts found under the vendor or product name. Common for government vendors and not counted against anyone.",
+    },
+    {
+      check_id: "urgency_language",
+      label: "Urgency or pressure language",
+      status: "pass",
+      reason: null,
+    },
+  ],
+  questions: [
+    {
+      id: "gap-domain-age",
+      text: "Your materials describe a multi-year track record. Please list the legal entity name and founding year, any prior company names, and two customers from that earlier period we may contact.",
+      why: "The company's web presence is much newer than the history described.",
+      source: "gap",
+    },
+    {
+      id: "gap-customers",
+      text: "Your materials describe processing 40,000 permits a month across 12 states. Please name at least five of the cities or counties behind that figure, with the contract administrator's contact so we may verify.",
+      why: "Beyond the one confirmed pilot, the claimed footprint left no public trace we could find.",
+      source: "gap",
+    },
+    {
+      id: "perf-kes-c6",
+      text: 'Your materials state: "93 percent of routine permits are approved automatically with zero errors". Which deployment produced this figure, measured how, over what period, and may we contact that organization?',
+      why: "Performance numbers need a methodology and a named reference before they can inform a decision.",
+      source: "claim",
+    },
+    {
+      id: "document-processing-q01",
+      text: "What field-level accuracy do you achieve on documents like ours, and will you demonstrate it in a pilot on 250–1,000 of our real documents, including faxes, phone photos, and handwriting?",
+      why: "The pilot number on your own permit applications is the one that matters.",
+      source: "pack",
+    },
+    {
+      id: "document-processing-q02",
+      text: "Is that character, field, or document accuracy? Define the denominator.",
+      why: "The 93 percent claim needs a denominator before it can mean anything.",
+      source: "pack",
+    },
+    {
+      id: "document-processing-q07",
+      text: 'Where is our data processed and stored, is it used to train your models or any third party\'s, and what is the deletion timeline? We need this in writing.',
+      why: "The pitch promises no training on your data. Get the promise into contract terms.",
+      source: "pack",
+    },
+    {
+      id: "document-processing-q08",
+      text: "Which underlying OCR or extraction engine or foundation model do you use, and which subprocessors touch our documents?",
+      why: "The answer tests the proprietary-model claim in the pitch.",
+      source: "pack",
+    },
+    {
+      id: "core-data-training",
+      text: "Will you sign a contract clause permanently prohibiting the use of our data to train any model, yours or a subprocessor's, absent our written consent?",
+      why: "The single most common gap in government AI contracts.",
+      source: "core",
+    },
+    {
+      id: "core-export",
+      text: "At contract end, what do we get back? Confirm no-cost machine-readable export of all our data and configurations, and name the format.",
+      why: "Protects you from lock-in before it starts.",
+      source: "core",
+    },
+    {
+      id: "core-references",
+      text: "Which government agencies use this product today? Are you listed in the GovAI Coalition registry, a state AI inventory, or a cooperative contract we can check?",
+      why: "Verifiable references are the fastest path from pitch to informed conversation.",
+      source: "core",
+    },
+    {
+      id: "core-breach",
+      text: "Define a reportable incident under our contract, your notification timeline, and who pays for breach response.",
+      why: "Incident terms are cheapest to fix before signature.",
+      source: "core",
+    },
+    {
+      id: "core-pricing",
+      text: "Provide the complete pricing structure: platform, usage, integration, support, and every trigger that changes our bill, including a surge scenario.",
+      why: "Surprise overage economics are a recurring failure mode in AI contracts.",
+      source: "core",
+    },
+  ],
+  manual_checks: [
+    {
+      id: "kes-m1",
+      label: "Read the council minutes yourself",
+      instructions:
+        "Open the March 17, 2026 Fairview Heights council minutes and find the Kestrel agenda item. Check what the council actually approved: a six-month pilot for the building department. Then compare that scope to how the pitch describes the relationship.",
+      link: "https://www.fairviewheights.oh.gov/council/minutes/2026-03-17-sample",
+      what_bad_looks_like:
+        "The vendor describes the pilot as a long-running production deployment, or the minutes cover a smaller scope than the pitch suggests.",
+    },
+    {
+      id: "kes-m2",
+      label: "LinkedIn headcount check (60 seconds)",
+      instructions:
+        "Search LinkedIn for people who list Kestrel Permit AI as their current employer. An operation processing 40,000 permits a month across 12 states should show a real team: engineers, support staff, and the CEO named in the pitch.",
+      link: "https://www.linkedin.com/search/results/people/?keywords=Kestrel%20Permit%20AI",
+      what_bad_looks_like:
+        "Only a handful of profiles, profiles created recently, or no one in engineering or support roles.",
+    },
+    {
+      id: "kes-m3",
+      label: "Check the formation date yourself",
+      instructions:
+        "Search the Ohio Secretary of State's business search for Kestrel Permit AI. Compare the formation date on the record (June 2024) with the history the vendor tells you in conversation.",
+      link: "https://businesssearch.ohiosos.gov/",
+      what_bad_looks_like:
+        "The vendor keeps describing years of deployments without naming any entity or product that existed before 2024.",
+    },
+  ],
+  next_steps: [
+    "Send the first two questions in the pack (track record and customer list) before scheduling a demo. A company with the claimed footprint can answer both in a day.",
+    "Call the Fairview Heights building department and ask what the pilot covers, when it went live, and how it is going. This is the one customer the public record confirms.",
+    "Set the 93 percent figure aside until the vendor names the deployment, the measurement method, and the period behind it.",
+    "If the vendor documents its pre-2024 history, or corrects the claim, re-run this check with the new information. Reports change when the record does.",
+    "If the vendor believes this report is wrong, the report-an-error link goes to a review with a five-business-day turnaround.",
+  ],
+  sector: {
+    pack_ids: ["document-processing"],
+    elevated: false,
+    overlay_reason: null,
+    state_items: [],
+  },
+  sources: [
+    {
+      url: "https://businesssearch.ohiosos.gov/?sample",
+      title: "Ohio Secretary of State business search",
+      retrieved_at: RETRIEVED,
+    },
+    {
+      url: "https://www.fairviewheights.oh.gov/council/minutes/2026-03-17-sample",
+      title: "City of Fairview Heights council minutes",
+      retrieved_at: RETRIEVED,
+    },
+    {
+      url: "https://rdap.org/domain/kestrelpermit.ai",
+      title: "RDAP registration record",
+      retrieved_at: RETRIEVED,
+    },
+    {
+      url: "https://web.archive.org/cdx/search/cdx?url=kestrelpermit.ai",
+      title: "Wayback Machine capture index",
+      retrieved_at: RETRIEVED,
+    },
+    {
+      url: "https://www.usaspending.gov/search/?keyword=kestrel-permit-sample",
+      title: "USAspending award search",
+      retrieved_at: RETRIEVED,
+    },
+  ],
+  review: {
+    reviewed: true,
+    model: "claude-haiku-4-5",
+    adjustments: [
+      "Rewrote the domain-age note to state the recorded dates and place them next to the claim, without characterizing intent.",
+      "Moved the confirmed-pilot reference call to the top of the next steps.",
+    ],
+  },
+  meta: {
+    generated_at: GENERATED_AT,
+    expires_at: EXPIRES_AT,
+    methodology_version: "1.0",
+    pack_release: "2026.08",
+    vendor_key: "kestrel-permit-ai",
+    vendor_display_name: "Kestrel Permit AI (sample, fictional)",
+    research_partial: false,
+    input_kind: "paste",
+  },
+};
+
 export const SAMPLE_REPORTS: Record<SampleId, Report> = {
   meridian: meridianReport,
   swiftgov: swiftgovReport,
   claradocs: claradocsReport,
+  kestrel: kestrelReport,
 };
 
 export function getSampleReport(id: SampleId): Report {

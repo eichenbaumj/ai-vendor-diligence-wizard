@@ -368,8 +368,8 @@ export default function Check() {
                 <p className="mt-3 max-w-xl text-sm text-brand-charcoal-soft">
                   Preview build: the live research engine is not connected yet.
                   Submissions replay a sample report about a fictional vendor
-                  so you can see the format. The three sample buttons above
-                  show all three verdict shapes.
+                  so you can see the format. The sample buttons above show
+                  the different verdict shapes.
                 </p>
               )}
             </div>

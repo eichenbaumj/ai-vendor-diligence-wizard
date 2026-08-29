@@ -86,6 +86,13 @@ export default function Check() {
     setError(null);
   };
 
+  /* Samples must never overwrite a pitch someone typed or pasted: the
+     strip greys out while the box holds the user's own text. A loaded
+     sample's text stays switchable to the other samples. */
+  const samplesLocked =
+    content.trim().length > 0 &&
+    !SAMPLE_PITCHES.some((p) => p.text === content);
+
   const onContentChange = (value: string) => {
     setContent(value);
     if (sampleId && getSamplePitch(sampleId)?.text !== value) {
@@ -292,12 +299,16 @@ export default function Check() {
 
             {/* Sample strip */}
             <div className="mt-4 flex flex-wrap items-center gap-2">
-              <span className="text-sm text-brand-charcoal-soft">Try a sample:</span>
+              <span className="text-sm text-brand-charcoal-soft">
+                Try a sample:
+                {samplesLocked && " (clear the box first)"}
+              </span>
               {SAMPLE_PITCHES.map((p) => (
                 <PillButton
                   key={p.id}
                   variant="ghost"
                   size="md"
+                  disabled={samplesLocked}
                   onClick={() => applySample(p.id)}
                 >
                   {p.shortLabel}

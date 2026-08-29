@@ -236,6 +236,11 @@ export const HonestyItem = z.object({
   label: z.string().max(160),
   status: HonestyStatus,
   reason: z.string().max(300).nullable(), // required when could_not_check
+  /* Panel grouping (see honesty-groups.ts). Optional: reports stored before
+     the field existed fall back to a status-derived default client-side. */
+  group: z
+    .enum(["flag", "checked", "needs_you", "unavailable", "not_applicable"])
+    .optional(),
 });
 export type HonestyItem = z.infer<typeof HonestyItem>;
 

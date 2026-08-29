@@ -942,6 +942,21 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
 
   manualChecks.push(...leadCards);
 
+  /* Honesty-panel grouping: an unavailable-this-run source and a check that
+     exists as a one-minute manual card must not read identically. Assigned
+     here, after the manual cards exist, so "for you to check" reflects an
+     actual card in this report. */
+  const cardCheckIds = new Set<string>(["planned_linkedin"]);
+  if (limitedSos && manualChecks.some((m) => m.id === "manual-sos")) {
+    cardCheckIds.add(limitedSos.check_id);
+  }
+  for (const h of honesty) {
+    if (h.status === "flag") h.group = "flag";
+    else if (h.status === "pass") h.group = "checked";
+    else if (h.status === "not_applicable") h.group = "not_applicable";
+    else h.group = cardCheckIds.has(h.check_id) ? "needs_you" : "unavailable";
+  }
+
   /* -------------------------------------------------------------- leads */
 
   /* Research findings that back no ledger row, surfaced instead of silently

@@ -337,3 +337,58 @@ describe("unverified leads", () => {
     expect([...classes].sort((a, b) => a - b)).toEqual(classes);
   });
 });
+
+describe("honesty-panel grouping", () => {
+  it("groups by status with card-awareness", () => {
+    const base = input([], []);
+    base.checks = [
+      {
+        check_id: "sos_ny",
+        source: "New York Department of State (data.ny.gov)",
+        status: "definitive_miss",
+        summary: "We searched New York's registry and did not find this company.",
+        evidence_url: "https://apps.dos.ny.gov/publicInquiry/",
+        confidence: null,
+        retrieved_at: AT,
+        data: null,
+      },
+      {
+        check_id: "edgar_fts",
+        source: "SEC EDGAR full-text search",
+        status: "error",
+        summary: "We could not reach SEC EDGAR, so this check did not run.",
+        evidence_url: null,
+        confidence: null,
+        retrieved_at: AT,
+        data: null,
+      },
+    ];
+    const out = assemble(base);
+    const byId = Object.fromEntries(out.honesty.map((h) => [h.check_id, h]));
+    expect(byId.sos_ny.group).toBe("checked");
+    expect(byId.edgar_fts.group).toBe("unavailable");
+    expect(byId.planned_linkedin.group).toBe("needs_you");
+    expect(byId.planned_soc2.group).toBe("unavailable");
+  });
+
+  it("a coverage-limited state WITH a manual card lands in needs_you", () => {
+    const base = input([], []);
+    base.identity = { identity_resolved: false, identifiers_found: [] };
+    base.checks = [
+      {
+        check_id: "sos_fl",
+        source: "Florida Division of Corporations (Sunbiz)",
+        status: "coverage_limited",
+        summary: "Florida publishes bulk files only; search Sunbiz at the link.",
+        evidence_url: "https://search.sunbiz.org/Inquiry/CorporationSearch/ByName",
+        confidence: null,
+        retrieved_at: AT,
+        data: null,
+      },
+    ];
+    const out = assemble(base);
+    const fl = out.honesty.find((h) => h.check_id === "sos_fl");
+    expect(fl?.group).toBe("needs_you");
+    expect(out.manualChecks.some((m) => m.id === "manual-sos")).toBe(true);
+  });
+});

@@ -172,7 +172,7 @@ Compliance claims come in different kinds: some can be checked against official 
 **What we look at.** Any FedRAMP claim, checked against the government's own machine-readable marketplace feed.
 **Public source.** [FedRAMP Marketplace data](https://raw.githubusercontent.com/FedRAMP/marketplace-fedramp-gov-data/main/data.json), refreshed daily, published by the FedRAMP program office.
 **How it runs.** Automatic lookup.
-**If adverse.** "FedRAMP Authorized" claimed but absent from the official feed is weighted Critical and is a registry contradiction (see Section 4). Vague vocabulary like "FedRAMP compliant," "FedRAMP equivalent," or "built on FedRAMP infrastructure" is weighted Medium to High: these are [not recognized designations](https://www.fedramp.gov/), and the report explains the difference. Having no FedRAMP status at all is neutral for vendors selling to state and local government.
+**If adverse.** "FedRAMP Authorized" claimed but absent from the official feed is weighted Critical and is a registry contradiction (see Section 4). The contradiction arms only when the pitch states the designation as a current status: vague vocabulary like "FedRAMP compliant," "FedRAMP equivalent," or "built on FedRAMP infrastructure" is weighted Medium to High instead, because these are [not recognized designations](https://www.fedramp.gov/), and the report explains the difference. "In process" or "pending" language never arms the contradiction; it becomes a question to the vendor. Having no FedRAMP status at all is neutral for vendors selling to state and local government.
 
 ### D3.2 GovRAMP and StateRAMP claims
 

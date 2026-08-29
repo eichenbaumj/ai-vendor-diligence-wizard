@@ -47,6 +47,7 @@ import { lintObject, lintText, looseText, tidyProse } from "../_shared/lint.ts";
 import { harvestCitations } from "../_shared/harvest.ts";
 import { inferPrimaryDomain } from "../_shared/domain-inference.ts";
 import { isNamedOrganization } from "../_shared/text-match.ts";
+import { PROGRAMS, affirmsProgram } from "../_shared/claim-status.ts";
 import {
   UrlIngestError,
   fetchSubmittedUrl,
@@ -521,11 +522,13 @@ async function runPipeline(
   });
 
   const foundingYear = extractFoundingYear(extract);
-  const claimsText = extract.claims.map((c) => c.quote).join(" \n ");
-  const claimedFedramp = /fedramp/i.test(claimsText);
-  const claimedGovramp = /govramp|stateramp/i.test(claimsText);
-  const claimedTxramp = /tx-?ramp/i.test(claimsText);
-  const claimedSourcewell = /sourcewell|naspo|omnia|cooperative (purchasing|contract)/i.test(claimsText);
+  /* Registry contradictions arm only on affirmative present-status claims:
+     "pursuing FedRAMP authorization" is a legitimate state (methodology D3.1)
+     and must never end in a CRITICAL contradiction. */
+  const claimedFedramp = affirmsProgram(extract.claims, PROGRAMS.fedramp);
+  const claimedGovramp = affirmsProgram(extract.claims, PROGRAMS.govramp);
+  const claimedTxramp = affirmsProgram(extract.claims, PROGRAMS.txramp);
+  const claimedSourcewell = affirmsProgram(extract.claims, PROGRAMS.sourcewell);
   const senderDomain = extract.sender_email?.split("@")[1] ?? null;
   const companyNames = extract.vendor_name_candidates.length
     ? extract.vendor_name_candidates

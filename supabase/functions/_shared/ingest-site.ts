@@ -21,6 +21,7 @@
 import {
   UrlIngestError,
   fetchSubmittedUrl,
+  htmlHeadSummary,
   htmlToText,
   normalizeSubmittedUrl,
 } from "./ingest-url.ts";
@@ -158,7 +159,12 @@ export async function fetchVendorSite(
     seenFinal.add(finalUrl);
     const stripped = stripHiddenHtml(rawHtml);
     hiddenTotal += stripped.spanCount;
-    const text = htmlToText(stripped.html, SITE_PAGE_TEXT_CAP);
+    /* Client-rendered sites ship an empty body but a descriptive head:
+       title + meta descriptions join the corpus so a JS shell still tells
+       us whose site this is (the live Govra homepage is exactly this). */
+    const head = htmlHeadSummary(rawHtml);
+    const body = htmlToText(stripped.html, SITE_PAGE_TEXT_CAP);
+    const text = [head, body].filter(Boolean).join("\n").slice(0, SITE_PAGE_TEXT_CAP);
     if (text.length < 40) return;
     pages.push({
       url,

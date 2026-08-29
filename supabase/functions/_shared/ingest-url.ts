@@ -192,8 +192,43 @@ const NAMED_ENTITIES: Record<string, string> = {
   rdquo: '"',
 };
 
+function decodeEntities(text: string): string {
+  return text
+    .replace(/&#x([0-9a-f]+);/gi, (_, h) => String.fromCodePoint(parseInt(h, 16)))
+    .replace(/&#(\d+);/g, (_, d) => String.fromCodePoint(Number(d)))
+    .replace(/&([a-z]+);/gi, (m, name) => NAMED_ENTITIES[name.toLowerCase()] ?? m);
+}
+
 const BLOCK_TAGS =
   /<\/?(?:p|div|section|article|header|footer|main|aside|nav|h[1-6]|li|ul|ol|table|tr|td|th|blockquote|br|hr|figure|figcaption)\b[^>]*>/gi;
+
+/* Title and meta descriptions from the RAW head. Client-rendered sites
+   (JS shells) carry no body text at all, but their head still states who
+   the site belongs to — the first live Govra run returned a 3.8KB shell
+   with zero extractable body text and a fully descriptive head. */
+export function htmlHeadSummary(html: string): string {
+  const parts: string[] = [];
+  const title = html.match(/<title[^>]*>([\s\S]{0,300}?)<\/title>/i);
+  if (title?.[1]) parts.push(title[1]);
+  for (const m of html.matchAll(/<meta\s+[^>]*>/gi)) {
+    const tag = m[0];
+    if (!/name\s*=\s*["']description["']|property\s*=\s*["']og:(title|description|site_name)["']/i.test(tag)) {
+      continue;
+    }
+    const content = tag.match(/content\s*=\s*["']([^"']{1,400})["']/i);
+    if (content?.[1]) parts.push(content[1]);
+  }
+  const seen = new Set<string>();
+  return parts
+    .map((t) => decodeEntities(t).replace(/\s+/g, " ").trim())
+    .filter((t) => {
+      if (!t || seen.has(t.toLowerCase())) return false;
+      seen.add(t.toLowerCase());
+      return true;
+    })
+    .join(". ")
+    .slice(0, 1000);
+}
 
 /* Plain-text extraction adequate for pitch analysis. Fidelity of the strip
    does not affect hidden-text detection: detectHiddenHtml runs on the RAW
@@ -204,10 +239,7 @@ export function htmlToText(html: string, maxChars = 40_000): string {
   s = s.replace(/<(script|style|noscript|template|head|svg)\b[\s\S]*?<\/\1>/gi, " ");
   s = s.replace(BLOCK_TAGS, "\n");
   s = s.replace(/<[^>]+>/g, " ");
-  s = s
-    .replace(/&#x([0-9a-f]+);/gi, (_, h) => String.fromCodePoint(parseInt(h, 16)))
-    .replace(/&#(\d+);/g, (_, d) => String.fromCodePoint(Number(d)))
-    .replace(/&([a-z]+);/gi, (m, name) => NAMED_ENTITIES[name.toLowerCase()] ?? m);
+  s = decodeEntities(s);
   s = s
     .replace(/[ \t\r\f\v]+/g, " ")
     .replace(/\s*\n\s*/g, "\n")

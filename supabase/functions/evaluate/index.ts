@@ -626,7 +626,9 @@ async function runPipeline(
     if (siteHost && Date.now() - pipelineStart < 60_000) {
       const site = await fetchVendorSite(siteHost);
       markStage("s1b_site_fetch");
-      if (site && site.combinedText.length >= 200) {
+      /* 60 chars admits a title-plus-description JS shell — enough for
+         the name-match confirmation even when the body is client-rendered. */
+      if (site && site.combinedText.length >= 60) {
         /* Informational forensics only: the SSN scrub and invisible-char
            strip run, but site findings NEVER join the ceiling-bearing adv
            set — "system prompt" appears on every AI vendor's docs pages,

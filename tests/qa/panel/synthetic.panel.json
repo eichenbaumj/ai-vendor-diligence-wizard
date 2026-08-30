@@ -96,22 +96,23 @@
       "expected": {
         "status": "complete",
         "tier": {
-          "min": 2,
-          "max": 3
+          "min": 0,
+          "max": 1
         },
         "never": {
-          "at_or_below": 0
+          "at_or_above": 2
         }
       },
-      "rationale": "Honest fictional early-stage vendor: modest, specific claims (one pilot, SOC 2 Type I, named auditor) and no fabricated registry credentials. Research cannot corroborate a fictional company, so 2..3 is a soft prior for the startup band until calibration runs pin the edge.",
+      "rationale": "Honest fictional early-stage vendor: modest, specific claims (one pilot, SOC 2 Type I, named auditor) and no fabricated registry credentials. The original 2..3 band was structurally impossible: tiers 2-4 require identity resolution (tier.ts, methodology section 3), and a fictional company with a reserved example.com domain can never produce an identifier, so its reachable tiers are 0 (clean) or 1 (with triggers). This control's real job is fairness of treatment, not tier lift: a clean young pitch must terminate complete at tier 0 with non-adverse language, no triggers, and no ADV codes. The never-at-or-above-2 clause is the meaningful tripwire (a fictional vendor must never present as verified); tighten the band after 3 observations.",
       "evidence_links": [],
       "added": "2026-08-29",
       "calibrated_against": {
-        "methodology_version": "1.1",
-        "runs": 0,
+        "methodology_version": "1.2",
+        "runs": 1,
         "last_calibrated": "2026-08-29"
       },
-      "expectations_status": "calibrating"
+      "expectations_status": "calibrating",
+      "notes": "First live observation 2026-08-29 (run 2026-08-29-1523): tier 0, complete, no triggers, non-adverse rationale text confirmed by eye. The authored never-at-or-below-0 floor fired on that run and was removed as impossible-by-design after investigation (Joe approved 2026-08-29)."
     },
     {
       "id": "control-unverifiable",

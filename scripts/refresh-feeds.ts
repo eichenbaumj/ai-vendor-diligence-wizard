@@ -37,18 +37,35 @@ const SOURCEWELL_URL = "https://sourcewell.co/contract-list";
 /* dir.texas.gov sits behind a bot challenge that scores request fingerprints;
    browser-like headers pass more often than a bare fetch. When the challenge
    fires anyway we get an HTML page instead of a spreadsheet — the magic-byte
-   check below turns that into a loud, upsert-skipping failure. */
+   check below turns that into a loud, upsert-skipping failure. The full
+   client-hint set below exists because the UA string alone started drawing
+   403s from GitHub-hosted runners on 2026-08-29; a sparse header set is
+   itself a bot signal to fingerprint scorers. */
 const BROWSER_HEADERS = {
   "User-Agent":
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
-  Accept: "*/*",
+  Accept:
+    "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
   "Accept-Language": "en-US,en;q=0.9",
+  "Sec-Ch-Ua": '"Chromium";v="128", "Not;A=Brand";v="24", "Google Chrome";v="128"',
+  "Sec-Ch-Ua-Mobile": "?0",
+  "Sec-Ch-Ua-Platform": '"macOS"',
+  "Sec-Fetch-Dest": "document",
+  "Sec-Fetch-Mode": "navigate",
+  "Sec-Fetch-Site": "none",
+  "Sec-Fetch-User": "?1",
+  "Upgrade-Insecure-Requests": "1",
 };
 
 async function fetchBytes(url: string, headers: Record<string, string>): Promise<Buffer> {
-  const res = await fetch(url, { headers });
-  if (!res.ok) throw new FeedParseError(`${url} returned ${res.status}`);
-  return Buffer.from(await res.arrayBuffer());
+  /* One retry after a pause: challenge scorers sometimes pass the second
+     attempt from the same client once it looks like a page reload. */
+  for (let attempt = 1; ; attempt++) {
+    const res = await fetch(url, { headers });
+    if (res.ok) return Buffer.from(await res.arrayBuffer());
+    if (attempt >= 2) throw new FeedParseError(`${url} returned ${res.status}`);
+    await new Promise((r) => setTimeout(r, 4000));
+  }
 }
 
 function assertXlsx(data: Buffer, source: string): void {

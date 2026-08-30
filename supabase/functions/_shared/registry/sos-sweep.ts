@@ -255,10 +255,18 @@ async function runSocrataLane(
     if (matches.length > 0) {
       const best =
         matches.find((m) => m.confidence === "exact") ?? matches[0];
-      let summary = `${lane.stateName} business records list ${best.name}`;
+      /* Candidate framing: at check time the identity decision has not run
+         yet, so a hit must never read as "this vendor is registered here".
+         Short common names collide (a "17A" search matches 17A WASHINGTON
+         STREET, LLC), and announcing the raw name as the vendor's record
+         erodes trust mid-generation. */
+      let summary = `${lane.stateName} business records include an entry under a ${
+        best.confidence === "exact" ? "matching" : "similar"
+      } name: ${best.name}`;
       if (best.date) summary += `, registered ${best.date}`;
       if (best.status) summary += `, status listed as "${best.status}"`;
-      summary += ".";
+      summary +=
+        ". The identity check weighs whether this record belongs to this vendor.";
       if (best.status && LAPSE_STATUS.test(best.status)) {
         summary +=
           " A status note like this often reflects a late annual report filing, which is common at young companies. Treat it as informational.";

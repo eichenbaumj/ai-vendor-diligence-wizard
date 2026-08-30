@@ -218,7 +218,7 @@ export async function checkEdgarFts(
           check_id: FTS_CHECK_ID,
           source: FTS_SOURCE,
           status: "hit",
-          summary: `SEC filings show a Form D for this company${incPhrase}. A Form D is a federal filing that shows the company exists and has raised investment money.`,
+          summary: `SEC filings include a Form D under a matching company name${incPhrase}. A Form D is a federal filing that shows a company exists and has raised investment money; the identity check weighs whether it is this vendor.`,
           evidence_url: humanUrl(name),
           confidence: bestConfidence,
           retrieved_at,

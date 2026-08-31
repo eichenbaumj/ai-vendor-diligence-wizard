@@ -118,7 +118,7 @@ function ReportView({
       <ReportOverview report={report} />
 
       <GreenFlags flags={report.green_flags} />
-      <AdvFindingCard findings={report.adv_findings} />
+      <AdvFindingCard findings={report.adv_findings} rationale={report.verdict.rationale} />
       <VerificationLedger rows={report.ledger} />
       <HonestyPanel items={report.honesty_panel} />
       <QuestionPack report={report} />

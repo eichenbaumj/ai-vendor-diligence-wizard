@@ -80,7 +80,12 @@ export interface TierDecision {
    tier. Capping on it would also hand third parties a lever over any
    vendor's verdict. (Joe, 2026-08-31.) */
 const ADV_CEILING: VerdictTier = 2;
-const CEILING_ADV_CODES = new Set(["ADV-01", "ADV-02", "ADV-03"]);
+export const CEILING_ADV_CODES = new Set(["ADV-01", "ADV-02", "ADV-03"]);
+
+/* The deterministic marker for an applied cap. Stored reports do not carry
+   ceiling_applied, so the frontend detects an applied cap by this prefix on
+   a rationale line; keep the two in lockstep. */
+export const VERDICT_CAPPED_PREFIX = "Verdict capped:";
 
 export function computeTier(inputs: TierInputs): TierDecision {
   const rationale: string[] = [];
@@ -147,7 +152,7 @@ export function computeTier(inputs: TierInputs): TierDecision {
     tier = ADV_CEILING;
     ceiling_applied = true;
     rationale.push(
-      `Verdict capped: the submitted material contained content its reader cannot see or that addresses automated systems (${[...new Set(ceilingCodes)].join(", ")}; see the adversarial-content findings). A submission that reads differently to a person than to a machine cannot present as verified.`,
+      `${VERDICT_CAPPED_PREFIX} the submitted material contained content its reader cannot see or that addresses automated systems (${[...new Set(ceilingCodes)].join(", ")}; see the adversarial-content findings). A submission that reads differently to a person than to a machine cannot present as verified.`,
     );
   }
 

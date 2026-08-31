@@ -11,7 +11,13 @@ export interface FriendlyError {
   hint: string | null;
 }
 
-export type ApiSurface = "evaluate" | "chat" | "get-evaluation" | "dispute";
+export type ApiSurface =
+  | "evaluate"
+  | "chat"
+  | "get-evaluation"
+  | "dispute"
+  | "gov-request-code"
+  | "gov-verify-code";
 
 const EVALUATE_MAP: Record<string, FriendlyError> = {
   method: {
@@ -142,6 +148,39 @@ const CHAT_MAP: Record<string, FriendlyError> = {
   },
 };
 
+/* The two gov-verification functions return full sentences for every 400,
+   which the sentence passthrough below renders verbatim; the maps cover
+   their machine codes. */
+const GOV_REQUEST_MAP: Record<string, FriendlyError> = {
+  rate_limited: {
+    headline: "You have reached the limit for code requests.",
+    hint: "Please try again tomorrow.",
+  },
+  "verification failed": {
+    headline: "We could not confirm your browser.",
+    hint: "A new security check just started. Wait a moment, then try again.",
+  },
+  "not configured": {
+    headline: "Verification is not fully set up yet.",
+    hint: "Please try again later.",
+  },
+  storage: {
+    headline: "We could not save your code.",
+    hint: "Please try again in a moment.",
+  },
+};
+
+const GOV_VERIFY_MAP: Record<string, FriendlyError> = {
+  rate_limited: {
+    headline: "You have reached the limit for code attempts.",
+    hint: "Please try again tomorrow.",
+  },
+  "not configured": {
+    headline: "Verification is not fully set up yet.",
+    hint: "Please try again later.",
+  },
+};
+
 /* Codes whose retry_hint / detail is written for users and should surface.
    Chat "upstream" detail carries raw provider text and must never render. */
 const HINT_PASSTHROUGH = new Set(["rate_limited", "session_limit"]);
@@ -158,7 +197,7 @@ function statusFallback(status: number, surface: ApiSurface): FriendlyError {
     };
   }
   if (status === 429) {
-    return surface === "dispute" ? DISPUTE_MAP.rate_limited : EVALUATE_MAP.rate_limited;
+    return tableFor(surface).rate_limited ?? EVALUATE_MAP.rate_limited;
   }
   if (status >= 500) {
     return {
@@ -170,7 +209,28 @@ function statusFallback(status: number, surface: ApiSurface): FriendlyError {
   if (surface === "dispute") {
     return { headline: "The dispute could not be sent.", hint: "Please try again." };
   }
+  if (surface === "gov-request-code") {
+    return { headline: "The code could not be sent.", hint: "Please try again." };
+  }
+  if (surface === "gov-verify-code") {
+    return { headline: "The code could not be checked.", hint: "Please try again." };
+  }
   return { headline: "The check could not start.", hint: "Please try again." };
+}
+
+function tableFor(surface: ApiSurface): Record<string, FriendlyError> {
+  switch (surface) {
+    case "chat":
+      return CHAT_MAP;
+    case "dispute":
+      return DISPUTE_MAP;
+    case "gov-request-code":
+      return GOV_REQUEST_MAP;
+    case "gov-verify-code":
+      return GOV_VERIFY_MAP;
+    default:
+      return EVALUATE_MAP;
+  }
 }
 
 export function mapApiError(input: {
@@ -181,8 +241,7 @@ export function mapApiError(input: {
 }): FriendlyError {
   const { status, surface } = input;
   const code = input.code?.trim() || null;
-  const table =
-    surface === "chat" ? CHAT_MAP : surface === "dispute" ? DISPUTE_MAP : EVALUATE_MAP;
+  const table = tableFor(surface);
 
   let base: FriendlyError | null = null;
   if (code && surface !== "get-evaluation" && table[code]) {

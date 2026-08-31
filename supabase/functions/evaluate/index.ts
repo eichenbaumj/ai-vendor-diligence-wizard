@@ -1,8 +1,9 @@
 /*
   POST /evaluate — the pipeline orchestrator.
 
-  Foreground (< 2s): validate → Turnstile → rate limits → insert evaluation →
-  respond 202 with the evaluation id. Background (EdgeRuntime.waitUntil):
+  Foreground (< 2s): validate → Turnstile → name-cache lookup → rate limits
+  (verified-gov monthly pool or anonymous per-IP daily cap) → insert
+  evaluation → respond 202 with the evaluation id. Background (EdgeRuntime.waitUntil):
   S1 parse → S2 registry checks → S3 web research → S4 pack match →
   S5 synthesis (+ S5.5 adversarial review) → persist report. Every stage
   writes replayable events and broadcasts live progress.
@@ -14,7 +15,14 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { CORS_HEADERS, clientIp, json, preflight } from "../_shared/http.ts";
 import { verifyTurnstile } from "../_shared/turnstile.ts";
-import { allow, dayKey, sha256Hex } from "../_shared/ratelimit.ts";
+import {
+  allow,
+  allowWithRemaining,
+  dayKey,
+  monthKey,
+  sha256Hex,
+} from "../_shared/ratelimit.ts";
+import { verifyGovToken } from "../_shared/gov-token.ts";
 import { makeEmitter, type Emitter } from "../_shared/broadcast.ts";
 import { detectHiddenHtml, runForensics } from "../_shared/forensics.ts";
 import {
@@ -77,6 +85,8 @@ import type { S5UserInput } from "../_shared/prompts/s5-structure.ts";
 import * as registry from "../_shared/registry/index.ts";
 
 const IP_DAILY_CAP = 3;
+/* Verified-government-email tier: monthly, keyed to the email hash. */
+const GOV_MONTHLY_CAP = 20;
 const DEEP_IP_DAILY_CAP = 1;
 const DEEP_GLOBAL_DAILY_CAP = 10;
 const GLOBAL_DAILY_CAP = 400;
@@ -207,12 +217,70 @@ Deno.serve(async (req) => {
     ));
   if (!turnstileOk) return json({ error: "verification failed, reload and retry" }, 403);
 
+  /* Verified-government-email tier: a valid stateless credential (minted by
+     gov-verify-code) switches the caller from the per-IP daily cap to a
+     monthly cap keyed to the email hash. Any defect in the token just means
+     "anonymous" (null) — never an error. */
+  const govClaim = evalBypass
+    ? null
+    : await verifyGovToken(
+        req.headers.get("x-gov-token"),
+        Deno.env.get("GOV_TOKEN_SECRET") ?? "",
+        new Date(),
+      );
+
   const ipHash = (await sha256Hex(ip)).slice(0, 24);
-  if (!evalBypass && !(await allow(supabase, dayKey("ip", ipHash), IP_DAILY_CAP))) {
-    return json(
-      { error: "rate_limited", retry_hint: "Daily limit reached for this connection. Try again tomorrow." },
-      429,
+  const deepRequested = body?.deep === true;
+
+  /* Name-only inputs have a known vendor key already — serve the result
+     cache BEFORE any counter is touched, so a cache hit never consumes
+     anyone's daily or monthly quota. Deep and harness runs are deliberate
+     spend and never serve from cache. */
+  if (inputKind === "name" && !deepRequested && !evalBypass) {
+    const key = vendorKeyFromName(content);
+    const cached = await findCached(supabase, key);
+    if (cached) {
+      return json(
+        { evaluation_id: cached, cached: true },
+        202,
+        govClaim ? await govRemainingHeader(supabase, govClaim.emailHash24) : undefined,
+      );
+    }
+  }
+
+  /* Quota: verified government callers draw from the monthly pool; everyone
+     else stays on the per-IP daily cap. A rate-limit RPC failure on the
+     monthly pool falls through to the per-IP path (fail safe, never open). */
+  let govRemaining: number | null = null;
+  if (govClaim) {
+    const monthly = await allowWithRemaining(
+      supabase,
+      monthKey("govmail", govClaim.emailHash24),
+      GOV_MONTHLY_CAP,
     );
+    if (monthly && !monthly.allowed) {
+      return json(
+        {
+          error: "rate_limited",
+          retry_hint:
+            "You have used all 20 verified checks for this month. The count resets on the first of the month.",
+        },
+        429,
+      );
+    }
+    if (monthly) govRemaining = monthly.remaining;
+  }
+  if (govRemaining === null && !evalBypass) {
+    if (!(await allow(supabase, dayKey("ip", ipHash), IP_DAILY_CAP))) {
+      return json(
+        {
+          error: "rate_limited",
+          retry_hint:
+            "Daily limit reached for this connection. Government staff can verify a .gov email for 20 checks a month, or try again tomorrow.",
+        },
+        429,
+      );
+    }
   }
   if (!(await allow(supabase, dayKey("global", "all"), GLOBAL_DAILY_CAP))) {
     return json({ error: "capacity" }, 503);
@@ -221,7 +289,6 @@ Deno.serve(async (req) => {
   /* Deep mode: user-facing while the DEEP_MODE_ENABLED secret is set
      (unset it to remove the feature without a deploy); harness runs may
      use it via the bypass regardless. Deep runs carry their own caps. */
-  const deepRequested = body?.deep === true;
   if (deepRequested && !Deno.env.get("DEEP_MODE_ENABLED") && !evalBypass) {
     return json({ error: "deep checks are not available right now" }, 400);
   }
@@ -331,15 +398,6 @@ Deno.serve(async (req) => {
      set; like every ADV path, detection only ever ADDS. */
   forensics.adv_findings.push(...ingestAdv);
 
-  /* Name-only inputs have a known vendor key now — check the result cache
-     before spending anything. Deep and harness runs are deliberate spend
-     and never serve from cache. */
-  if (inputKind === "name" && !deepRequested && !evalBypass) {
-    const key = vendorKeyFromName(content);
-    const cached = await findCached(supabase, key);
-    if (cached) return json({ evaluation_id: cached, cached: true }, 202);
-  }
-
   const { data: row, error: insErr } = await supabase
     .from("evaluations")
     .insert({
@@ -391,7 +449,11 @@ Deno.serve(async (req) => {
   if (runtime?.waitUntil) runtime.waitUntil(pipeline);
   /* Without waitUntil (local dev without per_worker) the promise still runs. */
 
-  return json({ evaluation_id: evaluationId, cached: false }, 202);
+  return json(
+    { evaluation_id: evaluationId, cached: false },
+    202,
+    govRemaining !== null ? { "x-gov-remaining": String(govRemaining) } : undefined,
+  );
 });
 
 function vendorKeyFromName(name: string): string {
@@ -419,6 +481,22 @@ async function findCached(
     .limit(1)
     .maybeSingle();
   return (data?.id as string) ?? null;
+}
+
+/* Remaining monthly checks for a verified caller WITHOUT consuming one —
+   used on cache hits, which are free. A read failure just omits the header. */
+async function govRemainingHeader(
+  supabase: SupabaseClient,
+  emailHash24: string,
+): Promise<Record<string, string> | undefined> {
+  const { data, error } = await supabase
+    .from("rate_limits")
+    .select("count")
+    .eq("key", monthKey("govmail", emailHash24))
+    .maybeSingle();
+  if (error) return undefined;
+  const used = typeof data?.count === "number" ? data.count : 0;
+  return { "x-gov-remaining": String(Math.max(0, GOV_MONTHLY_CAP - used)) };
 }
 
 /* ------------------------------------------------------------ the pipeline */

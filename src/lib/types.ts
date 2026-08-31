@@ -65,6 +65,9 @@ export interface GetEvaluationResponse {
 export interface EvaluateResponse {
   evaluation_id: string;
   cached: boolean;
+  /* Monthly checks left for a verified government email, read from the
+     x-gov-remaining response header. Null for anonymous callers. */
+  gov_remaining?: number | null;
 }
 
 export type InputKind = "paste" | "name" | "pdf" | "url";

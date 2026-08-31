@@ -3,17 +3,24 @@
 export const CORS_HEADERS: Record<string, string> = {
   "access-control-allow-origin": "*",
   "access-control-allow-headers":
-    "authorization, x-client-info, apikey, content-type, x-gate-token, x-eval-token",
+    "authorization, x-client-info, apikey, content-type, x-gate-token, x-eval-token, x-gov-token",
   "access-control-allow-methods": "GET, POST, OPTIONS",
+  /* Response headers the browser may read cross-origin. */
+  "access-control-expose-headers": "x-gov-remaining",
 };
 
-export function json(body: unknown, status = 200): Response {
+export function json(
+  body: unknown,
+  status = 200,
+  extraHeaders?: Record<string, string>,
+): Response {
   return new Response(JSON.stringify(body), {
     status,
     headers: {
       "content-type": "application/json",
       "cache-control": "no-store",
       ...CORS_HEADERS,
+      ...(extraHeaders ?? {}),
     },
   });
 }

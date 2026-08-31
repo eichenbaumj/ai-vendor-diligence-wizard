@@ -139,3 +139,62 @@ describe("dispute surface", () => {
     expect(out.headline).toBe("The dispute could not be sent.");
   });
 });
+
+describe("gov verification surfaces", () => {
+  it("request-code rate limit passes the backend hint through", () => {
+    const out = mapApiError({
+      status: 429,
+      code: "rate_limited",
+      retryHint: "Too many code requests for now. Try again tomorrow.",
+      surface: "gov-request-code",
+    });
+    expect(out.headline).toBe("You have reached the limit for code requests.");
+    expect(out.hint).toBe("Too many code requests for now. Try again tomorrow.");
+  });
+
+  it("request-code rate limit falls back to a friendly hint without one", () => {
+    const out = mapApiError({ status: 429, code: "rate_limited", surface: "gov-request-code" });
+    expect(out.hint).toMatch(/try again/i);
+  });
+
+  it("verify-code rate limit uses its own copy", () => {
+    const out = mapApiError({ status: 429, code: "rate_limited", surface: "gov-verify-code" });
+    expect(out.headline).toBe("You have reached the limit for code attempts.");
+  });
+
+  it("the domain-policy sentence passes through verbatim", () => {
+    const sentence =
+      "That address does not end in .gov or .mil, the government domains this program covers.";
+    const out = mapApiError({ status: 400, code: sentence, surface: "gov-request-code" });
+    expect(out.headline).toBe(sentence);
+  });
+
+  it("the generic code-failure sentence passes through verbatim", () => {
+    const sentence =
+      "That code did not match or has expired. Request a new code and try again.";
+    const out = mapApiError({ status: 400, code: sentence, surface: "gov-verify-code" });
+    expect(out.headline).toBe(sentence);
+  });
+
+  it("the not-open-yet 503 sentence passes through verbatim", () => {
+    const sentence = "Government email verification is not open yet.";
+    const out = mapApiError({ status: 503, code: sentence, surface: "gov-request-code" });
+    expect(out.headline).toBe(sentence);
+  });
+
+  it("turnstile failure maps to browser-confirm copy on request-code", () => {
+    const out = mapApiError({
+      status: 403,
+      code: "verification failed",
+      surface: "gov-request-code",
+    });
+    expect(out.headline).toBe("We could not confirm your browser.");
+  });
+
+  it("unknown short tokens fall back to the per-surface generic, never rendering the code", () => {
+    const req = mapApiError({ status: 400, code: "zorp", surface: "gov-request-code" });
+    expect(req.headline).toBe("The code could not be sent.");
+    const ver = mapApiError({ status: 400, code: "zorp", surface: "gov-verify-code" });
+    expect(ver.headline).toBe("The code could not be checked.");
+  });
+});

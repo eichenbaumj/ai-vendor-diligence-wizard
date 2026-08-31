@@ -42,6 +42,69 @@ export function getClientToken(): string {
   }
 }
 
+/* ------------------------------------------- verified government email tier */
+
+/* The credential and its display metadata live in localStorage. Only the
+   server-issued token matters for quota; the email is kept locally so the
+   card can show which address was verified (the server stores hashes only). */
+const GOV_TOKEN_KEY = "vdw_gov_token";
+const GOV_EMAIL_KEY = "vdw_gov_email";
+const GOV_EXP_KEY = "vdw_gov_exp";
+
+export interface GovVerification {
+  email: string;
+  expiresAt: string;
+}
+
+/* The stored verification, or null when absent, expired, or unreadable
+   (private mode / blocked storage — same posture as the client token). */
+export function getGovVerification(): GovVerification | null {
+  try {
+    const token = localStorage.getItem(GOV_TOKEN_KEY);
+    const email = localStorage.getItem(GOV_EMAIL_KEY);
+    const expiresAt = localStorage.getItem(GOV_EXP_KEY);
+    if (!token || !email || !expiresAt) return null;
+    const exp = Date.parse(expiresAt);
+    if (Number.isNaN(exp) || exp <= Date.now()) return null;
+    return { email, expiresAt };
+  } catch {
+    return null;
+  }
+}
+
+function getGovToken(): string | null {
+  try {
+    const token = localStorage.getItem(GOV_TOKEN_KEY);
+    const expiresAt = localStorage.getItem(GOV_EXP_KEY);
+    if (!token || !expiresAt) return null;
+    const exp = Date.parse(expiresAt);
+    if (Number.isNaN(exp) || exp <= Date.now()) return null;
+    return token;
+  } catch {
+    return null;
+  }
+}
+
+function storeGovVerification(email: string, token: string, expiresAt: string): void {
+  try {
+    localStorage.setItem(GOV_TOKEN_KEY, token);
+    localStorage.setItem(GOV_EMAIL_KEY, email);
+    localStorage.setItem(GOV_EXP_KEY, expiresAt);
+  } catch {
+    /* Storage unavailable: verification works for this page load only. */
+  }
+}
+
+export function clearGovVerification(): void {
+  try {
+    localStorage.removeItem(GOV_TOKEN_KEY);
+    localStorage.removeItem(GOV_EMAIL_KEY);
+    localStorage.removeItem(GOV_EXP_KEY);
+  } catch {
+    /* storage unavailable */
+  }
+}
+
 /* ------------------------------------------------------------------ errors */
 
 export class ApiError extends Error {
@@ -121,17 +184,68 @@ export async function evaluate(params: {
   const gateToken = supabase
     ? (await supabase.auth.getSession()).data.session?.access_token ?? null
     : null;
+  /* Verified-government-email credential: attached whenever a stored,
+     unexpired token exists. The server treats a bad token as anonymous. */
+  const govToken = getGovToken();
   const res = await fetch(`${FUNCTIONS_BASE}/evaluate`, {
     method: "POST",
     headers: {
       ...baseHeaders(),
       ...(gateToken ? { "x-gate-token": gateToken } : {}),
+      ...(govToken ? { "x-gov-token": govToken } : {}),
     },
     body: JSON.stringify(body),
   });
 
   if (!res.ok) await throwMapped(res, "evaluate");
-  return (await res.json()) as EvaluateResponse;
+  const data = (await res.json()) as EvaluateResponse;
+  const remainingHeader = res.headers.get("x-gov-remaining");
+  const remaining = remainingHeader === null ? NaN : Number(remainingHeader);
+  return {
+    ...data,
+    gov_remaining: Number.isFinite(remaining) ? remaining : null,
+  };
+}
+
+/* ---------------------------------------------------------- gov verification */
+
+export async function requestGovCode(
+  email: string,
+  turnstileToken: string | null,
+): Promise<{ message: string }> {
+  const res = await fetch(`${FUNCTIONS_BASE}/gov-request-code`, {
+    method: "POST",
+    headers: baseHeaders(),
+    body: JSON.stringify({ email, turnstile_token: turnstileToken }),
+  });
+  if (!res.ok) await throwMapped(res, "gov-request-code");
+  const data = (await res.json()) as { message?: string };
+  return {
+    message:
+      data.message ??
+      "We sent a 6 digit code to your address. Enter it within 10 minutes.",
+  };
+}
+
+export async function verifyGovCode(
+  email: string,
+  code: string,
+): Promise<{ message: string }> {
+  const res = await fetch(`${FUNCTIONS_BASE}/gov-verify-code`, {
+    method: "POST",
+    headers: baseHeaders(),
+    body: JSON.stringify({ email, code }),
+  });
+  if (!res.ok) await throwMapped(res, "gov-verify-code");
+  const data = (await res.json()) as {
+    gov_token?: string;
+    expires_at?: string;
+    message?: string;
+  };
+  if (data.gov_token && data.expires_at) {
+    storeGovVerification(email.trim().toLowerCase(), data.gov_token, data.expires_at);
+  }
+  return { message: data.message ?? "Verified. You now have 20 checks each month." };
 }
 
 /* ---------------------------------------------------------- get-evaluation */

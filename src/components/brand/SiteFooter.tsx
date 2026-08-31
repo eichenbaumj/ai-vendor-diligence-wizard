@@ -25,7 +25,7 @@ export function SiteFooter() {
           <ul className="mt-4 space-y-3">
             <li>
               <Link to="/about" className={FOOTER_LINK}>
-                Who made this
+                Why we made this
               </Link>
             </li>
             <li>

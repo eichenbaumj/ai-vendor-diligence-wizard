@@ -40,7 +40,7 @@ export function DisclaimerHeader({ report }: { report: Report }) {
             to="/about"
             className="text-brand-cobalt underline underline-offset-2"
           >
-            Who made this
+            Why we made this
           </Link>
           {" · "}
           <Link

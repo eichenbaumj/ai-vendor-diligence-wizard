@@ -40,11 +40,11 @@ export function SiteHeader() {
           <Link to="/your-data" className={`hidden md:block ${NAV_LINK}`}>
             Your data
           </Link>
-          {/* Attribution stays reachable without scrolling, on every page
-              and every screen size. */}
+          {/* Purpose and attribution stay reachable without scrolling, on
+              every page and every screen size. */}
           <Link to="/about" className={NAV_LINK}>
-            <span className="sm:hidden">About</span>
-            <span className="hidden sm:inline">Who made this</span>
+            <span className="sm:hidden">Why</span>
+            <span className="hidden sm:inline">Why we made this</span>
           </Link>
           <PillButton to="/check" size="md">
             Check a pitch

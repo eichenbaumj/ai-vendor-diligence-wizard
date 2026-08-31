@@ -1,15 +1,16 @@
 /*
-  Tests for the report-overview model: every sentence and count on the
-  at-a-glance card is code-templated here, so this file is the lint and
-  drift lock for that copy. Runs against all four sample fixtures plus a
-  synthetic minimal report (empty sections, research_partial), the case the
-  section components handle by early-returning null.
+  Tests for the report-overview model: every sentence, count, and bar
+  segment on the at-a-glance card is code-templated, so this file is the
+  lint and drift lock for that copy. Runs against all four sample fixtures
+  plus a synthetic minimal report (empty sections, research_partial), the
+  case the section components handle by early-returning null.
 */
 import { describe, expect, it } from "vitest";
 import { Report } from "@shared/schemas.ts";
 import { lintObject } from "@shared/lint.ts";
 import { SAMPLE_REPORTS } from "@/lib/sample-reports";
 import {
+  OVERVIEW_GROUP_LABELS,
   REPORT_SECTION_IDS,
   buildOverviewModel,
 } from "@/components/report/report-overview-model";
@@ -49,25 +50,60 @@ const minimal: Report = Report.parse({
   },
 });
 
-describe("buildOverviewModel: counts and rendering conditions", () => {
-  it.each(fixtures)("%s: counts equal the source array lengths", (_key, report) => {
+function allTiles(m: ReturnType<typeof buildOverviewModel>) {
+  return [...m.found.tiles, ...m.next.tiles];
+}
+
+describe("buildOverviewModel: counts, segments, and rendering conditions", () => {
+  it.each(fixtures)("%s: bar segments sum to their populations", (_key, report) => {
     const m = buildOverviewModel(report);
-    expect(m.claims?.count).toBe(report.ledger.length);
-    expect(m.questions?.count).toBe(report.questions.length);
-    const tile = (key: string) => m.tiles.find((t) => t.key === key);
+    if (report.ledger.length > 0) {
+      expect(m.found.claims).not.toBeNull();
+      const claimSum = m.found.claims!.segments.reduce((s, b) => s + b.count, 0);
+      expect(claimSum).toBe(report.ledger.length);
+      expect(m.found.claims!.title).toContain(String(report.ledger.length));
+    } else {
+      expect(m.found.claims).toBeNull();
+    }
+    if (report.honesty_panel.length > 0) {
+      const cov = m.coverage!;
+      const covSum = cov.segments.reduce((s, b) => s + b.count, 0) + cov.notApplicable;
+      expect(covSum).toBe(report.honesty_panel.length);
+      expect(cov.sourcesLine).toContain(String(report.sources.length));
+    }
+  });
+
+  it.each(fixtures)("%s: tile counts equal the source array lengths", (_key, report) => {
+    const m = buildOverviewModel(report);
+    const tile = (key: string) => allTiles(m).find((t) => t.key === key);
     if (report.green_flags.length > 0) {
       expect(tile("green-flags")?.count).toBe(report.green_flags.length);
       expect(tile("green-flags")?.state).toBe("link");
     } else {
       expect(tile("green-flags")?.state).toBe("muted");
     }
-    expect(tile("honesty")?.count).toBe(report.honesty_panel.length);
-    expect(tile("sources")?.count).toBe(report.sources.length);
-    const breakdownTotal = (m.claims?.breakdown ?? []).reduce((s, b) => s + b.count, 0);
-    expect(breakdownTotal).toBe(report.ledger.length);
+    if (report.questions.length > 0) {
+      expect(tile("questions")?.count).toBe(report.questions.length);
+      expect(tile("questions")?.primary).toBe(true);
+    }
+    if (report.manual_checks.length > 0) {
+      expect(tile("manual-checks")?.count).toBe(report.manual_checks.length);
+    }
   });
 
-  it.each(fixtures)("%s: the BLUF carries the three load-bearing numbers", (_key, report) => {
+  it("exactly one tile is primary, and it is the questions tile", () => {
+    for (const [, report] of fixtures) {
+      const primaries = allTiles(buildOverviewModel(report)).filter((t) => t.primary);
+      if (report.questions.length > 0) {
+        expect(primaries).toHaveLength(1);
+        expect(primaries[0].key).toBe("questions");
+      } else {
+        expect(primaries).toHaveLength(0);
+      }
+    }
+  });
+
+  it.each(fixtures)("%s: the BLUF carries the load-bearing numbers", (_key, report) => {
     const m = buildOverviewModel(report);
     expect(m.bluf).toContain(String(report.ledger.length));
     expect(m.bluf).toContain(String(report.sources.length));
@@ -77,7 +113,7 @@ describe("buildOverviewModel: counts and rendering conditions", () => {
     }
   });
 
-  it.each(fixtures)("%s: every link tile targets a section that renders", (_key, report) => {
+  it.each(fixtures)("%s: every link targets a section that renders", (_key, report) => {
     const m = buildOverviewModel(report);
     const renderable = new Set<string>();
     if (report.green_flags.length > 0) renderable.add(REPORT_SECTION_IDS.greenFlags);
@@ -91,8 +127,13 @@ describe("buildOverviewModel: counts and rendering conditions", () => {
       renderable.add(REPORT_SECTION_IDS.nextSteps);
     }
     if (report.sources.length > 0) renderable.add(REPORT_SECTION_IDS.sources);
-    for (const tile of m.tiles.filter((t) => t.state === "link")) {
+    for (const tile of allTiles(m).filter((t) => t.state === "link")) {
       expect(renderable.has(tile.targetId), `${tile.key} links to a hidden section`).toBe(true);
+    }
+    if (m.found.claims) expect(renderable.has(m.found.claims.targetId)).toBe(true);
+    if (m.coverage) {
+      expect(renderable.has(m.coverage.targetId)).toBe(true);
+      expect(renderable.has(m.coverage.sourcesTargetId)).toBe(true);
     }
   });
 });
@@ -100,19 +141,15 @@ describe("buildOverviewModel: counts and rendering conditions", () => {
 describe("buildOverviewModel: the minimal report", () => {
   const m = buildOverviewModel(minimal);
 
-  it("hides plumbing tiles for empty sections and keeps the zero-state ones", () => {
-    const keys = m.tiles.map((t) => t.key);
-    expect(keys).not.toContain("manual-checks");
+  it("hides plumbing for empty sections and keeps the zero-state tiles", () => {
+    expect(m.found.claims).toBeNull();
+    expect(m.coverage).toBeNull();
+    expect(m.next.tiles).toHaveLength(0);
+    const keys = m.found.tiles.map((t) => t.key);
+    expect(keys).toContain("green-flags");
+    expect(keys).toContain("adv-findings");
     expect(keys).not.toContain("leads");
-    expect(keys).not.toContain("next-steps");
-    expect(keys).not.toContain("honesty");
-    const green = m.tiles.find((t) => t.key === "green-flags");
-    expect(green?.state).toBe("muted");
-    /* paste input: the adversarial zero-state is information. */
-    const adv = m.tiles.find((t) => t.key === "adv-findings");
-    expect(adv?.state).toBe("muted");
-    expect(m.claims).toBeNull();
-    expect(m.questions).toBeNull();
+    for (const t of m.found.tiles) expect(t.state).toBe("muted");
   });
 
   it("shows the research-partial notice exactly when the report says so", () => {
@@ -129,7 +166,7 @@ describe("buildOverviewModel: the minimal report", () => {
       ...minimal,
       meta: { ...minimal.meta, input_kind: "name" },
     });
-    const keys = buildOverviewModel(nameRun).tiles.map((t) => t.key);
+    const keys = buildOverviewModel(nameRun).found.tiles.map((t) => t.key);
     expect(keys).not.toContain("adv-findings");
   });
 });
@@ -142,9 +179,14 @@ describe("buildOverviewModel: copy discipline", () => {
       const corpus = {
         bluf: m.bluf,
         partial: m.partialNotice ?? "",
-        tiles: m.tiles.map((t) => `${t.label} ${t.detail ?? ""}`),
-        claims: m.claims ? `${m.claims.sourcesLine} ${m.claims.breakdown.map((b) => b.label).join(" ")}` : "",
-        questions: m.questions ? `${m.questions.lead} ${m.questions.detail}` : "",
+        groups: Object.values(OVERVIEW_GROUP_LABELS),
+        tiles: allTiles(m).map((t) => `${t.label} ${t.detail ?? ""}`),
+        claims: m.found.claims
+          ? `${m.found.claims.title} ${m.found.claims.segments.map((s) => s.label).join(" ")}`
+          : "",
+        coverage: m.coverage
+          ? `${m.coverage.title} ${m.coverage.sourcesLine} ${m.coverage.segments.map((s) => s.label).join(" ")}`
+          : "",
       };
       expect(lintObject(corpus).filter((v) => v.kind === "banned")).toEqual([]);
       expect(JSON.stringify(corpus)).not.toContain("—");

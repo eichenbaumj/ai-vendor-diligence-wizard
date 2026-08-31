@@ -16,21 +16,41 @@ export default function About() {
     <>
       <Section tone="tint" className="py-12! md:py-16!">
         <p className="font-sans text-sm font-bold tracking-[0.14em] text-brand-cobalt [font-variant-caps:all-small-caps]">
-          Who made this
+          Why we made this
         </p>
         <h1 className="mt-2 max-w-3xl font-serif text-[clamp(2rem,3.6vw,3rem)] font-bold leading-tight">
           A free check, from people who want government technology to work.
         </h1>
         <p className="mt-5 max-w-2xl font-sans text-lg leading-relaxed">
-          The AI Vendor Diligence Wizard is built by 17A with the Center for
-          Civic Futures. We work with state and local governments, and we want
-          new tools to succeed there. Good adoption starts with hard questions
-          asked early, so we made the questions free.
+          The AI Vendor Diligence Wizard is built by 17A and the Center for
+          Civic Futures. We are genuinely excited about what new AI tools can
+          do for state and local government, and we know what it is like to
+          buy them right now. So we built the first hour of diligence and made
+          it free.
         </p>
       </Section>
 
       <Section tone="white" className="py-14! md:py-20!">
         <div className="mx-auto max-w-3xl space-y-12">
+          <div>
+            <h2 className={BLOCK_HEADING}>Why we built it</h2>
+            <p className={BLOCK_BODY}>
+              New AI tools could help governments deliver excellent services,
+              and we want that future to arrive. But buying AI for a city or a
+              state today feels like buying auto parts in 1910: the invention
+              is real, the market is young, quality varies wildly, and there
+              is no trusted mechanic on every corner. Two things are true at
+              once. There is deep skepticism about AI inside government, much
+              of it earned. And there is a wave of shaky software being sold
+              with great confidence. Both slow down the agencies that stand to
+              gain the most. We think getting quality tools into public hands,
+              and getting the weak ones asked hard questions early, is urgent.
+              Public staff time is valuable, and state and local government
+              deserves the best. The first hour of that questioning should not
+              depend on anyone's budget, so it is free.
+            </p>
+          </div>
+
           <div>
             <h2 className={BLOCK_HEADING}>Who we are</h2>
             <p className={BLOCK_BODY}>
@@ -56,19 +76,6 @@ export default function About() {
                 Civic Futures
               </span>
             </div>
-          </div>
-
-          <div>
-            <h2 className={BLOCK_HEADING}>Why it is free</h2>
-            <p className={BLOCK_BODY}>
-              Public agencies are getting more AI pitches than any procurement
-              office can vet, and the first hour of diligence is the same
-              every time: does the company exist, do the claims match the
-              public record, and what should you ask before a demo. That hour
-              should not depend on budget. The tool does that first hour in a
-              few minutes, shows its sources, and hands you the questions to
-              send back.
-            </p>
           </div>
 
           <div>

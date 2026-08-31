@@ -1,17 +1,23 @@
 /*
-  The report-overview model: every sentence and count on the at-a-glance
-  card, derived in pure code from the report JSON. Templates live here, not
-  in JSX, for the same reason load-bearing self-descriptions are
-  code-templated everywhere else: the card describes what the report offers,
-  so its copy is deterministic, unit-tested, and linted.
+  The report-overview model: every sentence, count, and bar segment on the
+  at-a-glance card, derived in pure code from the report JSON. Templates
+  live here, not in JSX, for the same reason load-bearing self-descriptions
+  are code-templated everywhere else: the card describes what the report
+  offers, so its copy is deterministic, unit-tested, and linted.
 
-  A tile renders as a link only when its section renders (the section
+  Shape (Joe's design direction, 2026-08-31): not a flat grid of big
+  numbers. Three narrative groups — what we found, what we could check,
+  what to do next — with the two part-to-whole facts (claim results,
+  check coverage) rendered as segmented bars so the numbers relate to one
+  another graphically, and the action counts as icon tiles.
+
+  A tile or bar renders only when its section renders (the section
   components early-return null on empty data, and this model applies the
   same conditions so the two can never drift). Green flags and adversarial
   findings are the two sections where zero is itself information, so they
-  get muted zero-state tiles instead of disappearing; the adversarial
-  zero-state is skipped on name-only runs, where no material was submitted
-  for those screens to read.
+  get muted zero-state tiles; the adversarial zero-state is skipped on
+  name-only runs, where no material was submitted for those screens to
+  read.
 */
 import type { Report } from "@/lib/types";
 
@@ -29,40 +35,64 @@ export const REPORT_SECTION_IDS = {
   sources: "sources",
 } as const;
 
-export interface ResultChipCount {
-  result: "VERIFIED" | "OFFICIAL_RECORD_FOUND" | "COULD_NOT_VERIFY" | "CONTRADICTED" | "COVERAGE_LIMITED";
+/* Group headings, exported so the lint tests cover them. */
+export const OVERVIEW_GROUP_LABELS = {
+  found: "What we found",
+  coverage: "What we could check",
+  next: "What to do next",
+} as const;
+
+export type ClaimResult =
+  | "VERIFIED"
+  | "OFFICIAL_RECORD_FOUND"
+  | "CONTRADICTED"
+  | "COULD_NOT_VERIFY"
+  | "COVERAGE_LIMITED";
+
+export interface BarSegment {
+  key: string;
   label: string;
   count: number;
 }
 
 export interface OverviewTile {
-  key: string;
+  key: "green-flags" | "adv-findings" | "leads" | "questions" | "manual-checks" | "next-steps";
   targetId: string;
   count: number;
   label: string;
   detail: string | null;
   state: "link" | "muted";
+  /* Exactly one tile per report is primary (the questions tile): the one
+     action the reader should take. */
+  primary?: boolean;
 }
 
 export interface OverviewModel {
   bluf: string;
   partialNotice: string | null;
-  claims: {
+  found: {
+    claims: {
+      targetId: string;
+      count: number;
+      title: string;
+      segments: BarSegment[];
+    } | null;
+    tiles: OverviewTile[];
+  };
+  coverage: {
     targetId: string;
-    count: number;
-    breakdown: ResultChipCount[];
+    title: string;
+    segments: BarSegment[];
+    notApplicable: number;
     sourcesLine: string;
+    sourcesTargetId: string;
   } | null;
-  questions: {
-    targetId: string;
-    count: number;
-    lead: string;
-    detail: string;
-  } | null;
-  tiles: OverviewTile[];
+  next: {
+    tiles: OverviewTile[];
+  };
 }
 
-const RESULT_LABELS: Record<ResultChipCount["result"], string> = {
+const RESULT_LABELS: Record<ClaimResult, string> = {
   VERIFIED: "verified",
   OFFICIAL_RECORD_FOUND: "official record found",
   CONTRADICTED: "contradicted",
@@ -70,8 +100,8 @@ const RESULT_LABELS: Record<ResultChipCount["result"], string> = {
   COVERAGE_LIMITED: "coverage limited",
 };
 
-/* Render order for the breakdown chips: decisive results first. */
-const RESULT_ORDER: ResultChipCount["result"][] = [
+/* Render order for the claim segments: decisive results first. */
+const RESULT_ORDER: ClaimResult[] = [
   "VERIFIED",
   "OFFICIAL_RECORD_FOUND",
   "CONTRADICTED",
@@ -99,52 +129,44 @@ export function buildOverviewModel(report: Report): OverviewModel {
       `${questionCount} ${questionCount === 1 ? "question is" : "questions are"} ready to send back by email.`,
     );
   }
-  blufParts.push("The boxes below jump to each part of the report.");
+  blufParts.push("Everything below jumps to its part of the report.");
   const bluf = blufParts.join(" ");
 
   const partialNotice = report.meta.research_partial
     ? "Some sources could not be reached during this run. Gaps are marked in the ledger and in the honesty panel."
     : null;
 
-  const breakdown: ResultChipCount[] = RESULT_ORDER.map((result) => ({
-    result,
+  /* ------------------------------------------------------- what we found */
+
+  const claimSegments: BarSegment[] = RESULT_ORDER.map((result) => ({
+    key: result,
     label: RESULT_LABELS[result],
     count: report.ledger.filter((r) => r.result === result).length,
-  })).filter((b) => b.count > 0);
+  })).filter((s) => s.count > 0);
 
   const claims =
     ledgerCount > 0
       ? {
           targetId: REPORT_SECTION_IDS.ledger,
           count: ledgerCount,
-          breakdown,
-          sourcesLine: `from ${sourceCount} public ${sourceCount === 1 ? "source" : "sources"}, every result dated and linked`,
+          title: `${ledgerCount} ${ledgerCount === 1 ? "claim" : "claims"} tested, every result dated and linked`,
+          segments: claimSegments,
         }
       : null;
 
-  const questions =
-    questionCount > 0
-      ? {
-          targetId: REPORT_SECTION_IDS.questions,
-          count: questionCount,
-          lead: "questions to send the vendor",
-          detail: "Copy them as one email before you agree to a demo.",
-        }
-      : null;
-
-  const tiles: OverviewTile[] = [];
+  const foundTiles: OverviewTile[] = [];
 
   if (report.green_flags.length > 0) {
-    tiles.push({
+    foundTiles.push({
       key: "green-flags",
       targetId: REPORT_SECTION_IDS.greenFlags,
       count: report.green_flags.length,
-      label: "things checked out",
+      label: report.green_flags.length === 1 ? "thing checked out" : "things checked out",
       detail: null,
       state: "link",
     });
   } else {
-    tiles.push({
+    foundTiles.push({
       key: "green-flags",
       targetId: REPORT_SECTION_IDS.greenFlags,
       count: 0,
@@ -155,16 +177,19 @@ export function buildOverviewModel(report: Report): OverviewModel {
   }
 
   if (report.adv_findings.length > 0) {
-    tiles.push({
+    foundTiles.push({
       key: "adv-findings",
       targetId: REPORT_SECTION_IDS.advFindings,
       count: report.adv_findings.length,
-      label: report.adv_findings.length === 1 ? "note about the material" : "notes about the material",
+      label:
+        report.adv_findings.length === 1
+          ? "note about the material"
+          : "notes about the material",
       detail: null,
       state: "link",
     });
   } else if (report.meta.input_kind !== "name") {
-    tiles.push({
+    foundTiles.push({
       key: "adv-findings",
       targetId: REPORT_SECTION_IDS.advFindings,
       count: 0,
@@ -174,40 +199,9 @@ export function buildOverviewModel(report: Report): OverviewModel {
     });
   }
 
-  const honestyAttempted = report.honesty_panel.filter(
-    (h) => h.status === "pass" || h.status === "flag",
-  ).length;
-  const honestyUnavailable = report.honesty_panel.filter(
-    (h) => h.status === "could_not_check",
-  ).length;
-  if (report.honesty_panel.length > 0) {
-    tiles.push({
-      key: "honesty",
-      targetId: REPORT_SECTION_IDS.honesty,
-      count: report.honesty_panel.length,
-      label: "checks attempted, all shown",
-      detail:
-        honestyUnavailable > 0
-          ? `${honestyAttempted} ran, ${honestyUnavailable} could not run`
-          : `${honestyAttempted} ran`,
-      state: "link",
-    });
-  }
-
-  if (report.manual_checks.length > 0) {
-    tiles.push({
-      key: "manual-checks",
-      targetId: REPORT_SECTION_IDS.manualChecks,
-      count: report.manual_checks.length,
-      label: report.manual_checks.length === 1 ? "check only you can do" : "checks only you can do",
-      detail: "About a minute each.",
-      state: "link",
-    });
-  }
-
   const leadCount = report.leads?.length ?? 0;
   if (leadCount > 0) {
-    tiles.push({
+    foundTiles.push({
       key: "leads",
       targetId: REPORT_SECTION_IDS.leads,
       count: leadCount,
@@ -217,9 +211,63 @@ export function buildOverviewModel(report: Report): OverviewModel {
     });
   }
 
+  /* --------------------------------------------------- what we could check */
+
+  const honesty = report.honesty_panel;
+  const ran = honesty.filter((h) => h.status === "pass" || h.status === "flag").length;
+  const couldNotRun = honesty.filter((h) => h.status === "could_not_check").length;
+  const notApplicable = honesty.filter((h) => h.status === "not_applicable").length;
+
+  const coverageSegments: BarSegment[] = [
+    { key: "ran", label: "ran", count: ran },
+    { key: "could_not_run", label: "could not run", count: couldNotRun },
+  ].filter((s) => s.count > 0);
+
+  const coverage =
+    honesty.length > 0
+      ? {
+          targetId: REPORT_SECTION_IDS.honesty,
+          title: `${ran + couldNotRun} ${ran + couldNotRun === 1 ? "check" : "checks"} attempted, every one shown`,
+          segments: coverageSegments,
+          notApplicable,
+          sourcesLine: `${sourceCount} public ${sourceCount === 1 ? "source" : "sources"}, each dated and linked`,
+          sourcesTargetId: REPORT_SECTION_IDS.sources,
+        }
+      : null;
+
+  /* ------------------------------------------------------ what to do next */
+
+  const nextTiles: OverviewTile[] = [];
+
+  if (questionCount > 0) {
+    nextTiles.push({
+      key: "questions",
+      targetId: REPORT_SECTION_IDS.questions,
+      count: questionCount,
+      label: "questions to send the vendor",
+      detail: "Copy them as one email before you agree to a demo.",
+      state: "link",
+      primary: true,
+    });
+  }
+
+  if (report.manual_checks.length > 0) {
+    nextTiles.push({
+      key: "manual-checks",
+      targetId: REPORT_SECTION_IDS.manualChecks,
+      count: report.manual_checks.length,
+      label:
+        report.manual_checks.length === 1
+          ? "check only you can do"
+          : "checks only you can do",
+      detail: "About a minute each.",
+      state: "link",
+    });
+  }
+
   const nextCount = report.next_steps.length + report.sector.state_items.length;
   if (nextCount > 0) {
-    tiles.push({
+    nextTiles.push({
       key: "next-steps",
       targetId: REPORT_SECTION_IDS.nextSteps,
       count: nextCount,
@@ -232,16 +280,11 @@ export function buildOverviewModel(report: Report): OverviewModel {
     });
   }
 
-  if (report.sources.length > 0) {
-    tiles.push({
-      key: "sources",
-      targetId: REPORT_SECTION_IDS.sources,
-      count: report.sources.length,
-      label: report.sources.length === 1 ? "source, dated" : "sources, dated",
-      detail: null,
-      state: "link",
-    });
-  }
-
-  return { bluf, partialNotice, claims, questions, tiles };
+  return {
+    bluf,
+    partialNotice,
+    found: { claims, tiles: foundTiles },
+    coverage,
+    next: { tiles: nextTiles },
+  };
 }

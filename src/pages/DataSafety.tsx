@@ -59,6 +59,16 @@ export default function DataSafety() {
                   expires; you can re-run the check any time.
                 </span>
               </li>
+              <li className="flex gap-3">
+                <Check className="text-brand-cobalt" />
+                <span>
+                  If you choose to verify a government email for a higher
+                  monthly limit, we keep a scrambled fingerprint of that
+                  address, never the address itself. We cannot email you
+                  afterward, and the fingerprint cannot be turned back into
+                  your address.
+                </span>
+              </li>
             </ul>
           </div>
 

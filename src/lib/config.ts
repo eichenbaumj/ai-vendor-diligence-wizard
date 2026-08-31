@@ -35,4 +35,9 @@ export const GATE_ENABLED: boolean = !IS_MOCK;
    unless its DEEP_MODE_ENABLED secret is set, so hiding this is cosmetic. */
 export const DEEP_MODE_UI: boolean = !IS_MOCK;
 
+/* Verified-government-email tier card visibility. Dark by default: the
+   server independently refuses everything unless its GOV_VERIFY_ENABLED
+   secret is set, so showing this is never enough by itself. */
+export const GOV_VERIFY_UI: boolean = import.meta.env.VITE_GOV_VERIFY === "1";
+
 export const FUNCTIONS_BASE = `${SUPABASE_URL}/functions/v1`;

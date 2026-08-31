@@ -10,8 +10,9 @@ import {
   type TurnstileHandle,
 } from "@/components/input/TurnstileWidget";
 import { ApiError, evaluate } from "@/lib/api";
-import { DEEP_MODE_UI, IS_MOCK } from "@/lib/config";
+import { DEEP_MODE_UI, GOV_VERIFY_UI, IS_MOCK } from "@/lib/config";
 import { FilePicker } from "@/components/input/FilePicker";
+import { GovVerifyCard } from "@/components/input/GovVerifyCard";
 import {
   SAMPLE_PITCHES,
   getSamplePitch,
@@ -384,6 +385,12 @@ export default function Check() {
                 </p>
               )}
             </div>
+
+            {GOV_VERIFY_UI && (
+              <div className="mt-6 max-w-xl">
+                <GovVerifyCard />
+              </div>
+            )}
 
           <TurnstileWidget
             ref={turnstileRef}

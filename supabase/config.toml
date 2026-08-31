@@ -28,3 +28,9 @@ import_map = "./functions/import_map.json"
 
 [functions.dispute]
 import_map = "./functions/import_map.json"
+
+[functions.gov-request-code]
+import_map = "./functions/import_map.json"
+
+[functions.gov-verify-code]
+import_map = "./functions/import_map.json"

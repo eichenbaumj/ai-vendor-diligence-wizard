@@ -26,9 +26,12 @@ world-readable.
 ## Architecture
 - Frontend: Vite/React/TS/Tailwind 4 → Cloudflare Pages (manual wrangler
   deploys; a git push does NOT publish).
-- Backend: Supabase Pro edge functions (`supabase/functions/`), Postgres with
-  deny-all RLS (functions are the only data path). Progress = event replay +
-  Realtime Broadcast + polling fallback.
+- Backend: Supabase Pro edge functions (`supabase/functions/`: evaluate,
+  deep-research, get-evaluation, chat, dispute, gov-request-code,
+  gov-verify-code), Postgres with deny-all RLS (functions are the only data
+  path). Progress = event replay + Realtime Broadcast + polling fallback.
+  The gov-* pair (verified .gov/.mil email -> 20 checks/month) ships dark
+  behind the GOV_VERIFY_ENABLED secret and the VITE_GOV_VERIFY=1 build flag.
 - `_shared/` is pure platform-agnostic TS (no Deno APIs) — tested by vitest,
   imported by frontend via `@shared/*`. Imports carry explicit `.ts` extensions.
 - Packs: `packs/*.yaml` → `npm run packs:build` → `packs.gen.ts` + `src/generated/packs.json`.

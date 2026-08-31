@@ -27,7 +27,7 @@
   harness_timeout / failed submit) — hard failures take precedence over
   infra since they are the more actionable signal.
 */
-import { execSync } from "node:child_process";
+import { execFileSync, execSync } from "node:child_process";
 import {
   copyFileSync,
   existsSync,
@@ -233,6 +233,24 @@ function insideRepo(path: string): boolean {
   return rel !== "" && !rel.startsWith("..") && !isAbsolute(rel);
 }
 
+/* "Public" means the file would ship in the public repo: inside the repo
+   tree AND not gitignored. Path position alone stopped being enough on
+   2026-08-31, when the private QA tree moved inside the repo directory
+   (gitignored private/). When git cannot answer, fall back to the stricter
+   inside-repo verdict. */
+function wouldShipInRepo(path: string): boolean {
+  if (!insideRepo(path)) return false;
+  try {
+    execFileSync("git", ["check-ignore", "-q", "--", path], {
+      cwd: ROOT,
+      stdio: "ignore",
+    });
+    return false; /* exit 0: gitignored, never ships */
+  } catch {
+    return true; /* exit 1 (not ignored) or git unavailable: treat as public */
+  }
+}
+
 function listPanelFiles(dir: string): string[] {
   if (!existsSync(dir) || !statSync(dir).isDirectory()) return [];
   return readdirSync(dir)
@@ -255,7 +273,7 @@ function loadPanels(extraDirs: string[]): LoadedPanel[] {
     for (const path of listPanelFiles(join(resolve(dir), "panel"))) {
       if (seen.has(path)) continue;
       seen.add(path);
-      targets.push({ path, isPublicFile: insideRepo(path) });
+      targets.push({ path, isPublicFile: wouldShipInRepo(path) });
     }
   }
   if (targets.length === 0) fail(`no *.panel.json files found in ${PUBLIC_PANEL_DIR}`);

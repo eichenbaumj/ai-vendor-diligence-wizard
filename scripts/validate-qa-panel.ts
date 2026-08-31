@@ -19,6 +19,7 @@
   Run with: npx tsx scripts/validate-qa-panel.ts [panel files...]
 */
 
+import { execFileSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -43,6 +44,23 @@ function insideRepo(path: string): boolean {
   return rel !== "" && !rel.startsWith("..") && !isAbsolute(rel);
 }
 
+/* "Public" means the file would ship in the public repo: inside the repo
+   tree AND not gitignored (the private QA tree lives inside the repo
+   directory, gitignored, since 2026-08-31). Falls back to the stricter
+   inside-repo verdict when git cannot answer. */
+function wouldShipInRepo(path: string): boolean {
+  if (!insideRepo(path)) return false;
+  try {
+    execFileSync("git", ["check-ignore", "-q", "--", path], {
+      cwd: ROOT,
+      stdio: "ignore",
+    });
+    return false;
+  } catch {
+    return true;
+  }
+}
+
 function listPanelFiles(dir: string): string[] {
   if (!existsSync(dir) || !statSync(dir).isDirectory()) return [];
   return readdirSync(dir)
@@ -55,7 +73,7 @@ function collectTargets(args: string[]): Target[] {
   if (args.length > 0) {
     return args.map((a) => {
       const path = resolve(a);
-      return { path, isPublicFile: insideRepo(path) };
+      return { path, isPublicFile: wouldShipInRepo(path) };
     });
   }
   const targets: Target[] = listPanelFiles(PUBLIC_PANEL_DIR).map((path) => ({

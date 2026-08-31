@@ -24,9 +24,10 @@ export default defineConfig({
   server: {
     port: Number(process.env.PORT) || 8080,
     watch: {
-      /* Agent worktrees live under .claude/worktrees; without this, edits
-         there force full page reloads of the dev server. */
-      ignored: ["**/.claude/**"],
+      /* Agent worktrees live under .claude/worktrees and the private QA
+         and docs trees under private/; without this, edits there force
+         full page reloads of the dev server. */
+      ignored: ["**/.claude/**", "**/private/**"],
     },
   },
 });

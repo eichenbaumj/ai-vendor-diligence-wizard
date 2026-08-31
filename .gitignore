@@ -24,3 +24,8 @@ tests/redteam/results/
 
 # local QA run output (when QA_PANEL_DIR is unset)
 qa-runs/
+
+# Private QA panels and session docs — real-vendor expectations and
+# operational detail NEVER enter the public repo (docs/testing.md explains
+# why). A unit test fails if anything under private/ becomes tracked.
+private/

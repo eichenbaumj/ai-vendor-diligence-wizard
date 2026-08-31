@@ -51,7 +51,8 @@ file of expected scores for real companies would break that rule in
 spirit: it would be a standing public claim about them. So the machinery
 is public, the method is public, and the expectations about real
 companies stay private, where they can be corrected quietly when the
-record changes.
+record changes. They live in a gitignored private directory, and a unit
+test fails the suite if any of those files ever becomes tracked.
 
 ## Running it
 

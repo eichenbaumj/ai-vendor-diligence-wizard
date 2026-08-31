@@ -37,17 +37,24 @@ export default function About() {
             <p className={BLOCK_BODY}>
               New AI tools could help governments deliver excellent services,
               and we want that future to arrive. But buying AI for a city or a
-              state today feels like buying auto parts in 1910: the invention
-              is real, the market is young, quality varies wildly, and there
-              is no trusted mechanic on every corner. Two things are true at
-              once. There is deep skepticism about AI inside government, much
-              of it earned. And there is a wave of shaky software being sold
-              with great confidence. Both slow down the agencies that stand to
-              gain the most. We think getting quality tools into public hands,
-              and getting the weak ones asked hard questions early, is urgent.
-              Public staff time is valuable, and state and local government
-              deserves the best. The first hour of that questioning should not
-              depend on anyone's budget, so it is free.
+              state today feels like buying auto parts in 1910. The invention
+              is real, the market is young, quality varies wildly, and trusted
+              mechanics are hard to find.
+            </p>
+            <p className={BLOCK_BODY}>
+              We believe in getting quality tools into public hands, and in
+              asking every vendor the hard questions early. Public staff time
+              is valuable, and state and local government deserves the best.
+            </p>
+            <p className={BLOCK_BODY}>
+              We built this tool because the first hour of due diligence is
+              where automation pays off most. That hour is the hardest to
+              invest: where should you start, and why research this pitch
+              instead of that one, when they all look the same? It is also the
+              hour a computer does best. Only an expert can judge a vendor's
+              scope, references, and team. Checking registries, records, and
+              claims at the top of the funnel is work a computer can do on
+              every pitch, in minutes.
             </p>
           </div>
 

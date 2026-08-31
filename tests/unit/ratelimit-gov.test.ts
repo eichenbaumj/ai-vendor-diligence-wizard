@@ -6,7 +6,7 @@
 */
 import { describe, expect, it } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { allowWithRemaining, monthKey } from "@shared/ratelimit.ts";
+import { allowWithRemaining, monthKey, parseExemptIpHashes } from "@shared/ratelimit.ts";
 
 describe("monthKey", () => {
   it("formats prefix:id:YYYY-MM in UTC", () => {
@@ -63,5 +63,28 @@ describe("allowWithRemaining", () => {
   it("returns null on a non-numeric result", async () => {
     const out = await allowWithRemaining(stubClient({ data: "5", error: null }), "k", 20);
     expect(out).toBeNull();
+  });
+});
+
+describe("parseExemptIpHashes: the owner/reviewer exemption list", () => {
+  it("parses a comma-separated list of 24-hex hashes", () => {
+    const set = parseExemptIpHashes(
+      "378fa843493c53d4196431ae, 61C9BB4F0C47287BCBC5CB8E",
+    );
+    expect(set.has("378fa843493c53d4196431ae")).toBe(true);
+    /* case-insensitive: hashes normalize to lowercase */
+    expect(set.has("61c9bb4f0c47287bcbc5cb8e")).toBe(true);
+    expect(set.size).toBe(2);
+  });
+
+  it("rejects anything that is not a 24-character hash (no raw IPs)", () => {
+    const set = parseExemptIpHashes("203.0.113.7, not-a-hash, deadbeef, ");
+    expect(set.size).toBe(0);
+  });
+
+  it("an unset secret exempts nobody", () => {
+    expect(parseExemptIpHashes(undefined).size).toBe(0);
+    expect(parseExemptIpHashes("").size).toBe(0);
+    expect(parseExemptIpHashes(null).size).toBe(0);
   });
 });

@@ -23,6 +23,19 @@ export async function allow(
   return data === true;
 }
 
+/* Owner/reviewer exemption: a comma-separated list of the 24-character
+   ip hashes (the same one-way hashes the rate keys use, so no raw IP is
+   ever stored) whose PER-CONNECTION caps are skipped. Global caps always
+   apply regardless. Pure parser so the policy is unit-testable. */
+export function parseExemptIpHashes(raw: string | undefined | null): Set<string> {
+  return new Set(
+    (raw ?? "")
+      .split(",")
+      .map((s) => s.trim().toLowerCase())
+      .filter((s) => /^[0-9a-f]{24}$/.test(s)),
+  );
+}
+
 export function dayKey(prefix: string, id: string, now = new Date()): string {
   const day = now.toISOString().slice(0, 10);
   return `${prefix}:${id}:${day}`;

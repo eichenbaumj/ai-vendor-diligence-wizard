@@ -20,6 +20,7 @@ import {
   allowWithRemaining,
   dayKey,
   monthKey,
+  parseExemptIpHashes,
   sha256Hex,
 } from "../_shared/ratelimit.ts";
 import { verifyGovToken } from "../_shared/gov-token.ts";
@@ -232,6 +233,16 @@ Deno.serve(async (req) => {
   const ipHash = (await sha256Hex(ip)).slice(0, 24);
   const deepRequested = body?.deep === true;
 
+  /* Owner/reviewer exemption (RATE_EXEMPT_IP_HASHES secret): listed
+     connections skip the per-IP daily and deep caps so the people running
+     the pilot can test freely. Everything else still applies to them:
+     Turnstile, the gate, and both GLOBAL caps, so a leaked hash cannot
+     take the service past its spend guards. Hashes only; no raw IP is
+     ever configured or stored. */
+  const ipExempt = parseExemptIpHashes(
+    Deno.env.get("RATE_EXEMPT_IP_HASHES"),
+  ).has(ipHash);
+
   /* Name-only inputs have a known vendor key already — serve the result
      cache BEFORE any counter is touched, so a cache hit never consumes
      anyone's daily or monthly quota. Deep and harness runs are deliberate
@@ -270,7 +281,7 @@ Deno.serve(async (req) => {
     }
     if (monthly) govRemaining = monthly.remaining;
   }
-  if (govRemaining === null && !evalBypass) {
+  if (govRemaining === null && !evalBypass && !ipExempt) {
     if (!(await allow(supabase, dayKey("ip", ipHash), IP_DAILY_CAP))) {
       return json(
         {
@@ -293,7 +304,9 @@ Deno.serve(async (req) => {
     return json({ error: "deep checks are not available right now" }, 400);
   }
   if (deepRequested && !evalBypass) {
-    if (!(await allow(supabase, dayKey("deepip", ipHash), DEEP_IP_DAILY_CAP))) {
+    /* The per-connection deep cap honors the exemption; the GLOBAL deep
+       cap never does — it is the spend guard. */
+    if (!ipExempt && !(await allow(supabase, dayKey("deepip", ipHash), DEEP_IP_DAILY_CAP))) {
       return json(
         { error: "rate_limited", retry_hint: "One deep check per day per connection. Run a standard check, or try tomorrow." },
         429,

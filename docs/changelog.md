@@ -4,6 +4,60 @@ Every change to checks, weights, tier criteria, or language rules lands here
 with its date and its expected effect on verdicts. The methodology document
 states the current rules; this file records how they got there.
 
+## Version 1.4 (August 31, 2026)
+
+**Match confidence now gates favorable credit.** A registry record that
+merely resembles the vendor's name could previously mint identity, earn
+federal-award green flags, and clear the startup calibration bar; a live
+check of a short-named firm collected another company's awards as a green
+row. Now identity resolution and identity-class credit count only exact
+matches, similarity matches appear as labeled candidate rows with the
+listed entity's actual name, compliance-registry listings found under a
+similar name carry the label into the row and green flag, and names under
+four characters match only exactly. Expected effect: short and common-name
+vendors lose credit they never earned, which can lower a tier that was
+manufactured by a collision; correctly matched vendors are unaffected.
+
+**Dissolved registrations now surface.** The New York lane queries the
+Department of State's public inquiry service, which covers all entity
+statuses, with the active-corporations open dataset as its fallback. An
+affirmative end-of-registration designation ("Voluntarily Dissolved") on an
+exact match produces a record row and a Critical finding (High when the
+record is not the entity's home-state registration), stated strictly as
+what the record shows. Previously the lane read an active-only dataset and
+dissolved entities were structurally invisible.
+
+**ADV-04 no longer caps the verdict.** Only the injection-class findings
+(hidden text, machine-directed text, invisible characters), which exist
+only in material the submitter authored, cap at Tier 2. ADV-04 reads the
+open web, ordinary press-release syndication looks identical to planted
+coverage (a real vendor was capped by wire reprints), and a cap third
+parties could trigger would hand outsiders a lever over any vendor's
+verdict. The scan also now excludes any passage that appears in
+wire-carried text, wherever it was reprinted. The cap rationale no longer
+asserts intent. Expected effect: name-only checks of well-covered vendors
+stop landing at Tier 2 on syndication artifacts.
+
+**Identity survives lookup outages.** The domain registration check retries
+once, and when the lookup service is unavailable (never when it shows the
+domain unregistered), certificate transparency history or working mail
+records can stand in as the second identifier alongside a registry record.
+A verdict no longer drops multiple tiers because a third-party lookup had
+a bad minute.
+
+**Titles are attributed, statuses are exact, and coverage notes are
+code-written.** Person surfaces say who described a title ("described in
+the pitch as CEO") and add a dated note when independent coverage discusses
+a change in that role. Registry-status rows and green flags carry the exact
+listed status level ("Progressing," "Provisional") in code-templated copy.
+The identity note for runs where some registries were unreachable names
+only the registries that ran. Domain-age rows on claim-less submissions say
+no history claims were made. URL submissions bind to the submitted domain,
+not a domain named in the page text. Extraction retries once on a failed or
+empty parse of a non-trivial pitch, and quoted claims can no longer match
+inside a longer number in the source (a truncated "0%" can no longer stand
+in for "40%").
+
 ## Version 1.3 (August 29, 2026)
 
 **What changed.** GovRAMP, TX-RAMP, and Sourcewell checks now leave rows in

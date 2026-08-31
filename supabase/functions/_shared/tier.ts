@@ -9,8 +9,9 @@
     never assign Tier 1.
   - "Coverage-limited" never counts as "not found" (the Polimorphic rule):
     a registry we could not definitively search cannot produce a trigger.
-  - ADV findings (adversarial-input detections) impose a tier CEILING —
-    detection can lower, never raise, a verdict.
+  - Injection-class ADV findings (adversarial content in SUBMITTED material:
+    ADV-01/02/03) impose a tier CEILING — detection can lower, never raise,
+    a verdict. ADV-04 (open-web duplication) is reported but never caps.
   - Absence of any single credential is never adverse on its own
     (small-vendor fairness rules, methodology §7).
   - Tier 0 (NR) beats a bad grade: insufficient input routes to
@@ -68,10 +69,18 @@ export interface TierDecision {
   checks_met: { met: number; total: number };
 }
 
-/* ADV ceiling: any confirmed adversarial-input finding caps the verdict at
-   Tier 2 — a pitch that tries to manipulate the evaluator cannot present as a
-   vetted vendor, and the attempt itself is surfaced as a finding. */
+/* ADV ceiling: a confirmed adversarial finding in SUBMITTED material caps
+   the verdict at Tier 2, and the finding itself is surfaced. Only the
+   injection-class codes cap: hidden text (ADV-01), text addressed to AI
+   systems (ADV-02), and invisible characters (ADV-03) exist only in
+   material the submitter authored. ADV-04 (repeated identical phrasing on
+   the open web) is observational: the vendor does not control what other
+   sites publish, and ordinary press-release syndication looks identical to
+   planted coverage, so ADV-04 is reported prominently but never moves the
+   tier. Capping on it would also hand third parties a lever over any
+   vendor's verdict. (Joe, 2026-08-31.) */
 const ADV_CEILING: VerdictTier = 2;
+const CEILING_ADV_CODES = new Set(["ADV-01", "ADV-02", "ADV-03"]);
 
 export function computeTier(inputs: TierInputs): TierDecision {
   const rationale: string[] = [];
@@ -124,20 +133,21 @@ export function computeTier(inputs: TierInputs): TierDecision {
     tier = 3;
     rationale.push(
       inputs.startup_bar_met
-        ? "Identity verified; no high-severity findings; the vendor meets the startup calibration bar. Early-stage is not a defect — the question pack below is calibrated to what a company this size should be able to produce."
+        ? "Identity verified; no high-severity findings; the vendor meets the startup calibration bar. Early-stage is not a defect, and the question pack below is calibrated to what a company this size should be able to produce."
         : "Identity verified with no high-severity findings, but public evidence of government delivery is thin. The question pack asks for the artifacts a vendor at this stage should be able to produce.",
     );
   }
 
-  /* ADV ceiling — applied last, can only lower. */
+  /* ADV ceiling: applied last, can only lower, injection-class codes only. */
   let ceiling_applied = false;
-  if (inputs.adv_findings.length > 0 && tier > ADV_CEILING) {
+  const ceilingCodes = inputs.adv_findings
+    .map((a) => a.code)
+    .filter((code) => CEILING_ADV_CODES.has(code));
+  if (ceilingCodes.length > 0 && tier > ADV_CEILING) {
     tier = ADV_CEILING;
     ceiling_applied = true;
     rationale.push(
-      `Verdict capped: the submitted material contained ${inputs.adv_findings
-        .map((a) => a.code)
-        .join(", ")} (see adversarial-content findings). A pitch that attempts to influence automated evaluation cannot present as verified.`,
+      `Verdict capped: the submitted material contained content its reader cannot see or that addresses automated systems (${[...new Set(ceilingCodes)].join(", ")}; see the adversarial-content findings). A submission that reads differently to a person than to a machine cannot present as verified.`,
     );
   }
 

@@ -388,3 +388,63 @@ describe("computeTier: the Polimorphic scenario", () => {
     expect(d.checks_met).toEqual({ met: 4, total: 7 });
   });
 });
+
+describe("computeTier: ADV-04 is observational and never caps (Joe, 2026-08-31)", () => {
+  it("tier-4 inputs + ADV-04 alone -> tier stays 4, no ceiling", () => {
+    const d = computeTier(
+      inputs({
+        green_dimensions: ["D1", "D2", "D3"],
+        adv_findings: [adv("ADV-04")],
+      }),
+    );
+    expect(d.tier).toBe(4);
+    expect(d.ceiling_applied).toBe(false);
+    expect(d.rationale.join(" ")).not.toContain("Verdict capped");
+  });
+
+  it("tier-3 inputs + ADV-04 alone -> tier stays 3", () => {
+    const d = computeTier(
+      inputs({ green_dimensions: ["D1"], adv_findings: [adv("ADV-04")] }),
+    );
+    expect(d.tier).toBe(3);
+    expect(d.ceiling_applied).toBe(false);
+  });
+
+  it("ADV-04 alongside an injection code -> caps, and the rationale names only the injection code", () => {
+    const d = computeTier(
+      inputs({
+        green_dimensions: ["D1", "D2", "D3"],
+        adv_findings: [adv("ADV-04"), adv("ADV-02")],
+      }),
+    );
+    expect(d.tier).toBe(2);
+    expect(d.ceiling_applied).toBe(true);
+    expect(d.rationale.at(-1)).toContain("ADV-02");
+    expect(d.rationale.at(-1)).not.toContain("ADV-04");
+  });
+
+  it("the cap rationale never asserts intent and carries no em dash", () => {
+    const d = computeTier(
+      inputs({
+        green_dimensions: ["D1", "D2", "D3"],
+        adv_findings: [adv("ADV-01")],
+      }),
+    );
+    const cap = d.rationale.at(-1) ?? "";
+    expect(cap).toContain("Verdict capped");
+    expect(cap).not.toMatch(/designed to influence|attempts to influence/);
+    expect(cap).not.toContain("—");
+  });
+
+  it("no user-facing rationale string carries an em dash at any tier", () => {
+    for (const tierInputs of [
+      inputs({ green_dimensions: ["D1"], startup_bar_met: true }),
+      inputs({ green_dimensions: ["D1"], startup_bar_met: false }),
+      inputs({ resolvable: false, identity_resolved: false }),
+      inputs({ identity_resolved: false }),
+    ]) {
+      const d = computeTier(tierInputs);
+      for (const r of d.rationale) expect(r).not.toContain("—");
+    }
+  });
+});

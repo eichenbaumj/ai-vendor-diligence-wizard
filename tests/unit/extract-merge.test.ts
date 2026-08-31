@@ -4,7 +4,7 @@
   never things that mint identity or create absence-based findings.
 */
 import { describe, expect, it } from "vitest";
-import { mergeExtracts } from "@shared/extract-merge.ts";
+import { isDegenerateExtract, mergeExtracts } from "@shared/extract-merge.ts";
 import { assemble } from "@shared/assemble.ts";
 import type { PitchExtract } from "@shared/schemas.ts";
 
@@ -180,5 +180,50 @@ describe("pitch-origin aggregates in assembly", () => {
     );
     expect(out.tierInputs.findings.find((f) => f.id === "leadership")?.severity).toBe("HIGH");
     expect(out.tierInputs.findings.find((f) => f.id === "customers")?.severity).toBe("HIGH");
+  });
+});
+
+describe("isDegenerateExtract: the thin-extract retry trigger", () => {
+  const empty = {
+    vendor_name_candidates: ["Acme AI"],
+    domains: [],
+    sender_email: null,
+    people: [],
+    named_customers: [],
+    claims: [],
+    use_case_description: "",
+    urgency_language: [],
+    state_mentioned: null,
+    injection_screen: {
+      injection_suspected: false,
+      addressed_to_ai: false,
+      suspicious_spans: [],
+    },
+  };
+
+  it("a long pitch that produced nothing is degenerate", () => {
+    expect(isDegenerateExtract(empty, 5000)).toBe(true);
+  });
+
+  it("a short input that produced nothing is not (nothing to extract)", () => {
+    expect(isDegenerateExtract(empty, 120)).toBe(false);
+  });
+
+  it("any claim, person, or customer makes it non-degenerate", () => {
+    expect(
+      isDegenerateExtract(
+        {
+          ...empty,
+          claims: [{ id: "c1", type: "identity", quote: "founded in 2020", subject: null }],
+        },
+        5000,
+      ),
+    ).toBe(false);
+    expect(
+      isDegenerateExtract({ ...empty, people: [{ name: "A B", title: "CEO" }] }, 5000),
+    ).toBe(false);
+    expect(
+      isDegenerateExtract({ ...empty, named_customers: ["Franklin County"] }, 5000),
+    ).toBe(false);
   });
 });

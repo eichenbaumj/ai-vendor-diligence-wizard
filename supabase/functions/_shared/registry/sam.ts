@@ -100,7 +100,20 @@ export type CompanyMatch =
 /* Match one candidate record name against the pitch's disclosed names.
    exact = identical after normalization; name_similarity = one normalized
    token set contains the other. Investment-vehicle mismatches are rejected
-   outright, before any confidence is assigned. */
+   outright, before any confidence is assigned.
+
+   Ultra-short names are exact-only: a containment match is only as strong
+   as the shared tokens, and a name like "17A" is contained in unrelated
+   records everywhere ("17A WASHINGTON STREET, LLC" earned Joe's own firm
+   someone else's federal awards on 2026-08-29). The contained side must
+   have at least two tokens or a single token of four or more characters
+   to count as name_similarity. */
+function containedSideStrongEnough(contained: string): boolean {
+  const tokens = contained.split(" ").filter(Boolean);
+  if (tokens.length >= 2) return true;
+  return (tokens[0]?.length ?? 0) >= 4;
+}
+
 export function matchCompanyName(
   candidate: string,
   queries: string[],
@@ -124,7 +137,8 @@ export function matchCompanyName(
     const cList = cNorm.split(" ");
     const qContainsC = cList.every((t) => qSet.has(t));
     const cContainsQ = qTokens.every((t) => cTokens.has(t));
-    if ((qContainsC || cContainsQ) && !similarity) {
+    const contained = qContainsC ? cNorm : cContainsQ ? qNorm : null;
+    if (contained !== null && containedSideStrongEnough(contained) && !similarity) {
       similarity = { kind: "match", confidence: "name_similarity", query };
     }
   }

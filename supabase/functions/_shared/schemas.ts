@@ -212,6 +212,13 @@ export const LedgerRow = z.object({
   sources: z.array(SourceRef).max(8),
   note: z.string().max(700), // legal-safe sentence(s); linted
   methodology_ref: z.string().max(40), // anchor into /methodology, e.g. "d1-1-4"
+  /* How the underlying record was matched to this vendor, when the row rests
+     on a name-matched registry record. "name_similarity" rows carry the
+     label into the UI so a favorable row never silently borrows a namesake's
+     record (methodology: match confidence is displayed). Optional: rows not
+     built from name matching, and reports stored before the field existed,
+     omit it. */
+  match_confidence: MatchConfidence.optional(),
 });
 export type LedgerRow = z.infer<typeof LedgerRow>;
 

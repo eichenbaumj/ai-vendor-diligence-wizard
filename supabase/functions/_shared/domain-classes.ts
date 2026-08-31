@@ -110,6 +110,10 @@ const CLASS2_HOSTS = new Set([
   "kansascity.com",
   "azcentral.com",
   "reviewjournal.com",
+  /* Public-record broadcasters: nonpartisan outlets whose pages are records
+     of public appearances and proceedings (Joe-approved allowlist addition,
+     2026-08-31, the Percepta person-verification case). */
+  "c-span.org",
   /* Web archives. */
   "web.archive.org",
   "archive.org",

@@ -49,3 +49,105 @@ describe("identityMissNote with EDGAR unreachable", () => {
     expect(note.length).toBeLessThanOrEqual(700);
   });
 });
+
+/* ------------------------ coverage-limited identity note (v1.4) */
+
+import {
+  enforceRegistryStatusFlags,
+  identityCoverageLimitedNote,
+} from "../../supabase/functions/_shared/pipeline-tail.ts";
+import type { RegistryCheck } from "../../supabase/functions/_shared/schemas.ts";
+
+function sosCheck(id: string, status: RegistryCheck["status"]): RegistryCheck {
+  return {
+    check_id: id,
+    source: `${id} source`,
+    status,
+    summary: "test",
+    evidence_url: null,
+    confidence: null,
+    retrieved_at: "2026-08-30T00:00:00.000Z",
+    data: null,
+  };
+}
+
+describe("identityCoverageLimitedNote", () => {
+  const checks = [
+    sosCheck("sos_ny", "definitive_miss"),
+    sosCheck("sos_co", "definitive_miss"),
+    sosCheck("sos_ct", "definitive_miss"),
+    sosCheck("sos_tx", "definitive_miss"),
+    sosCheck("sos_or", "definitive_miss"),
+    sosCheck("sos_fl", "coverage_limited"),
+  ];
+
+  it("names only the states that ran and points unavailable ones at the honesty panel", () => {
+    const note = identityCoverageLimitedNote(checks, true, "2026-08-30T00:00:00.000Z");
+    expect(note).toContain("New York, Colorado, Connecticut, Texas, Oregon");
+    expect(note).toContain("Florida could not be checked this run");
+    expect(note).toContain("SEC EDGAR");
+    expect(note).toContain("not proof the company does not exist");
+    expect(note.length).toBeLessThanOrEqual(700);
+    expect(lintText(note).filter((v) => v.kind === "banned")).toEqual([]);
+    expect(note).not.toContain("—");
+  });
+
+  it("never claims an EDGAR search that did not run", () => {
+    const note = identityCoverageLimitedNote(checks, false, "2026-08-30T00:00:00.000Z");
+    expect(note).toContain("could not reach SEC EDGAR");
+    expect(note).not.toContain("We checked SEC EDGAR");
+  });
+
+  it("a full registry outage says so instead of claiming searches", () => {
+    const allDown = checks.map((c) => ({ ...c, status: "error" as const }));
+    const note = identityCoverageLimitedNote(allDown, false, "2026-08-30T00:00:00.000Z");
+    expect(note).toContain("could not reach the state business registries");
+    expect(note).not.toContain("did not find a registered entity");
+  });
+});
+
+describe("enforceRegistryStatusFlags", () => {
+  const facts = [
+    {
+      fact: 'Tyler Technologies appears on the GovRAMP program participant list with status "Progressing"',
+      source_name: "GovRAMP",
+      date: "2026-08-30",
+    },
+    {
+      fact: "A registered legal entity was found for Tyler Technologies (SEC EDGAR filing; SoS record)",
+      source_name: "SEC EDGAR",
+      date: "2026-08-30",
+    },
+  ];
+
+  it("replaces a model-phrased program flag with the templated status fact", () => {
+    const out = enforceRegistryStatusFlags(
+      ["Tyler has completed a federal cloud security review through GovRAMP"],
+      facts,
+    );
+    expect(out).toHaveLength(1);
+    expect(out[0]).toContain('with status "Progressing"');
+    expect(out[0]).toContain("(GovRAMP, checked 2026-08-30)");
+  });
+
+  it("drops a program flag that has no underlying fact", () => {
+    const out = enforceRegistryStatusFlags(
+      ["Tyler is FedRAMP authorized so you can skip that step"],
+      facts,
+    );
+    expect(out).toHaveLength(0);
+  });
+
+  it("collapses duplicate program flags into one templated line", () => {
+    const out = enforceRegistryStatusFlags(
+      ["GovRAMP member Tyler", "Tyler participates in GovRAMP today"],
+      facts,
+    );
+    expect(out).toHaveLength(1);
+  });
+
+  it("leaves non-program flags untouched", () => {
+    const flags = ["Nate Levine, described in the pitch as President, appears in Forbes"];
+    expect(enforceRegistryStatusFlags(flags, facts)).toEqual(flags);
+  });
+});

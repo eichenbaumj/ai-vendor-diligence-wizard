@@ -254,7 +254,7 @@ export async function checkGithubOrg(
       check_id: CHECK_ID,
       source: SOURCE,
       status: "error",
-      summary: "We could not reach GitHub, so this check did not run.",
+      summary: "We could not reach GitHub, so this check did not run. This does not count against the vendor.",
       evidence_url: searchUrl,
       confidence: null,
       retrieved_at,

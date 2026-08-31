@@ -92,6 +92,34 @@ function src(c: RegistryCheck) {
     : [];
 }
 
+/* Green-flag fact for a registry-feed hit: carries the EXACT listed status
+   (methodology D3.2 promises exact-status reporting; "Progressing" is not
+   "Authorized" and "Provisional" is not "Level 2") and labels similarity
+   matches so a favorable line never silently borrows a namesake's listing. */
+function registryHitFact(
+  vendorName: string,
+  wherePhrase: string,
+  check: RegistryCheck,
+): string {
+  const data = (check.data ?? {}) as {
+    matches?: {
+      provider?: string;
+      supplier?: string;
+      status?: string;
+      contract?: string;
+    }[];
+  };
+  const best = data.matches?.[0];
+  const status = best?.status ? ` with status "${best.status}"` : "";
+  const contract = best?.contract ? ` (contract ${best.contract})` : "";
+  const listedName = best?.provider ?? best?.supplier ?? null;
+  const similar =
+    check.confidence === "name_similarity" && listedName
+      ? `, listed under the similar name ${listedName}; confirm it is the same company`
+      : "";
+  return `${vendorName} appears ${wherePhrase}${status}${contract}${similar}`;
+}
+
 /* Ledger row ids are stable and semantic so QA expectations and drift
    reports can key on them across runs. Loop-generated rows carry a slug
    of their subject; collisions get a numeric suffix. */
@@ -106,6 +134,22 @@ function uniqueRowId(base: string): string {
   usedRowIds.add(id);
   return id;
 }
+/* Executive roles whose holders change, and the vocabulary independent
+   coverage uses when they do. Both must hit in one citation's retrieved
+   text for the dated role-change conflict to arm (a change verb alone
+   false-positives on ordinary product copy like "replaces paper forms"). */
+const EXEC_TITLE =
+  /\b(?:CEO|CFO|COO|CTO|CIO|chief executive|chief financial|chief operating|chief technology|president)\b/i;
+const ROLE_CHANGE_WORDS =
+  /\b(?:ceo|cfo|coo|cto|cio|president|chief executive|chief financial|chief operating|chief technology)\b/i;
+const ROLE_CHANGE_VERBS =
+  /\bappoints?\b|\bappointed\b|steps? down|stepp(?:ed|ing) down|\bsucceeds?\b|\bsucceeded\b|\boutgoing\b|\bsuccessor\b|\bretir(?:es|ing|ed)\b|\bnew\b.{0,24}\b(?:ceo|cfo|coo|cto|cio|president)\b/i;
+const ROLE_CHANGE = {
+  test(corpus: string): boolean {
+    return ROLE_CHANGE_WORDS.test(corpus) && ROLE_CHANGE_VERBS.test(corpus);
+  },
+};
+
 function slugPart(name: string): string {
   return (
     name
@@ -138,7 +182,18 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
   if (identity.identity_resolved) {
     greenDims.add("D1");
     const basis = identity.identifiers_found.slice(0, 3).join("; ");
-    const best = sosHits[0] ?? (edgar?.status === "hit" ? edgar : sam);
+    /* Only an EXACT-confidence record may put a legal name on the identity
+       surfaces: naming a similarity match's record printed the wrong
+       company's name live (Granicus read "Granicus Property Solutions,
+       LLC", 2026-08-29). Identity itself now resolves only from exact
+       identifiers, so an exact anchor normally exists; the fallback keeps
+       a source link without naming any record. */
+    const exactAnchor =
+      sosHits.find((c) => c.confidence === "exact") ??
+      (edgar?.status === "hit" && edgar.confidence === "exact" ? edgar : null) ??
+      (sam?.status === "hit" && sam.confidence === "exact" ? sam : null);
+    const sourceCheck =
+      exactAnchor ?? sosHits[0] ?? (edgar?.status === "hit" ? edgar : sam);
     ledger.push({
       id: uniqueRowId("identity"),
       dimension: "D1",
@@ -148,17 +203,20 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
       evidence_tier: "T1",
       severity: null,
       sources: [
-        ...(best ? src(best) : []),
-        ...(edgar && edgar.status === "hit" && best !== edgar ? src(edgar) : []),
+        ...(sourceCheck ? src(sourceCheck) : []),
+        ...(edgar && edgar.status === "hit" && sourceCheck !== edgar
+          ? src(edgar)
+          : []),
       ].slice(0, 4),
       note: "", // phrased by S5
       methodology_ref: "d1-1",
+      ...(exactAnchor ? { match_confidence: "exact" as const } : {}),
     });
-    if (best) {
+    if (exactAnchor) {
       /* When the record's legal name differs from the pitch's display name
          (compound names like "TrueTax by Govra" resolving to GOVRA, INC.),
          say so — the D1 row must not conflate product and company. */
-      const bestData = (best.data ?? {}) as {
+      const bestData = (exactAnchor.data ?? {}) as {
         matches?: { name?: string }[];
         legal_business_name?: string;
       };
@@ -170,8 +228,14 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
         fact: differs
           ? `A registered legal entity was found for ${vendorName} under the legal name ${differs} (${basis})`
           : `A registered legal entity was found for ${vendorName} (${basis})`,
-        source_name: best.source,
-        date: dateOf(best),
+        source_name: exactAnchor.source,
+        date: dateOf(exactAnchor),
+      });
+    } else if (sourceCheck) {
+      greenFlagFacts.push({
+        fact: `A registered legal entity was found for ${vendorName} (${basis})`,
+        source_name: sourceCheck.source,
+        date: dateOf(sourceCheck),
       });
     }
   } else {
@@ -205,8 +269,10 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
     /* When a registration WAS found but only one identifier class exists,
        the row must say that — otherwise the narrative model reads the
        COULD_NOT_VERIFY result plus the state sources and writes "we
-       searched Texas and found nothing" over a Texas hit. */
-    const partialHit = sosHits[0] ?? null;
+       searched Texas and found nothing" over a Texas hit. Only an
+       EXACT-confidence hit counts as "the registration found": a similar-
+       name record is a candidate, not this vendor's registration. */
+    const partialHit = sosHits.find((c) => c.confidence === "exact") ?? null;
     ledger.push({
       id: uniqueRowId("identity"),
       dimension: "D1",
@@ -214,7 +280,7 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
       what_checked: partialHit
         ? `Whether a second independent identifier corroborates the registration found in ${partialHit.source}`
         : IDENTITY_WHAT_CHECKED,
-      result: limited && sosHits.length === 0 ? "COVERAGE_LIMITED" : "COULD_NOT_VERIFY",
+      result: limited && !partialHit ? "COVERAGE_LIMITED" : "COULD_NOT_VERIFY",
       evidence_tier: "T4",
       severity: "MEDIUM",
       /* All searched states, hit first (6 SOS lanes), then the EDGAR
@@ -233,6 +299,56 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
       ].flatMap(src),
       note: "",
       methodology_ref: "d1-1",
+    });
+  }
+
+  /* Affirmative end-of-registration designations on EXACT-match registry
+     records (the lanes set data.dissolved only for exact matches, and only
+     for affirmative designations like "Voluntarily Dissolved" — a bare
+     "Inactive" or a late annual report never arms this). The language rule:
+     report what the record shows, never failure or wrongdoing framing. A
+     domestic end-of-registration is CRITICAL (the registered company itself
+     ended); anything else stays HIGH. */
+  for (const check of sosChecks) {
+    if (check.status !== "hit") continue;
+    const dissolved = ((check.data ?? {}) as {
+      dissolved?: {
+        legal_name: string;
+        status: string;
+        reason: string | null;
+        effective_date: string | null;
+        domestic: boolean | null;
+      };
+    }).dissolved;
+    if (!dissolved) continue;
+    const severity = dissolved.domestic === true ? "CRITICAL" : "HIGH";
+    const reasonPart =
+      dissolved.reason && dissolved.reason !== dissolved.status
+        ? `: ${dissolved.reason}`
+        : "";
+    const whenPart = dissolved.effective_date
+      ? `, effective ${dissolved.effective_date}`
+      : "";
+    const rowId = uniqueRowId(`dissolved-${slugPart(dissolved.legal_name)}`);
+    ledger.push({
+      id: rowId,
+      dimension: "D1",
+      claim_quote: null,
+      what_checked: `The current registration status of ${dissolved.legal_name} in ${check.source}`.slice(0, 300),
+      result: "OFFICIAL_RECORD_FOUND",
+      evidence_tier: "T1",
+      severity,
+      sources: src(check),
+      note: `${check.source} lists ${dissolved.legal_name} with status "${dissolved.status}"${reasonPart}${whenPart}. This is what the public record shows as of the check date; it does not by itself say anything about the people or products involved. Ask the vendor which legal entity would sign a contract today and how it relates to this record.`.slice(0, 700),
+      methodology_ref: "d1-1",
+      match_confidence: "exact",
+    });
+    findings.push({
+      id: `dissolved-${slugPart(dissolved.legal_name)}`,
+      dimension: "D1",
+      severity,
+      resolved: false,
+      detail: `${check.source} shows the registration for ${dissolved.legal_name} ended (${dissolved.status}${reasonPart}${whenPart}).`,
     });
   }
 
@@ -273,16 +389,26 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
     (rdap.data as { contradiction?: boolean } | null)?.contradiction === true;
   if (rdap && rdap.status === "hit") {
     const identityClaim = extract.claims.find((c) => c.type === "identity");
+    const rdapClaimedYear =
+      (rdap.data as { claimed_year?: number | null } | null)?.claimed_year ?? null;
     ledger.push({
       id: uniqueRowId("domain-age"),
       dimension: "D1",
       claim_quote: rdapContradiction ? (identityClaim?.quote ?? null) : null,
-      what_checked: "Domain registration date against the pitch's history claims",
+      /* On claim-less runs (name-only) there are no history claims to test:
+         the row must say so, or the narrative invents consistency "with the
+         vendor's history claims" that do not exist (Govra/Granicus,
+         2026-08-29). */
+      what_checked: rdapClaimedYear !== null
+        ? "Domain registration date against the pitch's history claims"
+        : "Domain registration date (no age or history claims were made to compare against)",
       result: rdapContradiction ? "CONTRADICTED" : "VERIFIED",
       evidence_tier: "T1",
       severity: rdapContradiction ? "HIGH" : null,
       sources: src(rdap),
-      note: "",
+      /* Code-templated: the check summary states the registration date and
+         mentions claim consistency only when a claimed year existed. */
+      note: rdap.summary.slice(0, 700),
       methodology_ref: "d1-4",
     });
     if (rdapContradiction) {
@@ -331,7 +457,7 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
   /* -------------------------------------------------- D2: government track record */
 
   const usasp = find(checks, "usaspending_awards");
-  if (usasp?.status === "hit") {
+  if (usasp?.status === "hit" && usasp.confidence === "exact") {
     greenDims.add("D2");
     greenFlagFacts.push({
       fact: `Federal payment records show awards to ${vendorName}`,
@@ -349,6 +475,26 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
       sources: src(usasp),
       note: "",
       methodology_ref: "d2-1",
+      match_confidence: "exact",
+    });
+  } else if (usasp?.status === "hit") {
+    /* A similar-name recipient is a candidate record, never favorable
+       credit: the live "17A" run credited 17A WASHINGTON STREET, LLC's
+       federal awards as a green row (2026-08-29). The row stays visible,
+       labeled, and neutral; the check's own candidate-framed summary is
+       the note (code-templated, so no model can upgrade it to credit). */
+    ledger.push({
+      id: uniqueRowId("usaspending"),
+      dimension: "D2",
+      claim_quote: null,
+      what_checked: "Federal award records (USAspending.gov)",
+      result: "COULD_NOT_VERIFY",
+      evidence_tier: "T4",
+      severity: null,
+      sources: src(usasp),
+      note: usasp.summary.slice(0, 700),
+      methodology_ref: "d2-1",
+      match_confidence: "name_similarity",
     });
   }
 
@@ -498,7 +644,7 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
     } else if (fedramp.status === "hit") {
       greenDims.add("D3");
       greenFlagFacts.push({
-        fact: `${vendorName} appears in the FedRAMP Marketplace`,
+        fact: registryHitFact(vendorName, "in the FedRAMP Marketplace", fedramp),
         source_name: fedramp.source,
         date: dateOf(fedramp),
       });
@@ -511,8 +657,12 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
         evidence_tier: "T1",
         severity: null,
         sources: src(fedramp),
-        note: "",
+        /* Code-templated: the check summary carries the exact listed status
+           and the product-scope caveat, which model phrasing has inflated
+           live ("has completed a federal cloud security review"). */
+        note: fedramp.summary.slice(0, 700),
         methodology_ref: "d3-1",
+        ...(fedramp.confidence ? { match_confidence: fedramp.confidence } : {}),
       });
     } else if (claimsFedramp) {
       ledger.push({
@@ -571,7 +721,7 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
     } else if (govramp.status === "hit") {
       greenDims.add("D3");
       greenFlagFacts.push({
-        fact: `${vendorName} appears on the GovRAMP program participant list`,
+        fact: registryHitFact(vendorName, "on the GovRAMP program participant list", govramp),
         source_name: govramp.source,
         date: dateOf(govramp),
       });
@@ -584,8 +734,11 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
         evidence_tier: "T1",
         severity: null,
         sources: src(govramp),
-        note: "",
+        /* Code-templated: GovRAMP has several levels ("Progressing" is not
+           "Authorized") and the summary states the exact one. */
+        note: govramp.summary.slice(0, 700),
         methodology_ref: "d3-2",
+        ...(govramp.confidence ? { match_confidence: govramp.confidence } : {}),
       });
     } else if (claimsGovramp) {
       ledger.push({
@@ -642,7 +795,7 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
     } else if (txramp.status === "hit") {
       greenDims.add("D3");
       greenFlagFacts.push({
-        fact: `${vendorName} appears on the TX-RAMP certified cloud products list`,
+        fact: registryHitFact(vendorName, "on the TX-RAMP certified cloud products list", txramp),
         source_name: txramp.source,
         date: dateOf(txramp),
       });
@@ -655,8 +808,11 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
         evidence_tier: "T1",
         severity: null,
         sources: src(txramp),
-        note: "",
+        /* Code-templated: TX-RAMP levels differ ("Provisional" is not
+           "Level 2") and the summary states the exact one. */
+        note: txramp.summary.slice(0, 700),
         methodology_ref: "d3-3",
+        ...(txramp.confidence ? { match_confidence: txramp.confidence } : {}),
       });
     } else if (claimsTxramp) {
       ledger.push({
@@ -708,7 +864,7 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
   } else if (sourcewell?.status === "hit") {
     greenDims.add("D2");
     greenFlagFacts.push({
-      fact: `${vendorName} holds a Sourcewell cooperative contract`,
+      fact: registryHitFact(vendorName, "on the Sourcewell cooperative contract holder list", sourcewell),
       source_name: sourcewell.source,
       date: dateOf(sourcewell),
     });
@@ -725,8 +881,9 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
       evidence_tier: "T1",
       severity: null,
       sources: src(sourcewell),
-      note: "",
+      note: sourcewell.summary.slice(0, 700),
       methodology_ref: "d2-2",
+      ...(sourcewell.confidence ? { match_confidence: sourcewell.confidence } : {}),
     });
   }
 
@@ -798,8 +955,9 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
      footprints are real and normal); the only adverse path is the aggregate
      below, gated on complete research. */
   const people = extract.people.slice(0, 6);
+  const pitchPeopleLead = input.pitch_person_count ?? extract.people.length;
   let corroboratedPeople = 0;
-  for (const person of people) {
+  people.forEach((person, personIndex) => {
     const support = citations.find(
       (c) =>
         canVerify(c.domain_class) &&
@@ -810,6 +968,36 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
       (c) =>
         c.type === "team" && c.subject && norm(c.subject) === norm(person.name),
     );
+    /* Titles are ATTRIBUTED, never asserted as current fact: "CEO Zac
+       Bookman" was true when a pitch was written and false by check time
+       (OpenGov, disposition #6). Every person surface says who described
+       the title. */
+    const describedIn =
+      personIndex < pitchPeopleLead ? "the pitch" : "the vendor's materials";
+    /* Dated role-change conflict: when retrieved class 1-2 coverage of this
+       vendor discusses a change in an executive role this person is said to
+       hold, the report must say so with the date, never re-assert the title
+       as current. Detection is code over citation metadata; no semantic
+       claim is made beyond "a report discusses a change in this role". */
+    const execTitle = EXEC_TITLE.exec(person.title)?.[0] ?? null;
+    const roleConflict = execTitle
+      ? citations.find(
+          (c) =>
+            canVerify(c.domain_class) &&
+            contentMentions(c, vendorName) &&
+            ROLE_CHANGE.test(`${c.title ?? ""} ${c.cited_text ?? ""}`),
+        )
+      : null;
+    let conflictNote = "";
+    if (roleConflict) {
+      let host = roleConflict.url;
+      try {
+        host = new URL(roleConflict.url).hostname;
+      } catch {
+        /* keep the raw URL */
+      }
+      conflictNote = ` Coverage retrieved on ${roleConflict.retrieved_at.slice(0, 10)} (${host}) discusses a change in the ${execTitle} role at this vendor, so confirm who holds the title today.`;
+    }
     ledger.push({
       id: uniqueRowId(`person-${slugPart(person.name)}`),
       dimension: "D5",
@@ -818,10 +1006,24 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
       result: support ? "VERIFIED" : "COULD_NOT_VERIFY",
       evidence_tier: support ? (support.domain_class === 1 ? "T1" : "T3") : "T4",
       severity: null,
-      sources: support
-        ? [{ url: support.url, title: support.title, retrieved_at: support.retrieved_at }]
-        : [],
-      note: "",
+      sources: [
+        ...(support
+          ? [{ url: support.url, title: support.title, retrieved_at: support.retrieved_at }]
+          : []),
+        ...(roleConflict && roleConflict.url !== support?.url
+          ? [{ url: roleConflict.url, title: roleConflict.title, retrieved_at: roleConflict.retrieved_at }]
+          : []),
+      ],
+      /* Code-templated when a role conflict exists (a model note re-asserted
+         a stale title while citing the succession article, 2026-08-29);
+         otherwise S5 phrases it. */
+      note: roleConflict
+        ? `${person.name}, described in ${describedIn} as ${person.title}, ${
+            support
+              ? "appears in public sources independent of the vendor's site."
+              : "could not be corroborated in retrieved public sources independent of the vendor's site. That is common and not adverse on its own."
+          }${conflictNote}`.slice(0, 700)
+        : "",
       methodology_ref: "d5-1",
     });
     if (support) {
@@ -835,13 +1037,13 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
           /* keep the raw URL as the source name */
         }
         greenFlagFacts.push({
-          fact: `${person.name} (${person.title}) appears in public sources independent of the vendor's site`,
+          fact: `${person.name}, described in ${describedIn} as ${person.title}, appears in public sources independent of the vendor's site${roleConflict ? ". Dated coverage discusses a change in this role; confirm current titles" : ""}`,
           source_name: host,
           date: support.retrieved_at.slice(0, 10),
         });
       }
     }
-  }
+  });
   /* Threshold on PITCH-origin people only; any corroborated person
      (pitch- or site-origin — it is the same team) suppresses the
      aggregate. */
@@ -961,11 +1163,14 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
 
   /* ---------------------------------------------------------- tier inputs */
 
+  /* Favorable credit follows the match-confidence rule: identity-class
+     connectors count only on exact matches (a namesake's records must not
+     clear the startup bar). */
   const startupBar =
     govramp?.status === "hit" ||
     verifiedCustomers > 0 ||
-    usasp?.status === "hit" ||
-    edgar?.status === "hit";
+    (usasp?.status === "hit" && usasp.confidence === "exact") ||
+    (edgar?.status === "hit" && edgar.confidence === "exact");
 
   const tierInputs: TierInputs = {
     resolvable: input.resolvable,

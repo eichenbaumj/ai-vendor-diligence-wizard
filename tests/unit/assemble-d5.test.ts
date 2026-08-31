@@ -101,8 +101,12 @@ describe("person corroboration: grounded rule", () => {
     expect(row.claim_quote).toBe("Jane Rivera, our CEO.");
     expect(row.sources).toHaveLength(1);
     expect(out.tierInputs.green_dimensions).toContain("D5");
+    /* Titles are attributed, never asserted as current fact (the OpenGov
+       stale-CEO standard, disposition #6). */
     expect(
-      out.greenFlagFacts.some((f) => f.fact.startsWith("Jane Rivera (CEO)")),
+      out.greenFlagFacts.some((f) =>
+        f.fact.startsWith("Jane Rivera, described in the pitch as CEO"),
+      ),
     ).toBe(true);
   });
 

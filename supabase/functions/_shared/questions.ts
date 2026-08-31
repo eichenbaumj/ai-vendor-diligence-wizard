@@ -128,6 +128,14 @@ function gapTemplate(f: Finding, ctx: GapContext): ReportQuestion | null {
       why: "The company's web presence is much newer than the history described.",
     };
   }
+  if (f.id.startsWith("dissolved-")) {
+    return {
+      id: "gap-dissolved",
+      source: "gap",
+      text: "A state registry lists a company under your name whose registration has ended. Which legal entity would sign a contract today, in what state is it registered and in good standing, and how does it relate to the record we found?",
+      why: "The public record shows an ended registration under a matching name; the contracting entity needs to be clear before anything moves forward.",
+    };
+  }
   if (f.id === "excl") {
     return {
       id: "gap-excl",

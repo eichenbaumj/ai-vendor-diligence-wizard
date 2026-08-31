@@ -263,15 +263,34 @@ function evaluateLedger(
   const matches = matchLedgerRows(cell, le);
   const present = matches.length > 0;
 
-  out.push(
-    result(
-      `ledger.${key}.presence`,
-      le.hardness,
-      le.presence === "required" ? present : !present,
-      `row ${le.presence}`,
-      present ? `present (${matches.map((m) => m.id).join(", ")})` : "absent",
-    ),
-  );
+  /* presence "optional" asserts nothing about presence: only the result
+     and severity constraints below apply, when a row exists. */
+  if (le.presence !== "optional") {
+    out.push(
+      result(
+        `ledger.${key}.presence`,
+        le.hardness,
+        le.presence === "required" ? present : !present,
+        `row ${le.presence}`,
+        present ? `present (${matches.map((m) => m.id).join(", ")})` : "absent",
+      ),
+    );
+  }
+
+  /* forbidden_result_in: no matched row may carry any of these results.
+     Vacuously true when the row is absent. */
+  if (le.forbidden_result_in) {
+    const forbidden = le.forbidden_result_in as string[];
+    out.push(
+      result(
+        `ledger.${key}.forbidden_result`,
+        le.hardness,
+        !matches.some((m) => forbidden.includes(m.row.result)),
+        `no row with result in [${forbidden.join(", ")}]`,
+        present ? fmtList(matches.map((m) => m.row.result)) : "absent",
+      ),
+    );
+  }
 
   /* result_in / severity_in apply only when a row is present; with several
      methodology_ref matches, one satisfying row is enough. */

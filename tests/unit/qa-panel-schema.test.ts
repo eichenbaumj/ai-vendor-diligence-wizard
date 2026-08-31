@@ -131,9 +131,31 @@ describe("panelProblems", () => {
     const problems = panelProblems(parsed, { isPublicFile: true });
     expect(
       problems.some((p) =>
-        p.includes("hard ledger expectation on VERIFIED is not allowed"),
+        p.includes("hard ledger expectation REQUIRING a VERIFIED row is not allowed"),
       ),
     ).toBe(true);
+  });
+
+  it("allows a hard forbidden_result_in on VERIFIED (deterministic ground truth)", () => {
+    const parsed = PanelFile.parse(
+      panel([
+        entry({
+          expected: {
+            status: "complete",
+            ledger: [
+              {
+                match: { id: "usaspending" },
+                presence: "optional",
+                forbidden_result_in: ["VERIFIED"],
+                hardness: "hard",
+              },
+            ],
+          },
+        }),
+      ]),
+    );
+    const problems = panelProblems(parsed, { isPublicFile: true });
+    expect(problems.some((p) => p.includes("VERIFIED"))).toBe(false);
   });
 
   it('rejects "calibrated" with fewer than 3 runs', () => {

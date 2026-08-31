@@ -8,7 +8,7 @@
   loose match).
 */
 import { describe, expect, it } from "vitest";
-import {lintObject, lintText, looseText, stripEmDashes, tidyProse } from "@shared/lint.ts";
+import {lintObject, lintText, looseQuoteInSource, looseText, stripEmDashes, tidyProse } from "@shared/lint.ts";
 
 describe("lintText: every banned pattern fires", () => {
   const bannedCases: [sample: string, label: string][] = [
@@ -237,5 +237,28 @@ describe("prose hygiene helpers", () => {
     const pitch = looseText("customers include Sarasota County, FL, and others");
     expect(pitch.includes(looseText("Sarasota County, FL"))).toBe(true);
     expect(pitch.includes(looseText("Sarasun County, FL"))).toBe(false);
+  });
+});
+
+describe("looseQuoteInSource: digit-boundary guard (the lost leading digit)", () => {
+  it("a quote starting mid-number never matches (0% inside 40%)", () => {
+    const src = looseText("delivers a 40% productivity increase and $17M annual savings");
+    expect(looseQuoteInSource(src, "0% productivity increase")).toBe(false);
+  });
+
+  it("the full number still matches", () => {
+    const src = looseText("delivers a 40% productivity increase and $17M annual savings");
+    expect(looseQuoteInSource(src, "40% productivity increase")).toBe(true);
+  });
+
+  it("a digit-led quote at the start of the source matches", () => {
+    const src = looseText("40% faster processing for permit review teams");
+    expect(looseQuoteInSource(src, "40% faster processing")).toBe(true);
+  });
+
+  it("non-digit quotes behave like plain containment", () => {
+    const src = looseText("customers include Sarasota County, FL, and others");
+    expect(looseQuoteInSource(src, "Sarasota County")).toBe(true);
+    expect(looseQuoteInSource(src, "Sarasun County")).toBe(false);
   });
 });

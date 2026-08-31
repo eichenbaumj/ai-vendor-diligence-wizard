@@ -4,13 +4,22 @@
   The pattern: the same marketing phrasing recurring across multiple
   low-authority websites that present as independent — content placed to be
   found by AI research tools. Detection is pure code over citation metadata
-  (never model judgment), and fires an AdvFinding, which caps the verdict at
-  Tier 2, so the false-positive bar is deliberately high:
+  (never model judgment), and fires an AdvFinding. ADV-04 is observational
+  and NEVER moves the verdict tier (tier.ts caps on injection-class codes
+  only): the vendor does not control what other sites publish, so a rival
+  planting copies must not be able to drag a verdict down. The
+  false-positive bar stays deliberately high anyway:
 
   - Only Class 3 citations count toward the network. Class 4 press wires
     syndicate identical releases as a matter of course, and a wire echoing a
     wire is ordinary vendor PR, not deception. Wires can carry the phrasing,
     but only sites presenting as independent make it a network.
+  - A passage that ALSO appears in a Class 4 wire citation is press-release
+    syndication by definition — reprints of a BusinessWire release on blogs
+    and local sites read as Class 3 (unknown host defaults there), and
+    before this exclusion they fired the detector on real funded companies
+    (Zencity, 2026-08-29). Any shingle seen in wire-carried text is
+    excluded from the network.
   - Vendor-controlled hosts never count: a vendor repeating its own tagline
     across its own properties is normal.
   - The phrasing must be a verbatim run of eight normalized tokens — long
@@ -20,7 +29,8 @@
     merely wrote into its narrative can never contribute to a match.
 
   The finding reports the observation with the hosts and the passage, never
-  a characterization of intent.
+  a characterization of intent, and says plainly that it does not change
+  the verdict.
 */
 import type { AdvFinding, Citation } from "./schemas.ts";
 
@@ -68,6 +78,19 @@ export function detectPlantedCorroboration(
   citations: Citation[],
   vendorDomains: string[],
 ): AdvFinding | null {
+  /* Wire-carried shingles first: any passage a Class 4 wire carries is
+     press-release text, and its reprints elsewhere are syndication, not a
+     planted network. */
+  const wireShingles = new Set<string>();
+  for (const c of citations) {
+    if (c.domain_class !== 4) continue;
+    if (c.cited_text === null) continue;
+    const tokens = normalizeText(c.cited_text);
+    for (let i = 0; i + SHINGLE_TOKENS <= tokens.length; i++) {
+      wireShingles.add(tokens.slice(i, i + SHINGLE_TOKENS).join(" "));
+    }
+  }
+
   /* shingle -> map of registrable domain -> one example URL */
   const shingleDomains = new Map<string, Map<string, string>>();
   const shingleText = new Map<string, string>();
@@ -82,6 +105,7 @@ export function detectPlantedCorroboration(
     for (let i = 0; i + SHINGLE_TOKENS <= tokens.length; i++) {
       const window = tokens.slice(i, i + SHINGLE_TOKENS);
       const key = window.join(" ");
+      if (wireShingles.has(key)) continue;
       let domains = shingleDomains.get(key);
       if (!domains) {
         domains = new Map();
@@ -102,7 +126,7 @@ export function detectPlantedCorroboration(
   const hosts = [...best.domains.keys()].slice(0, 4).join(", ");
   const passage = shingleText.get(best.key) ?? best.key;
   const detail =
-    `The same passage appears word for word on ${best.domains.size} unrelated sites (${hosts}): "${passage}". This repetition is reported as an observation for the reader to weigh.`.slice(
+    `The same passage appears word for word on ${best.domains.size} unrelated sites (${hosts}): "${passage}". Identical text often spreads through ordinary press-release syndication. This repetition is reported for the reader to weigh and does not change the verdict tier.`.slice(
       0,
       500,
     );

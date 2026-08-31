@@ -145,3 +145,23 @@ export function tidyProse(s: string, max: number): string {
 export function looseText(s: string): string {
   return s.toLowerCase().replace(/[^a-z0-9]/g, "");
 }
+
+/* Containment with a digit-boundary guard for quoted claims: a quote that
+   begins with a digit must not match inside a longer number in the source.
+   Plain containment let "0% productivity increase" pass against a source
+   that said "40% productivity increase" (a truncated leading digit,
+   observed live 2026-08-30), which breaks the promise that claims are
+   quoted verbatim. `sourceLoose` is the precomputed looseText of the
+   source document. */
+export function looseQuoteInSource(sourceLoose: string, quote: string): boolean {
+  const q = looseText(quote);
+  if (!q) return false;
+  let idx = sourceLoose.indexOf(q);
+  while (idx !== -1) {
+    const startsWithDigit = /^[0-9]/.test(q);
+    const prevIsDigit = idx > 0 && /[0-9]/.test(sourceLoose[idx - 1]);
+    if (!(startsWithDigit && prevIsDigit)) return true;
+    idx = sourceLoose.indexOf(q, idx + 1);
+  }
+  return false;
+}

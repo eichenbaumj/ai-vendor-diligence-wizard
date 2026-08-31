@@ -55,13 +55,19 @@ export async function checkDomainAge(
   const humanUrl = `https://lookup.icann.org/en/lookup?name=${encodeURIComponent(domain)}`;
 
   try {
-    const res = await resolveFetch(ctx)(
-      `https://rdap.org/domain/${encodeURIComponent(domain)}`,
-      {
+    /* rdap.org flakes routinely (most of QA run 1 on 2026-08-29). One quick
+       retry inside the check turns a bad minute into a result instead of a
+       coverage gap; the shared endpoint signal still bounds total time. */
+    const fetchOnce = () =>
+      resolveFetch(ctx)(`https://rdap.org/domain/${encodeURIComponent(domain)}`, {
         signal: ctx.signal,
         headers: { accept: "application/rdap+json, application/json" },
-      },
-    );
+      });
+    let res = await fetchOnce().catch(() => null);
+    if (res === null || (!res.ok && res.status !== 404)) {
+      await new Promise((r) => setTimeout(r, 800));
+      res = await fetchOnce();
+    }
 
     if (res.status === 404) {
       return {
@@ -81,7 +87,7 @@ export async function checkDomainAge(
         check_id: CHECK_ID,
         source: SOURCE,
         status: "coverage_limited",
-        summary: `The domain registration lookup for ${domain} was unavailable, so this check did not run.`,
+        summary: `The domain registration lookup for ${domain} was unavailable, so this check did not run. This does not count against the vendor.`,
         evidence_url: humanUrl,
         confidence: null,
         retrieved_at,
@@ -161,7 +167,7 @@ export async function checkDomainAge(
       check_id: CHECK_ID,
       source: SOURCE,
       status: "error",
-      summary: `We could not reach the domain registration records service, so this check did not run.`,
+      summary: `We could not reach the domain registration records service, so this check did not run. This does not count against the vendor.`,
       evidence_url: humanUrl,
       confidence: null,
       retrieved_at,

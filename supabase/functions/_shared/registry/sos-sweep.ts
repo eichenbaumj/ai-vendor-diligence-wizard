@@ -4,7 +4,13 @@
   docs/research/gap-the-tier-1-identity-gate-rests-on-50-sta.md).
 
   The verified free deterministic lanes (as of Aug 28, 2026):
-  - New York      data.ny.gov        n9v6-gdp6  (Active Corporations)
+  - New York      apps.dos.ny.gov public-inquiry API (ALL statuses, incl.
+                    dissolved entities, with the dissolution reason and date
+                    from the per-entity detail record; verified live
+                    2026-08-31). Falls back to data.ny.gov n9v6-gdp6, which
+                    covers ACTIVE corporations only — the active-only
+                    dataset made dissolutions structurally invisible until
+                    the Citymart miss (2026-08-29).
   - Colorado      data.colorado.gov  4ykn-tg5h  (Business Entities)
   - Connecticut   data.ct.gov        n7gp-d28j  (Business Registry Master)
   - Texas         data.texas.gov     9cir-efmm  (Active Franchise Taxpayers,
@@ -164,6 +170,55 @@ const ID_COLS = [
    These are informational, never alarm findings. */
 const LAPSE_STATUS = /non-?compliant|past due|delinquent|not in good standing/i;
 
+/* Affirmative end-of-registration designations. Only these can arm the
+   dissolution finding downstream (the affirmative-designation rule: vague
+   language like a bare "Inactive" never fires an adverse path). Mergers and
+   foreign-state withdrawals are deliberately EXCLUDED: an acquired company
+   merging out of a registry, or a company ending its authority in one
+   foreign state, is routine corporate housekeeping, not an end of the
+   business. */
+const AFFIRMATIVE_INACTIVE =
+  /voluntar\w*\s+dissol\w*|dissolution|dissolved|revoked|revocation|forfeit\w*|surrender\w*|terminat\w*/i;
+
+export interface DissolvedDesignation {
+  legal_name: string;
+  status: string;
+  reason: string | null;
+  effective_date: string | null;
+  record_id: string | null;
+  /* True when the record is the entity's HOME-state registration (a domestic
+     dissolution ends the company); false for foreign registrations; null
+     when the lane cannot tell. Downstream severity keys on this. */
+  domestic: boolean | null;
+}
+
+/* Detect an affirmative end-of-registration designation on an EXACT-match
+   record. Similarity matches never arm adverse findings (methodology match-
+   confidence rule), so callers only invoke this for exact matches. */
+export function detectDissolvedDesignation(args: {
+  legalName: string;
+  status: string | null;
+  reason?: string | null;
+  effectiveDate?: string | null;
+  recordId?: string | null;
+  domestic?: boolean | null;
+}): DissolvedDesignation | null {
+  const corpus = `${args.status ?? ""} ${args.reason ?? ""}`;
+  if (!AFFIRMATIVE_INACTIVE.test(corpus)) return null;
+  if (LAPSE_STATUS.test(corpus) && !AFFIRMATIVE_INACTIVE.test(args.reason ?? "")) {
+    /* A lapse status alongside no affirmative reason stays informational. */
+    if (!AFFIRMATIVE_INACTIVE.test(args.status ?? "")) return null;
+  }
+  return {
+    legal_name: args.legalName,
+    status: args.status ?? "",
+    reason: args.reason ?? null,
+    effective_date: args.effectiveDate ?? null,
+    record_id: args.recordId ?? null,
+    domestic: args.domestic ?? null,
+  };
+}
+
 function socrataQueryUrls(lane: SocrataLane, name: string): string[] {
   const qUrl = `${lane.datasetUrl}?$q=${encodeURIComponent(name)}&$limit=50`;
   const normalized = normalizeCompanyName(name).replace(/'/g, "''");
@@ -271,11 +326,21 @@ async function runSocrataLane(
         summary +=
           " A status note like this often reflects a late annual report filing, which is common at young companies. Treat it as informational.";
       }
+      /* Exact matches carrying an affirmative end-of-registration status
+         arm the dissolution surface downstream. */
+      const dissolved =
+        best.confidence === "exact"
+          ? detectDissolvedDesignation({
+              legalName: best.name,
+              status: best.status,
+              recordId: best.record_id,
+            })
+          : null;
       return {
         check_id: lane.checkId,
         source: lane.source,
         status: "hit",
-        summary,
+        summary: summary.slice(0, 490),
         evidence_url: lane.humanSearchUrl,
         confidence: best.confidence,
         retrieved_at: nowIso(ctx),
@@ -284,6 +349,7 @@ async function runSocrataLane(
           rejected_investment_vehicles: rejectedVehicles,
           rejected_product_only: rejectedProductOnly,
           queries_run: queriesRun,
+          ...(dissolved ? { dissolved } : {}),
         },
       };
     }
@@ -303,6 +369,194 @@ async function runSocrataLane(
     };
   } catch {
     return errorCheck(lane.checkId, lane.source, lane.humanSearchUrl, ctx);
+  }
+}
+
+/* ------------------------------------------------- New York DOS lane */
+
+/* The DOS public-inquiry API behind apps.dos.ny.gov covers ALL entity
+   statuses (the open-data active-corps dataset structurally hides
+   dissolved entities), and its per-entity detail record carries the status
+   reason and effective date. Undocumented but public: it is the JSON
+   backend of the state's own search page, verified live 2026-08-31 with
+   the Citymart dissolution record. Any failure falls back to the Socrata
+   active-corps lane, so the failure posture never gets worse than the old
+   behavior. */
+const NY_DOS_SEARCH_URL =
+  "https://apps.dos.ny.gov/PublicInquiryWeb/api/PublicInquiry/GetComplexSearchMatchingEntities";
+const NY_DOS_DETAIL_URL =
+  "https://apps.dos.ny.gov/PublicInquiryWeb/api/PublicInquiry/GetEntityRecordByID";
+const NY_DOS_SOURCE = "New York Department of State (public inquiry service)";
+
+async function postNyDos(
+  url: string,
+  body: unknown,
+  ctx: RegistryCtx,
+): Promise<unknown> {
+  const fetchFn = ctx.fetchFn ?? globalThis.fetch;
+  const res = await fetchFn(url, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+    signal: ctx.signal,
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return await res.json();
+}
+
+async function runNyDosLane(
+  lane: SocrataLane,
+  names: string[],
+  productTokens: string[] | undefined,
+  ctx: RegistryCtx,
+): Promise<RegistryCheck> {
+  try {
+    const matches: LaneMatch[] = [];
+    const rejectedVehicles: string[] = [];
+    const rejectedProductOnly: string[] = [];
+    const queriesRun: string[] = [];
+    for (const name of names) {
+      queriesRun.push(`${NY_DOS_SEARCH_URL}?searchValue=${encodeURIComponent(name)}`);
+      const payload = await postNyDos(
+        NY_DOS_SEARCH_URL,
+        {
+          searchValue: name,
+          searchByTypeIndicator: "EntityName",
+          searchExpressionIndicator: "BeginsWith",
+          entityStatusIndicator: "AllStatuses",
+          entityTypeIndicator: [
+            "Corporation",
+            "LimitedLiabilityCompany",
+            "LimitedPartnership",
+            "LimitedLiabilityPartnership",
+          ],
+          listPaginationInfo: { listStartRecord: 1, listEndRecord: 50 },
+        },
+        ctx,
+      );
+      const root = asRecord(payload) ?? {};
+      for (const entry of Array.isArray(root["entitySearchResultList"])
+        ? (root["entitySearchResultList"] as unknown[])
+        : []) {
+        const rec = asRecord(entry) ?? {};
+        const rowName = firstString(rec, ["entityName"]);
+        if (!rowName) continue;
+        if (isProductOnlyName(rowName, productTokens)) {
+          if (!rejectedProductOnly.includes(rowName)) rejectedProductOnly.push(rowName);
+          continue;
+        }
+        const match = matchCompanyName(rowName, names);
+        if (match.kind === "vehicle_rejected") {
+          if (!rejectedVehicles.includes(rowName)) rejectedVehicles.push(rowName);
+          continue;
+        }
+        if (match.kind !== "match") continue;
+        if (matches.some((m) => m.name === rowName)) continue;
+        matches.push({
+          name: rowName,
+          status: firstString(rec, ["entityStatus"]),
+          date: trimDate(firstString(rec, ["initialFilingDate"])),
+          record_id: firstString(rec, ["dosID"]),
+          confidence: match.confidence,
+        });
+      }
+      if (matches.some((m) => m.confidence === "exact")) break;
+    }
+
+    if (matches.length === 0) {
+      /* The DOS search is begins-with; the Socrata full-text lane can still
+         catch mid-name matches among active corporations. */
+      const socrata = await runSocrataLane(lane, names, productTokens, ctx);
+      if (socrata.status === "hit") return socrata;
+      return {
+        check_id: lane.checkId,
+        source: NY_DOS_SOURCE,
+        status: "definitive_miss",
+        summary:
+          "We searched New York's Department of State corporation records, including inactive and dissolved entities, and did not find this company. Companies only register in the states where they do business, so a miss in one state is normal and not a red flag.",
+        evidence_url: lane.humanSearchUrl,
+        confidence: null,
+        retrieved_at: nowIso(ctx),
+        data: {
+          rejected_investment_vehicles: rejectedVehicles,
+          rejected_product_only: rejectedProductOnly,
+          queries_run: queriesRun,
+          all_statuses_searched: true,
+        },
+      };
+    }
+
+    const best = matches.find((m) => m.confidence === "exact") ?? matches[0];
+    /* The detail record carries the status reason ("Voluntarily Dissolved")
+       and the effective date; it is additive, so its failure never sinks
+       the search hit. */
+    let reason: string | null = null;
+    let inactiveDate: string | null = null;
+    let entityType: string | null = null;
+    if (best.record_id) {
+      try {
+        const payload = await postNyDos(
+          NY_DOS_DETAIL_URL,
+          { SearchID: best.record_id, EntityName: best.name, AssumedNameFlag: "false" },
+          ctx,
+        );
+        const info = asRecord(asRecord(payload)?.["entityGeneralInfo"]) ?? {};
+        reason = firstString(info, ["reasonForStatus"]);
+        inactiveDate = trimDate(firstString(info, ["inactiveDate"]));
+        entityType = firstString(info, ["entityType"]);
+        const detailStatus = firstString(info, ["entityStatus"]);
+        if (detailStatus) best.status = detailStatus;
+      } catch {
+        /* keep the search-level fields */
+      }
+    }
+
+    const dissolved =
+      best.confidence === "exact"
+        ? detectDissolvedDesignation({
+            legalName: best.name,
+            status: best.status,
+            reason,
+            effectiveDate: inactiveDate,
+            recordId: best.record_id,
+            domestic: entityType ? /domestic/i.test(entityType) : null,
+          })
+        : null;
+
+    let summary = `New York business records include an entry under a ${
+      best.confidence === "exact" ? "matching" : "similar"
+    } name: ${best.name}`;
+    if (best.date) summary += `, registered ${best.date}`;
+    if (best.status) summary += `, status listed as "${best.status}"`;
+    if (reason) summary += ` (${reason}${inactiveDate ? `, effective ${inactiveDate}` : ""})`;
+    summary += ". The identity check weighs whether this record belongs to this vendor.";
+    if (best.status && LAPSE_STATUS.test(best.status)) {
+      summary +=
+        " A status note like this often reflects a late annual report filing, which is common at young companies. Treat it as informational.";
+    }
+
+    return {
+      check_id: lane.checkId,
+      source: NY_DOS_SOURCE,
+      status: "hit",
+      summary: summary.slice(0, 490),
+      evidence_url: lane.humanSearchUrl,
+      confidence: best.confidence,
+      retrieved_at: nowIso(ctx),
+      data: {
+        matches,
+        rejected_investment_vehicles: rejectedVehicles,
+        rejected_product_only: rejectedProductOnly,
+        queries_run: queriesRun,
+        ...(reason ? { reason_for_status: reason } : {}),
+        ...(inactiveDate ? { inactive_date: inactiveDate } : {}),
+        ...(dissolved ? { dissolved } : {}),
+      },
+    };
+  } catch {
+    /* DOS API unavailable: the active-corps open-data lane still answers
+       for active entities. */
+    return runSocrataLane(lane, names, productTokens, ctx);
   }
 }
 
@@ -343,6 +597,9 @@ export async function checkSosSweep(
           data: null,
         });
       }
+      if (lane.checkId === "sos_ny") {
+        return runNyDosLane(lane, names, productTokens, ctx);
+      }
       return runSocrataLane(lane, names, productTokens, ctx);
     }),
   );
@@ -358,6 +615,12 @@ function classifyIdentifier(
   check: RegistryCheck,
 ): IdentifierClass | "rdap_discovered" | null {
   if (check.status !== "hit") return null;
+  /* Only exact-confidence matches can mint identity. A name-similarity hit
+     is a candidate record, not this vendor: collision matches were minting
+     the two-identifier floor live ("17A" earned identity from 17A
+     WASHINGTON STREET, LLC on 2026-08-29), which manufactures verdict
+     eligibility, not just decoration. */
+  if (check.confidence === "name_similarity") return null;
   const id = check.check_id;
   if (id.startsWith("sos_")) return "sos";
   if (id === "sam_exclusions") return null;
@@ -430,6 +693,55 @@ export function resolveIdentity(checks: RegistryCheck[]): {
       "Domain registration record (RDAP), for a website matched to the vendor's name",
     );
   }
+
+  /* Availability fallback (the Govra tier cliff, 2026-08-30): when the RDAP
+     lookup itself was UNAVAILABLE (never when it definitively found the
+     domain unregistered) and exactly one registry identifier exists, live
+     web infrastructure can stand in as the second identifier: certificate
+     transparency history or working mail records are independent, code-read
+     evidence the vendor's domain operates. Same second-identifier-only rule
+     as discovered domains, and an unconfirmed discovered domain never
+     qualifies. A vendor's verdict must not drop tiers because a third-party
+     lookup had a bad minute; coverage-limited never counts as not-found,
+     including for identity. */
+  if (identifiers.length === 1) {
+    const confirmedProvenance = (c: RegistryCheck): boolean => {
+      const d = (c.data ?? {}) as {
+        discovered_domain?: boolean;
+        confirmed_name_match?: boolean;
+      };
+      return !d.discovered_domain || d.confirmed_name_match === true;
+    };
+    const rdapCheck = checks.find((c) => c.check_id === "rdap_domain_age");
+    const rdapUnavailable =
+      rdapCheck !== undefined &&
+      (rdapCheck.status === "error" || rdapCheck.status === "coverage_limited") &&
+      confirmedProvenance(rdapCheck);
+    if (rdapUnavailable) {
+      const crtsh = checks.find(
+        (c) =>
+          c.check_id === "crtsh_subdomains" &&
+          c.status === "hit" &&
+          confirmedProvenance(c),
+      );
+      const dns = checks.find(
+        (c) =>
+          c.check_id === "dns_email_hygiene" &&
+          c.status === "hit" &&
+          ((c.data ?? {}) as { has_mx?: boolean }).has_mx === true &&
+          confirmedProvenance(c),
+      );
+      const infra = crtsh ?? dns;
+      if (infra) {
+        identifiers.push(
+          crtsh
+            ? "Certificate transparency records for the vendor's domain, used because the domain registration lookup was unavailable this run"
+            : "Working mail records (DNS) for the vendor's domain, used because the domain registration lookup was unavailable this run",
+        );
+      }
+    }
+  }
+
   return {
     identity_resolved: identifiers.length >= 2,
     identifiers_found: identifiers,

@@ -736,3 +736,57 @@ describe("evaluateMonotonicPairs", () => {
     expect(results).toHaveLength(0);
   });
 });
+
+describe("ledger expectations: optional presence + forbidden_result_in (v1.4)", () => {
+  const base = {
+    ledger: [
+      {
+        match: { id: "usaspending" },
+        presence: "optional",
+        forbidden_result_in: ["VERIFIED"],
+        hardness: "hard",
+      },
+    ],
+  };
+
+  it("passes when the row is absent (vacuous), with no presence assertion", () => {
+    const cell = cellFrom(meridian, { ledger_map: {} });
+    const out = evaluateExpectations(makeEntry(base), cell);
+    const fr = out.find((r) => r.code === "ledger.usaspending.forbidden_result");
+    expect(fr?.pass).toBe(true);
+    expect(out.some((r) => r.code === "ledger.usaspending.presence")).toBe(false);
+  });
+
+  it("passes when the row is present with an allowed result", () => {
+    const cell = cellFrom(meridian, {
+      ledger_map: {
+        usaspending: {
+          result: "COULD_NOT_VERIFY",
+          evidence_tier: "T4",
+          severity: null,
+          methodology_ref: "d2-1",
+        },
+      },
+    });
+    const out = evaluateExpectations(makeEntry(base), cell);
+    const fr = out.find((r) => r.code === "ledger.usaspending.forbidden_result");
+    expect(fr?.pass).toBe(true);
+  });
+
+  it("fails hard when the row carries a forbidden result", () => {
+    const cell = cellFrom(meridian, {
+      ledger_map: {
+        usaspending: {
+          result: "VERIFIED",
+          evidence_tier: "T1",
+          severity: null,
+          methodology_ref: "d2-1",
+        },
+      },
+    });
+    const out = evaluateExpectations(makeEntry(base), cell);
+    const fr = out.find((r) => r.code === "ledger.usaspending.forbidden_result");
+    expect(fr?.pass).toBe(false);
+    expect(fr?.hardness).toBe("hard");
+  });
+});

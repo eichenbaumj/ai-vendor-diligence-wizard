@@ -22,6 +22,24 @@
 import type { PitchExtract } from "./schemas.ts";
 import { norm, isNamedOrganization } from "./text-match.ts";
 
+/* A degenerate extraction: a non-trivial pitch that yielded no claims, no
+   people, and no customers is far more likely a flaky parse than a truly
+   empty pitch (observed ~1-in-6 on PDF text layers, where a thin extract
+   dropped a clean twin from tier 1 to tier 0 and flipped the monotonic
+   pair). The caller retries the extractor once; a second degenerate result
+   is accepted as genuine. */
+export function isDegenerateExtract(
+  extract: PitchExtract,
+  sourceTextLength: number,
+): boolean {
+  return (
+    sourceTextLength >= 400 &&
+    extract.claims.length === 0 &&
+    extract.people.length === 0 &&
+    extract.named_customers.length === 0
+  );
+}
+
 /* Claim types that may cross from site text into the pipeline. Compliance
    claims deliberately cross: an affirmative "FedRAMP Authorized" on the
    public site that is absent from the official feed is a registry

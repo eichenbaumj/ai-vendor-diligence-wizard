@@ -21,8 +21,10 @@ export const FINDING_IDS = [
 ] as const;
 export type FindingId = (typeof FINDING_IDS)[number];
 
-/* Templated ids: `perf-<claimId>` performance findings match this prefix. */
-export const FINDING_PREFIXES = ["perf-"] as const;
+/* Templated ids: `perf-<claimId>` performance findings and
+   `dissolved-<entity-slug>` end-of-registration findings match these
+   prefixes. */
+export const FINDING_PREFIXES = ["perf-", "dissolved-"] as const;
 
 export function isKnownFindingId(id: string): boolean {
   return (

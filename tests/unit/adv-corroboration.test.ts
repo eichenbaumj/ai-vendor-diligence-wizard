@@ -133,3 +133,31 @@ describe("detectPlantedCorroboration", () => {
     expect(finding).toBeNull();
   });
 });
+
+describe("wire-syndication discrimination (the Zencity class, 2026-08-29)", () => {
+  it("a passage also carried by a class-4 wire never forms a network", () => {
+    const finding = detectPlantedCorroboration(
+      [
+        cite("https://www.businesswire.com/news/home/funding", 4, PLANTED),
+        cite("https://local-biz-blog.example.com/reprint", 3, PLANTED),
+        cite("https://startup-news.example.net/reprint", 3, PLANTED),
+      ],
+      ["acmeai.com"],
+    );
+    expect(finding).toBeNull();
+  });
+
+  it("a genuinely planted passage absent from wires still fires", () => {
+    const finding = detectPlantedCorroboration(
+      [
+        cite("https://www.businesswire.com/news/home/funding", 4, "A completely different press release about series funding rounds today"),
+        cite("https://gov-tech-insider.example.com/review", 3, PLANTED),
+        cite("https://civic-software-daily.example.org/roundup", 3, PLANTED),
+      ],
+      ["acmeai.com"],
+    );
+    expect(finding?.code).toBe("ADV-04");
+    expect(finding?.detail).toContain("does not change the verdict tier");
+    expect(finding?.detail).toContain("syndication");
+  });
+});

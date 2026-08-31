@@ -46,7 +46,7 @@ import { STATE_ITEMS } from "./state-items.ts";
 import type { S5UserInput } from "./prompts/s5-structure.ts";
 import * as registry from "./registry/index.ts";
 
-export const METHODOLOGY_VERSION = "1.3";
+export const METHODOLOGY_VERSION = "1.4";
 
 const TAIL_TIMEOUTS = {
   registryPerEndpoint: 8_000,
@@ -351,7 +351,7 @@ export async function runPipelineTail(
     /* The identity miss-row explains the tool's own registry coverage, and
        model phrasing has inverted that fact live ("these six states do not
        offer free automated searches" about exactly the states that do).
-       The clean-miss case is templated in code; the second-identifier
+       Both miss variants are templated in code; the second-identifier
        variant keeps model phrasing for its nuance. */
     if (
       r.id === "identity" &&
@@ -366,6 +366,30 @@ export async function runPipelineTail(
         note: identityMissNote(r.sources[0]?.retrieved_at ?? generatedAt, searchedEdgar),
       };
     }
+    if (
+      r.id === "identity" &&
+      r.result === "COVERAGE_LIMITED" &&
+      r.what_checked === IDENTITY_WHAT_CHECKED
+    ) {
+      /* The coverage-limited variant enumerates which registries actually
+         ran: model phrasing claimed searches of exactly the lanes that were
+         could_not_check (Florida, 2026-08-29), the inverted-coverage class
+         this template family exists to prevent. */
+      const searchedEdgar = r.sources.some((s) => /edgar/i.test(s.title ?? ""));
+      return {
+        ...r,
+        note: identityCoverageLimitedNote(
+          checks,
+          searchedEdgar,
+          r.sources[0]?.retrieved_at ?? generatedAt,
+        ),
+      };
+    }
+    /* Rows assemble already templated in code (registry statuses, the
+       dissolution surface, role-change conflicts, domain age, similarity
+       candidates) keep their notes: load-bearing self-descriptions are
+       never model-phrased. */
+    if (r.note !== "") return r;
     const modelNote = narrative.value?.row_notes.find((n) => n.id === r.id)?.note;
     return {
       ...r,
@@ -395,9 +419,13 @@ export async function runPipelineTail(
       rationale: decision.rationale.slice(0, 8).map((r) => r.slice(0, 400)),
     },
     ledger: ledger.map((r) => ({ ...r, sources: firewallSources(r.sources) })),
-    green_flags: (narrative.value?.green_flags ?? skeleton.greenFlagFacts.map(
-      (g) => `${g.fact} (${g.source_name}, checked ${g.date})`,
-    ))
+    green_flags: enforceRegistryStatusFlags(
+      narrative.value?.green_flags ??
+        skeleton.greenFlagFacts.map(
+          (g) => `${g.fact} (${g.source_name}, checked ${g.date})`,
+        ),
+      skeleton.greenFlagFacts,
+    )
       .slice(0, 15)
       .map((g) => tidyProse(g, 400)),
     adv_findings: adv.slice(0, 6),
@@ -588,6 +616,83 @@ export function identityMissNote(retrievedAt: string, searchedEdgar: boolean): s
     "We could not reach SEC EDGAR, the federal filing database, for this report; the honesty panel says so. Absence here is not proof the company does not exist: most states do not offer automated registry search. " +
     "Ask the vendor for its state of registration and search that state's official registry directly; it takes about a minute."
   );
+}
+
+/* Deterministic note for the identity row when at least one registry lane
+   was UNAVAILABLE and the reachable ones found nothing. Names only what
+   actually ran; the unreachable lanes are pointed at the honesty panel. */
+const SOS_STATE_NAMES: Record<string, string> = {
+  sos_ny: "New York",
+  sos_co: "Colorado",
+  sos_ct: "Connecticut",
+  sos_tx: "Texas",
+  sos_or: "Oregon",
+  sos_fl: "Florida",
+};
+
+export function identityCoverageLimitedNote(
+  checks: RegistryCheck[],
+  searchedEdgar: boolean,
+  retrievedAt: string,
+): string {
+  const date = retrievedAt.slice(0, 10);
+  const ran: string[] = [];
+  const unavailable: string[] = [];
+  for (const [id, name] of Object.entries(SOS_STATE_NAMES)) {
+    const check = checks.find((c) => c.check_id === id);
+    if (!check) continue;
+    if (check.status === "definitive_miss") ran.push(name);
+    else if (check.status === "coverage_limited" || check.status === "error") {
+      unavailable.push(name);
+    }
+  }
+  const unavailablePart =
+    unavailable.length > 0
+      ? `${unavailable.join(", ")} could not be checked this run; the honesty panel says why. `
+      : "";
+  const closing =
+    "Absence here is not proof the company does not exist: many firms never file with the SEC, and most states do not offer automated registry search. Ask the vendor for its state of registration and search that state's official registry directly; it takes about a minute.";
+  if (ran.length === 0 && !searchedEdgar) {
+    return `We could not reach the state business registries or SEC EDGAR this run, so no definitive registration search completed; the honesty panel lists what was unavailable. ${closing}`.slice(0, 700);
+  }
+  if (searchedEdgar) {
+    return `We checked SEC EDGAR, the federal filing database that covers venture-funded companies in every state${
+      ran.length > 0 ? `, plus the state business registries we could reach (${ran.join(", ")})` : ""
+    }, on ${date}, and did not find a registered entity under any name the pitch uses. ${unavailablePart}${closing}`.slice(0, 700);
+  }
+  return `We searched the state business registries we could reach (${ran.join(", ")}) on ${date} and did not find a registered entity under any name the pitch uses. ${unavailablePart}We could not reach SEC EDGAR, the federal filing database, for this report; the honesty panel says so. ${closing}`.slice(0, 700);
+}
+
+/* Registry-status legibility for green flags: a model-phrased flag about a
+   program listing is replaced by the code-templated fact, which carries the
+   exact status level ("Progressing" is not "Authorized"; "Provisional" is
+   not "Level 2"). A program flag with no underlying fact is dropped. */
+const PROGRAM_FLAG_PATTERNS: RegExp[] = [
+  /fedramp/i,
+  /govramp|stateramp/i,
+  /tx-?ramp/i,
+  /sourcewell/i,
+];
+
+export function enforceRegistryStatusFlags(
+  flags: string[],
+  facts: { fact: string; source_name: string; date: string }[],
+): string[] {
+  let out = [...flags];
+  for (const re of PROGRAM_FLAG_PATTERNS) {
+    const fact = facts.find((f) => re.test(f.fact));
+    const templated = fact
+      ? `${fact.fact} (${fact.source_name}, checked ${fact.date})`
+      : null;
+    let replaced = false;
+    out = out.flatMap((f) => {
+      if (!re.test(f)) return [f];
+      if (!templated || replaced) return [];
+      replaced = true;
+      return [templated];
+    });
+  }
+  return out;
 }
 
 async function runStructurePass(

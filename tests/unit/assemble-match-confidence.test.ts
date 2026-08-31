@@ -1,0 +1,318 @@
+/*
+  Tests for the v1.4 match-confidence rules in report assembly (the
+  wrong-namesake defect class, 2026-08-29 live reads):
+
+  - Favorable credit requires an EXACT match: a name-similarity USAspending
+    recipient produces a labeled candidate row, never a green flag, a green
+    dimension, or the startup bar.
+  - The identity surfaces name a legal entity only from an exact-confidence
+    record.
+  - An affirmative end-of-registration designation on an exact SoS match
+    becomes a labeled OFFICIAL_RECORD_FOUND row and a finding (domestic =
+    CRITICAL), with record-only language.
+  - Registry-feed rows carry code-templated notes with the exact status,
+    and green-flag facts state the status level.
+  - Person titles are attributed, and dated role-change coverage produces a
+    code-templated conflict note instead of a re-asserted title.
+*/
+import { describe, expect, it } from "vitest";
+import { assemble, type AssembleInput } from "@shared/assemble.ts";
+import { lintText } from "@shared/lint.ts";
+import type { Citation, PitchExtract, RegistryCheck } from "@shared/schemas.ts";
+
+const AT = "2026-08-30T00:00:00.000Z";
+
+function baseExtract(over: Partial<PitchExtract> = {}): PitchExtract {
+  return {
+    vendor_name_candidates: ["17A"],
+    domains: [],
+    sender_email: null,
+    people: [],
+    named_customers: [],
+    claims: [],
+    use_case_description: "Consulting for local government.",
+    urgency_language: [],
+    state_mentioned: null,
+    injection_screen: {
+      injection_suspected: false,
+      addressed_to_ai: false,
+      suspicious_spans: [],
+    },
+    ...over,
+  };
+}
+
+function check(over: Partial<RegistryCheck> & { check_id: string }): RegistryCheck {
+  return {
+    source: "Test source",
+    status: "hit",
+    summary: "Test summary.",
+    evidence_url: "https://example.gov/record",
+    confidence: "exact",
+    retrieved_at: AT,
+    data: null,
+    ...over,
+  };
+}
+
+function input(over: Partial<AssembleInput> = {}): AssembleInput {
+  return {
+    extract: baseExtract(),
+    checks: [],
+    identity: { identity_resolved: false, identifiers_found: [] },
+    citations: [],
+    adv_findings: [],
+    sector: { pack_ids: [], elevated: false, overlay_reason: null, state_items: [] },
+    packs: {},
+    resolvable: true,
+    research_partial: false,
+    generated_at: AT,
+    ...over,
+  };
+}
+
+describe("USAspending favorable credit requires an exact match", () => {
+  const similarityUsasp = check({
+    check_id: "usaspending_awards",
+    source: "USAspending.gov",
+    summary:
+      "USAspending.gov shows 2 federal contract awards to a recipient named 17A WASHINGTON STREET, LLC in the last five years. The identity check weighs the name match.",
+    confidence: "name_similarity",
+  });
+
+  it("a similarity recipient is a labeled candidate row, never credit", () => {
+    const out = assemble(input({ checks: [similarityUsasp] }));
+    const row = out.ledger.find((r) => r.methodology_ref === "d2-1");
+    expect(row).toBeDefined();
+    expect(row!.result).toBe("COULD_NOT_VERIFY");
+    expect(row!.severity).toBeNull();
+    expect(row!.match_confidence).toBe("name_similarity");
+    /* The candidate-framed check summary is the note, code-templated. */
+    expect(row!.note).toContain("17A WASHINGTON STREET, LLC");
+    expect(out.tierInputs.green_dimensions).not.toContain("D2");
+    expect(out.tierInputs.startup_bar_met).toBe(false);
+    expect(out.greenFlagFacts.some((f) => /federal payment/i.test(f.fact))).toBe(false);
+  });
+
+  it("an exact recipient still earns the verified row and green flag", () => {
+    const out = assemble(
+      input({ checks: [{ ...similarityUsasp, confidence: "exact" }] }),
+    );
+    const row = out.ledger.find((r) => r.methodology_ref === "d2-1");
+    expect(row!.result).toBe("VERIFIED");
+    expect(row!.match_confidence).toBe("exact");
+    expect(out.tierInputs.green_dimensions).toContain("D2");
+  });
+});
+
+describe("identity surfaces name entities only from exact records", () => {
+  it("a similarity SoS hit never puts a legal name on the green flag", () => {
+    const sosSimilarity = check({
+      check_id: "sos_ny",
+      source: "New York Department of State (public inquiry service)",
+      confidence: "name_similarity",
+      data: { matches: [{ name: "17A WASHINGTON STREET, LLC" }] },
+    });
+    /* Identity resolved through other identifiers (e.g. EDGAR + RDAP). */
+    const out = assemble(
+      input({
+        checks: [sosSimilarity],
+        identity: {
+          identity_resolved: true,
+          identifiers_found: ["SEC EDGAR filing", "Domain registration record (RDAP)"],
+        },
+      }),
+    );
+    const flag = out.greenFlagFacts.find((f) => /registered legal entity/i.test(f.fact));
+    expect(flag).toBeDefined();
+    expect(flag!.fact).not.toContain("17A WASHINGTON STREET");
+  });
+});
+
+describe("dissolution designations (the Citymart class)", () => {
+  const dissolvedNy = check({
+    check_id: "sos_ny",
+    source: "New York Department of State (public inquiry service)",
+    confidence: "exact",
+    summary:
+      'New York business records include an entry under a matching name: CITYMART US INC., registered 2014-08-27, status listed as "Inactive" (Voluntarily Dissolved, effective 2022-12-30). The identity check weighs whether this record belongs to this vendor.',
+    data: {
+      dissolved: {
+        legal_name: "CITYMART US INC.",
+        status: "Inactive",
+        reason: "Voluntarily Dissolved",
+        effective_date: "2022-12-30",
+        record_id: "4628074",
+        domestic: true,
+      },
+    },
+  });
+
+  it("a domestic dissolution becomes a CRITICAL record row and finding", () => {
+    const out = assemble(
+      input({
+        extract: baseExtract({ vendor_name_candidates: ["Citymart"] }),
+        checks: [dissolvedNy],
+      }),
+    );
+    const row = out.ledger.find((r) => r.id.startsWith("dissolved-"));
+    expect(row).toBeDefined();
+    expect(row!.result).toBe("OFFICIAL_RECORD_FOUND");
+    expect(row!.severity).toBe("CRITICAL");
+    expect(row!.evidence_tier).toBe("T1");
+    expect(row!.match_confidence).toBe("exact");
+    expect(row!.note).toContain("Voluntarily Dissolved");
+    expect(row!.note).toContain("2022-12-30");
+    /* Record-only language: never failure or illegitimacy framing. */
+    expect(lintText(row!.note).filter((v) => v.kind === "banned")).toHaveLength(0);
+    const finding = out.tierInputs.findings.find((f) => f.id.startsWith("dissolved-"));
+    expect(finding).toBeDefined();
+    expect(finding!.severity).toBe("CRITICAL");
+    /* The gap question asks for the contracting entity. */
+    expect(out.questions.some((q) => q.id === "gap-dissolved")).toBe(true);
+  });
+
+  it("a non-domestic designation stays HIGH", () => {
+    const foreign = {
+      ...dissolvedNy,
+      data: {
+        dissolved: {
+          ...(dissolvedNy.data as { dissolved: Record<string, unknown> }).dissolved,
+          domestic: false,
+        },
+      },
+    };
+    const out = assemble(input({ checks: [foreign] }));
+    const finding = out.tierInputs.findings.find((f) => f.id.startsWith("dissolved-"));
+    expect(finding!.severity).toBe("HIGH");
+  });
+});
+
+describe("registry-feed rows carry exact status in code-templated copy", () => {
+  const govrampHit = check({
+    check_id: "govramp",
+    source: "GovRAMP",
+    summary:
+      "The GovRAMP participant list includes Tyler Technologies with status Progressing. Note that GovRAMP has several levels; the status shown here is the one that counts, and membership alone is not a security verification.",
+    data: {
+      matches: [{ provider: "Tyler Technologies", status: "Progressing", confidence: "exact" }],
+      claimed: false,
+    },
+  });
+
+  it("the row note is the check summary and the fact states the status", () => {
+    const out = assemble(
+      input({
+        extract: baseExtract({ vendor_name_candidates: ["Tyler Technologies"] }),
+        checks: [govrampHit],
+      }),
+    );
+    const row = out.ledger.find((r) => r.methodology_ref === "d3-2");
+    expect(row!.note).toContain("status Progressing");
+    const fact = out.greenFlagFacts.find((f) => /GovRAMP/i.test(f.fact));
+    expect(fact).toBeDefined();
+    expect(fact!.fact).toContain('with status "Progressing"');
+  });
+
+  it("a similarity feed match carries the listed name label in the fact", () => {
+    const similar = {
+      ...govrampHit,
+      confidence: "name_similarity" as const,
+      data: {
+        matches: [
+          { provider: "Accela Government Solutions", status: "Ready", confidence: "name_similarity" },
+        ],
+        claimed: false,
+      },
+    };
+    const out = assemble(
+      input({
+        extract: baseExtract({ vendor_name_candidates: ["Accela"] }),
+        checks: [similar],
+      }),
+    );
+    const fact = out.greenFlagFacts.find((f) => /GovRAMP/i.test(f.fact));
+    expect(fact!.fact).toContain("similar name Accela Government Solutions");
+    const row = out.ledger.find((r) => r.methodology_ref === "d3-2");
+    expect(row!.match_confidence).toBe("name_similarity");
+  });
+});
+
+describe("person titles are attributed; role-change coverage is dated", () => {
+  const bookman = { name: "Zac Bookman", title: "CEO" };
+  const successionCite: Citation = {
+    url: "https://www.govtech.com/opengov-appoints-new-ceo",
+    title: "OpenGov Appoints New CEO",
+    cited_text:
+      "OpenGov announced Thiago Sa Freire will succeed Zac Bookman as chief executive.",
+    retrieved_at: AT,
+    domain_class: 2,
+  };
+
+  it("the conflict note is code-templated and never re-asserts the title", () => {
+    const out = assemble(
+      input({
+        extract: baseExtract({
+          vendor_name_candidates: ["OpenGov"],
+          people: [bookman],
+          claims: [
+            { id: "clm-1", type: "team", quote: "CEO Zac Bookman", subject: "Zac Bookman" },
+          ],
+        }),
+        citations: [successionCite],
+        pitch_person_count: 1,
+      }),
+    );
+    const row = out.ledger.find((r) => r.methodology_ref === "d5-1");
+    expect(row).toBeDefined();
+    expect(row!.note).toContain("described in the pitch as CEO");
+    expect(row!.note).toContain("discusses a change in the CEO role");
+    expect(row!.note).toContain("confirm who holds the title today");
+    const flag = out.greenFlagFacts.find((f) => f.fact.startsWith("Zac Bookman"));
+    expect(flag).toBeDefined();
+    expect(flag!.fact).toContain("described in the pitch as CEO");
+    expect(flag!.fact).not.toMatch(/Zac Bookman \(CEO\)/);
+  });
+
+  it("no role-change coverage leaves the note to the narrative pass", () => {
+    const quietCite: Citation = {
+      ...successionCite,
+      title: "OpenGov expands Ohio work",
+      cited_text: "Zac Bookman of OpenGov discussed the expansion.",
+    };
+    const out = assemble(
+      input({
+        extract: baseExtract({
+          vendor_name_candidates: ["OpenGov"],
+          people: [bookman],
+        }),
+        citations: [quietCite],
+        pitch_person_count: 1,
+      }),
+    );
+    const row = out.ledger.find((r) => r.methodology_ref === "d5-1");
+    expect(row!.result).toBe("VERIFIED");
+    expect(row!.note).toBe("");
+  });
+});
+
+describe("domain-age rows on claim-less runs", () => {
+  it("the row says no claims existed and the note is the check summary", () => {
+    const rdap = check({
+      check_id: "rdap_domain_age",
+      source: "Domain registration records (RDAP)",
+      summary: "The domain govra.com was registered in March 2014.",
+      data: {
+        registered: true,
+        registration_date: "2014-03-01T00:00:00.000Z",
+        registered_year: 2014,
+        claimed_year: null,
+        contradiction: false,
+      },
+    });
+    const out = assemble(input({ checks: [rdap] }));
+    const row = out.ledger.find((r) => r.methodology_ref === "d1-4");
+    expect(row!.what_checked).toContain("no age or history claims were made");
+    expect(row!.note).toBe("The domain govra.com was registered in March 2014.");
+  });
+});

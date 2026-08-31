@@ -76,7 +76,7 @@ export const REGISTRY_MANIFEST: Array<{
   },
   {
     check_id: "sos_ny",
-    label: "New York business registry (open data)",
+    label: "New York business registry (Department of State, all statuses)",
     dimension: "D1",
   },
   {

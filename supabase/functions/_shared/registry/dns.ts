@@ -216,7 +216,7 @@ export async function checkEmailHygiene(
       check_id: CHECK_ID,
       source: SOURCE,
       status: "error",
-      summary: `We could not reach the DNS lookup service, so we could not check this domain's email setup.`,
+      summary: `We could not reach the DNS lookup service, so we could not check this domain's email setup. This does not count against the vendor.`,
       evidence_url: humanUrl,
       confidence: null,
       retrieved_at,

@@ -263,8 +263,11 @@ describe("checkSosSweep: mechanics", () => {
         now: NOW,
       },
     );
-    expect(requests.length).toBeGreaterThan(0);
-    for (const r of requests) {
+    /* The token is a Socrata credential: only the data.* dataset requests
+       carry it; the NY DOS public-inquiry requests do not. */
+    const socrataRequests = requests.filter((r) => /data\./.test(r.url));
+    expect(socrataRequests.length).toBeGreaterThan(0);
+    for (const r of socrataRequests) {
       expect(r.headers["X-App-Token"]).toBe("test-token");
     }
   });
@@ -481,5 +484,244 @@ describe("resolveIdentity: discovered-domain provenance", () => {
   it("a pitch-stated domain keeps its full identifier standing (unchanged)", () => {
     const r = resolveIdentity([sosHit, rdapOf({ contradiction: false })]);
     expect(r.identity_resolved).toBe(true);
+  });
+});
+
+/* ------------------------------------------------- NY DOS lane (v1.4) */
+
+const NY_DOS_SEARCH = "GetComplexSearchMatchingEntities";
+const NY_DOS_DETAIL = "GetEntityRecordByID";
+
+const citymartSearch = {
+  requestStatus: "Success",
+  resultIndicator: "EntityMatchFound",
+  entitySearchResultList: [
+    {
+      entityName: "CITYMART US INC.",
+      dosID: "4628074",
+      initialFilingDate: "2014-08-27T00:00:00",
+      entityType: "DOMESTIC BUSINESS CORPORATION",
+      entityStatus: "Inactive",
+      jurisdiction: "New York, United States",
+      nameType: "ACTUAL",
+    },
+  ],
+  totalMatchingCount: 1,
+};
+
+const citymartDetail = {
+  requestStatus: "Success",
+  entityGeneralInfo: {
+    entityName: "CITYMART US INC.",
+    dosID: "4628074",
+    entityType: "DOMESTIC BUSINESS CORPORATION",
+    entityStatus: "Inactive",
+    reasonForStatus: "Voluntarily Dissolved",
+    dateOfInitialDosFiling: "2014-08-27T00:00:00",
+    inactiveDate: "2022-12-30T00:00:00",
+  },
+};
+
+describe("checkSosSweep: NY DOS lane surfaces dissolved entities (the Citymart case)", () => {
+  const routes = [
+    { match: NY_DOS_SEARCH, body: citymartSearch },
+    { match: NY_DOS_DETAIL, body: citymartDetail },
+    { match: CO, body: sosEmpty },
+    { match: CT, body: sosEmpty },
+    { match: TX, body: sosEmpty },
+    { match: OR, body: sosEmpty },
+  ];
+
+  it("finds the dissolution with reason, date, and the dissolved designation", async () => {
+    const checks = byId(
+      await checkSosSweep(
+        { companyNames: ["Citymart US Inc."] },
+        { fetchFn: makeFetch(routes), now: NOW },
+      ),
+    );
+    const ny = checks.sos_ny;
+    expect(ny.status).toBe("hit");
+    expect(ny.confidence).toBe("exact");
+    expect(ny.summary).toContain("CITYMART US INC.");
+    expect(ny.summary).toContain("Voluntarily Dissolved");
+    expect(ny.summary).toContain("2022-12-30");
+    const data = ny.data as {
+      dissolved?: { legal_name: string; reason: string | null; domestic: boolean | null };
+    };
+    expect(data.dissolved).toBeDefined();
+    expect(data.dissolved!.reason).toBe("Voluntarily Dissolved");
+    expect(data.dissolved!.domestic).toBe(true);
+    expect(lintText(ny.summary).filter((v) => v.kind === "banned")).toEqual([]);
+  });
+
+  it("a similarity match never carries the dissolved designation", async () => {
+    const checks = byId(
+      await checkSosSweep(
+        { companyNames: ["Citymart Solutions Group"] },
+        { fetchFn: makeFetch(routes), now: NOW },
+      ),
+    );
+    const ny = checks.sos_ny;
+    const data = (ny.data ?? {}) as { dissolved?: unknown };
+    expect(data.dissolved).toBeUndefined();
+  });
+
+  it("DOS API failure falls back to the active-corps open-data lane", async () => {
+    const checks = byId(
+      await checkSosSweep(
+        { companyNames: ["GovAssist AI"] },
+        {
+          fetchFn: makeFetch([
+            { match: NY_DOS_SEARCH, body: {}, fail: true },
+            { match: NY, body: sosEmpty },
+            { match: CO, body: sosEmpty },
+            { match: CT, body: sosEmpty },
+            { match: TX, body: sosEmpty },
+            { match: OR, body: sosEmpty },
+          ]),
+          now: NOW,
+        },
+      ),
+    );
+    expect(checks.sos_ny.status).toBe("definitive_miss");
+    expect(checks.sos_ny.source).toContain("data.ny.gov");
+  });
+
+  it("a DOS miss reports all-statuses coverage", async () => {
+    const checks = byId(
+      await checkSosSweep(
+        { companyNames: ["GovAssist AI"] },
+        {
+          fetchFn: makeFetch([
+            {
+              match: NY_DOS_SEARCH,
+              body: { requestStatus: "Success", entitySearchResultList: [] },
+            },
+            { match: NY, body: sosEmpty },
+            { match: CO, body: sosEmpty },
+            { match: CT, body: sosEmpty },
+            { match: TX, body: sosEmpty },
+            { match: OR, body: sosEmpty },
+          ]),
+          now: NOW,
+        },
+      ),
+    );
+    expect(checks.sos_ny.status).toBe("definitive_miss");
+    expect(checks.sos_ny.summary).toContain("including inactive and dissolved entities");
+  });
+});
+
+/* --------------------------------- identity: match confidence + fallback */
+
+describe("resolveIdentity: name-similarity hits never mint identity (the 17A case)", () => {
+  const similarSos: RegistryCheck = {
+    check_id: "sos_ny",
+    source: "New York Department of State (public inquiry service)",
+    status: "hit",
+    summary: "New York business records include an entry under a similar name.",
+    evidence_url: "https://apps.dos.ny.gov/publicInquiry/",
+    confidence: "name_similarity",
+    retrieved_at: "2026-08-28T12:00:00.000Z",
+    data: null,
+  };
+  const exactRdap: RegistryCheck = {
+    check_id: "rdap_domain_age",
+    source: "Domain registration records (RDAP)",
+    status: "hit",
+    summary: "The domain group17a.com was registered in 2015.",
+    evidence_url: "https://lookup.icann.org/en/lookup?name=group17a.com",
+    confidence: "exact",
+    retrieved_at: "2026-08-28T12:00:00.000Z",
+    data: null,
+  };
+
+  it("a similarity SoS hit plus RDAP does not resolve", () => {
+    const out = resolveIdentity([similarSos, exactRdap]);
+    expect(out.identity_resolved).toBe(false);
+  });
+
+  it("the similarity hit contributes no identifier at all", () => {
+    const out = resolveIdentity([similarSos]);
+    expect(out.identifiers_found).toHaveLength(0);
+  });
+});
+
+describe("resolveIdentity: RDAP availability fallback (the Govra tier cliff)", () => {
+  const exactSos: RegistryCheck = {
+    check_id: "sos_tx",
+    source: "Texas Comptroller Active Franchise Taxpayers (data.texas.gov)",
+    status: "hit",
+    summary: "Texas business records include an entry under a matching name.",
+    evidence_url: "https://comptroller.texas.gov/",
+    confidence: "exact",
+    retrieved_at: "2026-08-28T12:00:00.000Z",
+    data: null,
+  };
+  const rdapDown: RegistryCheck = {
+    check_id: "rdap_domain_age",
+    source: "Domain registration records (RDAP)",
+    status: "error",
+    summary: "We could not reach the domain registration records service.",
+    evidence_url: null,
+    confidence: null,
+    retrieved_at: "2026-08-28T12:00:00.000Z",
+    data: null,
+  };
+  const crtshHit: RegistryCheck = {
+    check_id: "crtsh_subdomains",
+    source: "Certificate transparency logs (crt.sh)",
+    status: "hit",
+    summary: "Certificates exist for app.govra.com and api.govra.com.",
+    evidence_url: "https://crt.sh/?q=%.govra.com",
+    confidence: "exact",
+    retrieved_at: "2026-08-28T12:00:00.000Z",
+    data: { distinct_subdomains: 4 },
+  };
+  const dnsMx: RegistryCheck = {
+    check_id: "dns_email_hygiene",
+    source: "Email security records (DNS)",
+    status: "hit",
+    summary: "The domain govra.com is set up to receive email.",
+    evidence_url: null,
+    confidence: "exact",
+    retrieved_at: "2026-08-28T12:00:00.000Z",
+    data: { has_mx: true },
+  };
+
+  it("registry hit + RDAP outage + certificate history resolves", () => {
+    const out = resolveIdentity([exactSos, rdapDown, crtshHit]);
+    expect(out.identity_resolved).toBe(true);
+    expect(out.identifiers_found.join(" ")).toContain("Certificate transparency");
+  });
+
+  it("registry hit + RDAP outage + working mail resolves", () => {
+    const out = resolveIdentity([exactSos, rdapDown, dnsMx]);
+    expect(out.identity_resolved).toBe(true);
+    expect(out.identifiers_found.join(" ")).toContain("mail records");
+  });
+
+  it("an RDAP definitive miss (unregistered domain) never triggers the fallback", () => {
+    const rdapMiss: RegistryCheck = { ...rdapDown, status: "definitive_miss" };
+    const out = resolveIdentity([exactSos, rdapMiss, crtshHit]);
+    expect(out.identity_resolved).toBe(false);
+  });
+
+  it("web infrastructure alone never resolves identity", () => {
+    const out = resolveIdentity([rdapDown, crtshHit, dnsMx]);
+    expect(out.identity_resolved).toBe(false);
+  });
+
+  it("an unconfirmed discovered domain's infrastructure never qualifies", () => {
+    const discovered = {
+      ...crtshHit,
+      data: { distinct_subdomains: 4, discovered_domain: true, confirmed_name_match: false },
+    };
+    const rdapDownDiscovered = {
+      ...rdapDown,
+      data: { discovered_domain: true, confirmed_name_match: false },
+    };
+    const out = resolveIdentity([exactSos, rdapDownDiscovered, discovered]);
+    expect(out.identity_resolved).toBe(false);
   });
 });

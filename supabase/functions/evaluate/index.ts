@@ -46,10 +46,10 @@ import {
 } from "../_shared/schemas.ts";
 import { computeTier } from "../_shared/tier.ts";
 import { assemble } from "../_shared/assemble.ts";
-import { lintObject, lintText, looseText, tidyProse } from "../_shared/lint.ts";
+import { lintObject, lintText, looseQuoteInSource, looseText, tidyProse } from "../_shared/lint.ts";
 import { harvestCitations } from "../_shared/harvest.ts";
 import { fetchVendorSite } from "../_shared/ingest-site.ts";
-import { mergeExtracts } from "../_shared/extract-merge.ts";
+import { isDegenerateExtract, mergeExtracts } from "../_shared/extract-merge.ts";
 import { inferPrimaryDomain } from "../_shared/domain-inference.ts";
 import { isNamedOrganization, splitNameCandidates } from "../_shared/text-match.ts";
 import { PROGRAMS, affirmsProgram } from "../_shared/claim-status.ts";
@@ -502,16 +502,36 @@ async function runPipeline(
       },
     };
   } else {
-    const res = await callAnthropic(
-      buildExtractRequest(S1_SOURCE_LABELS[inputKind] ?? S1_SOURCE_LABELS.paste, pitchText),
-      { apiKey: env.anthropicKey, timeoutMs: STAGE_TIMEOUTS.extract },
-    );
-    usageBox.value = addUsage(usageBox.value, res.usage);
-    stageUsage.s1 = res.usage;
+    /* S1 extraction is nondeterministically flaky in two known ways: a
+       ~1-in-5 refusal to parse injection-laden text, and a ~1-in-6 thin
+       extract on PDF text layers (zero claims from a real pitch). One
+       retry turns either into a completed run; a second thin result is
+       accepted as genuine. Safety properties are unchanged: every attempt
+       runs the same quarantined extractor, schema validation, and the
+       verbatim guards below. */
+    let extractOut: PitchExtract | null = null;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const res = await callAnthropic(
+        buildExtractRequest(S1_SOURCE_LABELS[inputKind] ?? S1_SOURCE_LABELS.paste, pitchText),
+        { apiKey: env.anthropicKey, timeoutMs: STAGE_TIMEOUTS.extract },
+      );
+      usageBox.value = addUsage(usageBox.value, res.usage);
+      stageUsage.s1 = stageUsage.s1 ? addUsage(stageUsage.s1, res.usage) : res.usage;
+      const parsed = res.ok ? parseStructured<unknown>(res) : null;
+      const validated = parsed ? PitchExtract.safeParse(parsed) : null;
+      if (validated?.success) {
+        if (!isDegenerateExtract(validated.data, pitchText.length)) {
+          extractOut = validated.data;
+          break;
+        }
+        extractOut ??= validated.data;
+        console.warn(`s1 degenerate extract on attempt ${attempt + 1}, pitch length ${pitchText.length}`);
+      } else {
+        console.warn(`s1 parse failure on attempt ${attempt + 1}`);
+      }
+    }
     markStage("s1_extract");
-    const parsed = res.ok ? parseStructured<unknown>(res) : null;
-    const validated = parsed ? PitchExtract.safeParse(parsed) : null;
-    if (!validated?.success) {
+    if (!extractOut) {
       await finishInsufficient(
         supabase,
         evaluationId,
@@ -520,7 +540,7 @@ async function runPipeline(
       );
       return;
     }
-    extract = validated.data;
+    extract = extractOut;
     /* Verbatim guards: the extractor sometimes misremembers a name or a
        quote ("Sarasun" for "Sarasota"), and a wrong name drives wrong
        searches and a mislabeled ledger row, while a drifted quote breaks
@@ -533,11 +553,27 @@ async function runPipeline(
          customer names: no row, no finding, no search budget spent. */
       .filter(isNamedOrganization);
     extract.claims = extract.claims.filter((c) =>
-      pitchLoose.includes(looseText(c.quote)),
+      looseQuoteInSource(pitchLoose, c.quote),
     );
   }
 
   const vendorName = extract.vendor_name_candidates[0] ?? pitchText.slice(0, 60);
+  /* URL-mode binds to the SUBMITTED domain (rule P1.6): a polco.us
+     submission must key vendor_key, RDAP, and the site lanes to polco.us
+     even when the page text names polco.com (the run 1 rebind defect).
+     Putting the submitted host first also makes it the ADV-04 vendor-host
+     exclusion's anchor. */
+  if (inputKind === "url" && sourceUrl) {
+    try {
+      const submitted = new URL(sourceUrl).hostname.toLowerCase().replace(/^www\./, "");
+      extract.domains = [
+        submitted,
+        ...extract.domains.filter((d) => d !== submitted),
+      ].slice(0, 5);
+    } catch {
+      /* keep the extracted domains */
+    }
+  }
   const primaryDomain = extract.domains[0] ?? null;
   const vendorKey = primaryDomain ?? vendorKeyFromName(vendorName || "unknown");
   await supabase.from("evaluations").update({ vendor_key: vendorKey }).eq("id", evaluationId);
@@ -703,7 +739,7 @@ async function runPipeline(
             (c) => siteLoose.includes(looseText(c)) && isNamedOrganization(c),
           );
           siteExtract.claims = siteExtract.claims.filter((c) =>
-            siteLoose.includes(looseText(c.quote)),
+            looseQuoteInSource(siteLoose, c.quote),
           );
           if (discoveredDomain) {
             /* The discovered domain's registration record may count as the

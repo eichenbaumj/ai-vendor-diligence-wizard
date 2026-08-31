@@ -73,8 +73,16 @@ export const LedgerExpectation = z
       .refine((m) => Boolean(m.id) || Boolean(m.methodology_ref), {
         message: "match needs an id or a methodology_ref",
       }),
-    presence: z.enum(["required", "forbidden"]),
+    /* "optional" emits no presence assertion: the row may or may not
+       appear, and only the result/severity constraints apply when it does
+       (the wrong-namesake locks: a candidate row is fine, a VERIFIED one
+       never is). */
+    presence: z.enum(["required", "forbidden", "optional"]),
     result_in: z.array(LedgerResultName).min(1).optional(),
+    /* No matched row may carry any of these results; vacuously true when
+       the row is absent. Deterministic ground-truth invariants (never a
+       VERIFIED row under this id) may be hard. */
+    forbidden_result_in: z.array(LedgerResultName).min(1).optional(),
     severity_in: z
       .array(z.enum(["CRITICAL", "HIGH", "MEDIUM", "LOW", "INFO"]).nullable())
       .min(1)
@@ -258,11 +266,17 @@ export function panelProblems(
       );
     }
     for (const le of entry.expected.ledger) {
-      const assertsVerified =
-        le.result_in?.includes("VERIFIED") && le.hardness === "hard";
-      if (assertsVerified) {
+      /* DEMANDING a VERIFIED row is research-dependent and must stay soft
+         (the cook-time study). FORBIDDING one is the opposite shape: "this
+         row must never verify" is a deterministic ground-truth invariant
+         (the wrong-namesake regression locks), so it may be hard. */
+      const demandsVerified =
+        le.presence === "required" &&
+        le.result_in?.includes("VERIFIED") &&
+        le.hardness === "hard";
+      if (demandsVerified) {
         problems.push(
-          `${entry.id}: a hard ledger expectation on VERIFIED is not allowed (research-dependent; make it soft)`,
+          `${entry.id}: a hard ledger expectation REQUIRING a VERIFIED row is not allowed (research-dependent; make it soft)`,
         );
       }
     }

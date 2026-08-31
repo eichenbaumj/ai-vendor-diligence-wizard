@@ -235,3 +235,29 @@ describe("product-only match guard", () => {
     expect(isProductOnlyName("ANYONE", [])).toBe(false);
   });
 });
+
+describe("matchCompanyName: ultra-short names are exact-only (the 17A case)", () => {
+  it("a short single-token query never similarity-matches a longer record", () => {
+    expect(matchCompanyName("17A WASHINGTON STREET, LLC", ["17A"])).toEqual({
+      kind: "none",
+    });
+  });
+
+  it("a short single-token query still matches exactly", () => {
+    const m = matchCompanyName("17A, LLC", ["17A"]);
+    expect(m.kind).toBe("match");
+    expect(m.kind === "match" && m.confidence).toBe("exact");
+  });
+
+  it("a single token of four or more characters keeps similarity matching", () => {
+    const m = matchCompanyName("GRANICUS PROPERTY SOLUTIONS, LLC", ["Granicus"]);
+    expect(m.kind).toBe("match");
+    expect(m.kind === "match" && m.confidence).toBe("name_similarity");
+  });
+
+  it("a two-token contained name keeps similarity matching", () => {
+    const m = matchCompanyName("ACME AI GOVERNMENT SOLUTIONS INC", ["Acme AI"]);
+    expect(m.kind).toBe("match");
+    expect(m.kind === "match" && m.confidence).toBe("name_similarity");
+  });
+});

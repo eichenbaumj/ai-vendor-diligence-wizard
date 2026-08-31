@@ -7,6 +7,8 @@ import EvaluationPage from "@/pages/Evaluation";
 import Methodology from "@/pages/Methodology";
 import DataSafety from "@/pages/DataSafety";
 import Disputes from "@/pages/Disputes";
+import About from "@/pages/About";
+import Terms from "@/pages/Terms";
 import { PasswordGate, useGateSession } from "@/components/input/PasswordGate";
 import { GATE_ENABLED } from "@/lib/config";
 
@@ -56,6 +58,8 @@ export default function App() {
           <Route path="/methodology" element={<Methodology />} />
           <Route path="/your-data" element={<DataSafety />} />
           <Route path="/disputes" element={<Disputes />} />
+          <Route path="/about" element={<About />} />
+          <Route path="/terms" element={<Terms />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </main>

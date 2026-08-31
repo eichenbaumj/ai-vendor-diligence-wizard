@@ -83,7 +83,7 @@ const STEPS: { n: string; title: string; body: string }[] = [
 const FAQS: { q: string; a: string }[] = [
   {
     q: "Is this a purchase recommendation?",
-    a: "No. The tool never says buy or don't buy, and it never gives a score. It tells you what public records show about the company, what it could not verify, and what to ask next. What you do with that is your call.",
+    a: "No. The tool never says buy or don't buy, and it never gives a score. It tells you what public records show about the company, what it could not verify, and what to ask next. What you do with that is your call. The Terms of use page (linked in the footer) covers this in plain language.",
   },
   {
     q: "Who sees what I share?",

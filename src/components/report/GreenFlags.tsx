@@ -2,10 +2,17 @@
   Green flags: what passed, with sources in the ledger. Findings too
   (methodology axiom 2).
 */
+import { REPORT_SECTION_IDS } from "@/components/report/report-overview-model";
+
 export function GreenFlags({ flags }: { flags: string[] }) {
   if (flags.length === 0) return null;
   return (
-    <section className="mx-auto max-w-5xl px-5 py-10 sm:px-8" aria-labelledby="green-flags-h">
+    <section
+      id={REPORT_SECTION_IDS.greenFlags}
+      tabIndex={-1}
+      className="mx-auto max-w-5xl scroll-mt-24 px-5 py-10 sm:px-8"
+      aria-labelledby="green-flags-h"
+    >
       <h2 id="green-flags-h" className="font-serif text-2xl font-bold sm:text-3xl">
         What checked out
       </h2>

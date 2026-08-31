@@ -12,9 +12,17 @@ export function SiteHeader() {
         <span className="flex items-center gap-3">
           <Link
             to="/"
-            className="font-serif text-lg font-bold leading-tight text-brand-ink no-underline md:text-xl"
+            className="flex items-center gap-2.5 font-serif text-lg font-bold leading-tight text-brand-ink no-underline md:text-xl"
           >
-            AI Vendor Diligence Wizard
+            <img
+              src="/brand-17a-cobalt.svg"
+              alt="17A"
+              className="h-5 w-auto md:h-6"
+            />
+            <span className="hidden min-[400px]:inline">
+              AI Vendor Diligence Wizard
+            </span>
+            <span className="min-[400px]:hidden">Diligence Wizard</span>
           </Link>
           {IS_MOCK && (
             <span
@@ -29,8 +37,14 @@ export function SiteHeader() {
           <Link to="/methodology" className={`hidden sm:block ${NAV_LINK}`}>
             How it works
           </Link>
-          <Link to="/your-data" className={`hidden sm:block ${NAV_LINK}`}>
+          <Link to="/your-data" className={`hidden md:block ${NAV_LINK}`}>
             Your data
+          </Link>
+          {/* Attribution stays reachable without scrolling, on every page
+              and every screen size. */}
+          <Link to="/about" className={NAV_LINK}>
+            <span className="sm:hidden">About</span>
+            <span className="hidden sm:inline">Who made this</span>
           </Link>
           <PillButton to="/check" size="md">
             Check a pitch

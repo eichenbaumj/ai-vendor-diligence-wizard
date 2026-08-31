@@ -5,6 +5,7 @@
 import { useState } from "react";
 import { PillButton } from "@/components/brand";
 import type { Report, ReportQuestion } from "@/lib/types";
+import { REPORT_SECTION_IDS } from "@/components/report/report-overview-model";
 
 async function copyText(text: string): Promise<boolean> {
   try {
@@ -93,7 +94,9 @@ export function QuestionPack({ report }: { report: Report }) {
 
   return (
     <section
-      className="bg-brand-cream"
+      id={REPORT_SECTION_IDS.questions}
+      tabIndex={-1}
+      className="scroll-mt-24 bg-brand-cream"
       aria-labelledby="questions-h"
     >
       <div className="mx-auto max-w-5xl px-5 py-12 sm:px-8">

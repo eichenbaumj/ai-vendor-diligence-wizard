@@ -18,6 +18,7 @@ import {
 import { MicroFindingFeed } from "@/components/progress/MicroFindingFeed";
 import { DisclaimerHeader } from "@/components/report/DisclaimerHeader";
 import { VerdictHero } from "@/components/report/VerdictHero";
+import { ReportOverview } from "@/components/report/ReportOverview";
 import { GreenFlags } from "@/components/report/GreenFlags";
 import { AdvFindingCard } from "@/components/report/AdvFindingCard";
 import { VerificationLedger } from "@/components/report/VerificationLedger";
@@ -114,14 +115,7 @@ function ReportView({
       )}
       <DisclaimerHeader report={report} />
       <VerdictHero report={report} disputed={disputed} />
-
-      <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 px-5 pt-6 sm:px-8">
-        <p className="text-sm text-brand-charcoal-soft">
-          Checked against {report.sources.length} public sources. Everything
-          below links to its evidence.
-        </p>
-        <PrintButton />
-      </div>
+      <ReportOverview report={report} />
 
       <GreenFlags flags={report.green_flags} />
       <AdvFindingCard findings={report.adv_findings} />

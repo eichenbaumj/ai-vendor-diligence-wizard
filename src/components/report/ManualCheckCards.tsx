@@ -3,12 +3,15 @@
   link, and what a bad answer looks like.
 */
 import type { ManualCheck } from "@/lib/types";
+import { REPORT_SECTION_IDS } from "@/components/report/report-overview-model";
 
 export function ManualCheckCards({ checks }: { checks: ManualCheck[] }) {
   if (checks.length === 0) return null;
   return (
     <section
-      className="mx-auto max-w-5xl px-5 py-12 sm:px-8"
+      id={REPORT_SECTION_IDS.manualChecks}
+      tabIndex={-1}
+      className="mx-auto max-w-5xl scroll-mt-24 px-5 py-12 sm:px-8"
       aria-labelledby="manual-h"
     >
       <h2 id="manual-h" className="font-serif text-2xl font-bold sm:text-3xl">

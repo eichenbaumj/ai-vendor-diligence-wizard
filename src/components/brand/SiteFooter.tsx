@@ -24,6 +24,11 @@ export function SiteFooter() {
           </h2>
           <ul className="mt-4 space-y-3">
             <li>
+              <Link to="/about" className={FOOTER_LINK}>
+                Who made this
+              </Link>
+            </li>
+            <li>
               <Link to="/methodology" className={FOOTER_LINK}>
                 Methodology
               </Link>
@@ -36,6 +41,11 @@ export function SiteFooter() {
             <li>
               <Link to="/disputes" className={FOOTER_LINK}>
                 Disputes and corrections
+              </Link>
+            </li>
+            <li>
+              <Link to="/terms" className={FOOTER_LINK}>
+                Terms of use
               </Link>
             </li>
             <li>

@@ -3,12 +3,15 @@
   expands every href) so the report is defensible in a procurement file.
 */
 import type { SourceRef } from "@/lib/types";
+import { REPORT_SECTION_IDS } from "@/components/report/report-overview-model";
 
 export function SourcesList({ sources }: { sources: SourceRef[] }) {
   if (sources.length === 0) return null;
   return (
     <section
-      className="mx-auto max-w-5xl px-5 py-10 sm:px-8"
+      id={REPORT_SECTION_IDS.sources}
+      tabIndex={-1}
+      className="mx-auto max-w-5xl scroll-mt-24 px-5 py-10 sm:px-8"
       aria-labelledby="sources-h"
     >
       <h2 id="sources-h" className="font-serif text-xl font-bold sm:text-2xl">

@@ -8,6 +8,7 @@
 */
 import type { HonestyItem } from "@/lib/types";
 import { HONESTY_GROUPS, defaultGroup } from "@shared/honesty-groups.ts";
+import { REPORT_SECTION_IDS } from "@/components/report/report-overview-model";
 
 const STATUS_PRESENT: Record<
   HonestyItem["status"],
@@ -34,7 +35,12 @@ export function HonestyPanel({ items }: { items: HonestyItem[] }) {
     items: items.filter((i) => (i.group ?? defaultGroup(i.status)) === g.id),
   })).filter((g) => g.items.length > 0);
   return (
-    <section className="bg-brand-vellum" aria-labelledby="honesty-h">
+    <section
+      id={REPORT_SECTION_IDS.honesty}
+      tabIndex={-1}
+      className="scroll-mt-24 bg-brand-vellum"
+      aria-labelledby="honesty-h"
+    >
       <div className="mx-auto max-w-5xl px-5 py-12 sm:px-8">
         <h2 id="honesty-h" className="font-serif text-2xl font-bold sm:text-3xl">
           Everything we tried to check

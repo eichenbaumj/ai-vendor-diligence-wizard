@@ -3,6 +3,8 @@
   state-specific obligations block when the engine supplied any
   (sector.state_items, methodology D7.3).
 */
+import { REPORT_SECTION_IDS } from "@/components/report/report-overview-model";
+
 export function NextSteps({
   steps,
   stateItems = [],
@@ -13,7 +15,9 @@ export function NextSteps({
   if (steps.length === 0 && stateItems.length === 0) return null;
   return (
     <section
-      className="mx-auto max-w-5xl px-5 py-10 sm:px-8"
+      id={REPORT_SECTION_IDS.nextSteps}
+      tabIndex={-1}
+      className="mx-auto max-w-5xl scroll-mt-24 px-5 py-10 sm:px-8"
       aria-labelledby="next-h"
     >
       {steps.length > 0 ? (

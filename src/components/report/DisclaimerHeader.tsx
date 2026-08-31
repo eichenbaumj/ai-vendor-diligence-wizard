@@ -1,7 +1,10 @@
 /*
   Thin vellum disclaimer band at the top of every report. Per-report
   contextual disclaimer, not TOS boilerplate (methodology section 5, rule 8).
+  Also carries the one-line provenance link: report readers arrive by deep
+  link, so who-made-this must be visible without scrolling to the footer.
 */
+import { Link } from "react-router-dom";
 import type { Report } from "@/lib/types";
 
 function formatDate(iso: string): string {
@@ -31,7 +34,21 @@ export function DisclaimerHeader({ report }: { report: Report }) {
           it.{" "}
           <span className="font-mono text-xs tracking-tight">
             Methodology v{report.meta.methodology_version}.
-          </span>
+          </span>{" "}
+          A free public tool from 17A and partners.{" "}
+          <Link
+            to="/about"
+            className="text-brand-cobalt underline underline-offset-2"
+          >
+            Who made this
+          </Link>
+          {" · "}
+          <Link
+            to="/terms"
+            className="text-brand-cobalt underline underline-offset-2"
+          >
+            Terms
+          </Link>
         </p>
       </div>
     </div>

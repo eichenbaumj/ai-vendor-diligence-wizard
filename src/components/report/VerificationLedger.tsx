@@ -4,6 +4,7 @@
   and dated source links. Rows collapse into <details> on small screens.
 */
 import type { EvidenceTier, LedgerResult, LedgerRow, SourceRef } from "@/lib/types";
+import { REPORT_SECTION_IDS } from "@/components/report/report-overview-model";
 
 const RESULT_STYLES: Record<LedgerResult, { label: string; glyph: string; className: string }> = {
   VERIFIED: {
@@ -134,7 +135,9 @@ export function VerificationLedger({ rows }: { rows: LedgerRow[] }) {
   if (rows.length === 0) return null;
   return (
     <section
-      className="mx-auto max-w-5xl px-5 py-10 sm:px-8"
+      id={REPORT_SECTION_IDS.ledger}
+      tabIndex={-1}
+      className="mx-auto max-w-5xl scroll-mt-24 px-5 py-10 sm:px-8"
       aria-labelledby="ledger-h"
     >
       <h2 id="ledger-h" className="font-serif text-2xl font-bold sm:text-3xl">

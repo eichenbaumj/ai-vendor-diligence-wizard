@@ -4,6 +4,7 @@
   was read or only surfaced, and what kind of source it is.
 */
 import type { LeadRef } from "@/lib/types";
+import { REPORT_SECTION_IDS } from "@/components/report/report-overview-model";
 
 const CLASS_LABEL: Record<number, string> = {
   1: "Official source",
@@ -15,7 +16,9 @@ export function LeadsList({ leads }: { leads: LeadRef[] }) {
   if (leads.length === 0) return null;
   return (
     <section
-      className="mx-auto max-w-5xl px-5 py-12 sm:px-8"
+      id={REPORT_SECTION_IDS.leads}
+      tabIndex={-1}
+      className="mx-auto max-w-5xl scroll-mt-24 px-5 py-12 sm:px-8"
       aria-labelledby="leads-h"
     >
       <h2 id="leads-h" className="font-serif text-2xl font-bold sm:text-3xl">

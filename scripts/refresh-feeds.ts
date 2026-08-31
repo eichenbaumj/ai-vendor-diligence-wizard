@@ -34,13 +34,18 @@ const TXRAMP_LANDING_URL =
 /* Stable alias; it redirects to the current cdn.sourcewell.org report. */
 const SOURCEWELL_URL = "https://sourcewell.co/contract-list";
 
-/* dir.texas.gov sits behind a bot challenge that scores request fingerprints;
-   browser-like headers pass more often than a bare fetch. When the challenge
-   fires anyway we get an HTML page instead of a spreadsheet — the magic-byte
-   check below turns that into a loud, upsert-skipping failure. The full
-   client-hint set below exists because the UA string alone started drawing
-   403s from GitHub-hosted runners on 2026-08-29; a sparse header set is
-   itself a bot signal to fingerprint scorers. */
+/* Header posture, learned the hard way. dir.texas.gov's challenge scores
+   CONSISTENCY, not politeness: a Chrome user-agent sent over a non-Chrome
+   TLS stack (Node fetch, curl) reads as a forged fingerprint and draws a
+   403 — measured 2026-08-31, when the browser-header set below got 403 from
+   a residential IP while a bare fetch (honest runtime fingerprint) got 200
+   for both the landing page and the spreadsheet. So the TX-RAMP lane sends
+   NO fake headers. The site also rate-limits bursts (429), so that lane
+   paces its two requests and backs off longer on retry. GovRAMP and
+   Sourcewell still get the browser header set: those fetches pass nightly
+   with it, and what passes stays untouched. When a challenge fires anyway
+   we get an HTML page instead of a spreadsheet — the magic-byte check below
+   turns that into a loud, upsert-skipping failure. */
 const BROWSER_HEADERS = {
   "User-Agent":
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
@@ -57,14 +62,21 @@ const BROWSER_HEADERS = {
   "Upgrade-Insecure-Requests": "1",
 };
 
-async function fetchBytes(url: string, headers: Record<string, string>): Promise<Buffer> {
+const pause = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+async function fetchBytes(
+  url: string,
+  headers: Record<string, string>,
+  retryPauseMs = 4000,
+): Promise<Buffer> {
   /* One retry after a pause: challenge scorers sometimes pass the second
-     attempt from the same client once it looks like a page reload. */
+     attempt from the same client once it looks like a page reload, and
+     rate limiters (429) clear after a real wait. */
   for (let attempt = 1; ; attempt++) {
     const res = await fetch(url, { headers });
     if (res.ok) return Buffer.from(await res.arrayBuffer());
     if (attempt >= 2) throw new FeedParseError(`${url} returned ${res.status}`);
-    await new Promise((r) => setTimeout(r, 4000));
+    await pause(retryPauseMs);
   }
 }
 
@@ -146,12 +158,12 @@ async function main() {
   });
 
   await refreshFeed(supabase, "txramp", async () => {
-    const landing = await fetchBytes(TXRAMP_LANDING_URL, BROWSER_HEADERS);
+    /* Honest fingerprint, paced requests, long 429 backoff — see the header
+       posture note above. */
+    const landing = await fetchBytes(TXRAMP_LANDING_URL, {}, 45000);
     const xlsxUrl = extractTxRampXlsxUrl(landing.toString("utf-8"), "https://dir.texas.gov");
-    const data = await fetchBytes(xlsxUrl, {
-      ...BROWSER_HEADERS,
-      Referer: TXRAMP_LANDING_URL,
-    });
+    await pause(5000);
+    const data = await fetchBytes(xlsxUrl, {}, 45000);
     assertXlsx(data, "txramp");
     return parseTxRampXlsx(data);
   });

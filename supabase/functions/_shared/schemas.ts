@@ -43,6 +43,12 @@ export const InjectionScreen = z.object({
 export const PitchExtract = z.object({
   vendor_name_candidates: z.array(z.string().max(120)).max(5),
   domains: z.array(z.string().max(253)).max(5),
+  /* Postal/street addresses the text presents as the vendor's own (HQ,
+     offices). Tying-signal input only: an address can corroborate that a
+     registry record belongs to this vendor. Verbatim-guarded by the caller
+     like customers and claims. Default keeps extracts and checkpoints
+     stored before the field existed parsing. */
+  addresses: z.array(z.string().max(160)).max(6).default([]),
   sender_email: z.string().max(254).nullable(),
   people: z
     .array(z.object({ name: z.string().max(120), title: z.string().max(160) }))
@@ -70,6 +76,45 @@ export type CheckStatus = z.infer<typeof CheckStatus>;
 export const MatchConfidence = z.enum(["exact", "name_similarity"]);
 export type MatchConfidence = z.infer<typeof MatchConfidence>;
 
+/* ------------------------------------------------------------ tying signals */
+
+/* A registry record under a matching name is a CANDIDATE until a second
+   detail ties it to this vendor (methodology D1.1 attribution rule).
+   Signals are computed record-side in identity-ties.ts: a fact captured
+   from the official record compared against vendor-side facts already
+   inside the typed stage boundaries. Strength policy (2026-08-31):
+   officer / address / domain / feed_product / full_legal_name are strong;
+   a bare state match is weak. Adverse findings arm only on strong ties;
+   favorable identity accepts any tie. */
+export const TieKind = z.enum([
+  "officer", // record's officer/agent named in pitch, site, or class 1-2 coverage
+  "address", // record's street or city+state on the vendor's own materials
+  "state", // record's registration/formation state matches a claimed state
+  "domain", // record names the vendor's registrable domain
+  "feed_product", // compliance feed's own metadata names the vendor's product/domain
+  "full_legal_name", // buyer submitted the record's full legal name, suffix included
+]);
+export type TieKind = z.infer<typeof TieKind>;
+
+export const TieSignal = z.object({
+  kind: TieKind,
+  strength: z.enum(["strong", "weak"]),
+  value: z.string().max(120), // the matched fact, for the record note
+  vendor_source: z.enum(["pitch", "site", "coverage", "submitted_name"]),
+});
+export type TieSignal = z.infer<typeof TieSignal>;
+
+export const TieEvidence = z.object({
+  tied: z.boolean(),
+  strong: z.boolean(),
+  /* False when NO vendor-side fact was available to compare (thin pitch,
+     unreachable site, no coverage): the record stays a candidate and the
+     fairness guard keeps that from ever being adverse. */
+  checkable: z.boolean(),
+  signals: z.array(TieSignal).max(8),
+});
+export type TieEvidence = z.infer<typeof TieEvidence>;
+
 export const RegistryCheck = z.object({
   check_id: z.string().max(40), // e.g. "sam_entity", "edgar_fts", "sos_ny"
   source: z.string().max(120), // human-readable source name
@@ -79,6 +124,10 @@ export const RegistryCheck = z.object({
   confidence: MatchConfidence.nullable(),
   retrieved_at: z.string(), // ISO timestamp
   data: z.record(z.unknown()).nullable(), // raw structured payload (logged, not rendered)
+  /* Attribution adjudication result for a hit (identity-ties.ts), written
+     by the S2c step in the tail. Optional: checks stored before the field
+     existed, and non-hit checks, omit it. */
+  tie: TieEvidence.optional(),
 });
 export type RegistryCheck = z.infer<typeof RegistryCheck>;
 
@@ -219,6 +268,14 @@ export const LedgerRow = z.object({
      built from name matching, and reports stored before the field existed,
      omit it. */
   match_confidence: MatchConfidence.optional(),
+  /* Attribution outcome for rows resting on a name-matched registry record:
+     "attributed" = the record carries a tying signal connecting it to this
+     vendor; "candidate" = a matching or similar name we could NOT tie —
+     shown for review, earns no credit, drives no warning. Optional: rows
+     not built from registry records, and older stored reports, omit it.
+     After the tying-signal build, exact-but-untied is also a candidate, so
+     match_confidence alone no longer encodes candidacy. */
+  attribution: z.enum(["attributed", "candidate"]).optional(),
 });
 export type LedgerRow = z.infer<typeof LedgerRow>;
 
@@ -308,6 +365,11 @@ export const Report = z.object({
   manual_checks: z.array(ManualCheck).max(8),
   /* Optional: reports stored before this field exists lack it. */
   leads: z.array(LeadRef).max(8).optional(),
+  /* Class 1-2 sources research retrieved that produced no row, no card, and
+     no lead slot (structuring invariant: every class 1-2 citation is
+     attached, a lead, or listed here — never silently dropped). Optional:
+     older stored reports lack it. */
+  unassessed_sources: z.array(SourceRef).max(12).optional(),
   next_steps: z.array(z.string().max(500)).max(8),
   sector: SectorContext,
   sources: z.array(SourceRef),

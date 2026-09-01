@@ -579,6 +579,7 @@ async function runPipeline(
     extract = {
       vendor_name_candidates: [pitchText],
       domains: [],
+      addresses: [],
       sender_email: null,
       people: [],
       named_customers: [],
@@ -645,6 +646,12 @@ async function runPipeline(
       .filter(isNamedOrganization);
     extract.claims = extract.claims.filter((c) =>
       looseQuoteInSource(pitchLoose, c.quote),
+    );
+    /* Addresses feed tying signals, so a hallucinated address could tie a
+       namesake record to this vendor. Keep only addresses that actually
+       appear in the pitch text. */
+    extract.addresses = extract.addresses.filter((a) =>
+      pitchLoose.includes(looseText(a)),
     );
   }
 
@@ -831,6 +838,9 @@ async function runPipeline(
           );
           siteExtract.claims = siteExtract.claims.filter((c) =>
             looseQuoteInSource(siteLoose, c.quote),
+          );
+          siteExtract.addresses = siteExtract.addresses.filter((a) =>
+            siteLoose.includes(looseText(a)),
           );
           if (discoveredDomain) {
             /* The discovered domain's registration record may count as the

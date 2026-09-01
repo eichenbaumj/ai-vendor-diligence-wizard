@@ -94,6 +94,23 @@ describe("checkSosSweep: the Polimorphic case", () => {
     );
   }
 
+  it("captures record-side tying-signal facts from the dataset columns", async () => {
+    const checks = byId(await runPolimorphicSweep());
+    const co = (checks.sos_co.data as { matches: Array<Record<string, unknown>> })
+      .matches[0];
+    expect(co.street).toBe("122 W 26th St Rm 1104");
+    expect(co.city).toBe("New York");
+    expect(co.addr_state).toBe("NY");
+    expect(co.entity_type).toBe("Foreign Corporation");
+    expect(co.jurisdiction).toBe("DE");
+    const ct = (checks.sos_ct.data as { matches: Array<Record<string, unknown>> })
+      .matches[0];
+    expect(ct.city).toBe("New York");
+    expect(ct.addr_state).toBe("NY");
+    expect(ct.jurisdiction).toBe("DE");
+    expect(ct.domestic_flag).toBe("Foreign");
+  });
+
   it("returns one schema-valid check per state", async () => {
     const checks = await runPolimorphicSweep();
     expect(checks).toHaveLength(6);
@@ -519,7 +536,20 @@ const citymartDetail = {
     reasonForStatus: "Voluntarily Dissolved",
     dateOfInitialDosFiling: "2014-08-27T00:00:00",
     inactiveDate: "2022-12-30T00:00:00",
+    jurisdiction: "New York, United States",
   },
+  /* Field names verified live 2026-08-31 on this record. */
+  sopAddress: {
+    address: {
+      streetAddress1: "C/O EABO, 37TH FL.",
+      addressLine2: "405 LEXINGTON AVENUE",
+      city: "NEW YORK",
+      state: "NY",
+      zipCode: "10174",
+    },
+  },
+  ceo: { name: "SASCHA HASELMAYER" },
+  registeredAgent: { name: "" },
 };
 
 describe("checkSosSweep: NY DOS lane surfaces dissolved entities (the Citymart case)", () => {
@@ -552,6 +582,25 @@ describe("checkSosSweep: NY DOS lane surfaces dissolved entities (the Citymart c
     expect(data.dissolved!.reason).toBe("Voluntarily Dissolved");
     expect(data.dissolved!.domestic).toBe(true);
     expect(lintText(ny.summary).filter((v) => v.kind === "banned")).toEqual([]);
+  });
+
+  it("captures the detail record's officer, address, and jurisdiction as tie facts", async () => {
+    const checks = byId(
+      await checkSosSweep(
+        { companyNames: ["Citymart US Inc."] },
+        { fetchFn: makeFetch(routes), now: NOW },
+      ),
+    );
+    const data = checks.sos_ny.data as {
+      matches: Array<Record<string, unknown>>;
+    };
+    const best = data.matches[0];
+    expect(best.officers).toEqual(["SASCHA HASELMAYER"]);
+    expect(best.agent).toBeNull(); // empty name in the record stays null
+    expect(best.street).toBe("C/O EABO, 37TH FL. 405 LEXINGTON AVENUE");
+    expect(best.city).toBe("NEW YORK");
+    expect(best.addr_state).toBe("NY");
+    expect(best.jurisdiction).toBe("New York, United States");
   });
 
   it("a similarity match never carries the dissolved designation", async () => {

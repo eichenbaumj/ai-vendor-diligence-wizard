@@ -30,6 +30,7 @@ function makeInput(
     extract: {
       vendor_name_candidates: ["Acme AI"],
       domains: ["acmeai.example.com"],
+      addresses: [],
       sender_email: null,
       people: [],
       named_customers: [],

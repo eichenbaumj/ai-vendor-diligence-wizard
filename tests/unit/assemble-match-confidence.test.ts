@@ -26,6 +26,7 @@ function baseExtract(over: Partial<PitchExtract> = {}): PitchExtract {
   return {
     vendor_name_candidates: ["17A"],
     domains: [],
+    addresses: [],
     sender_email: null,
     people: [],
     named_customers: [],

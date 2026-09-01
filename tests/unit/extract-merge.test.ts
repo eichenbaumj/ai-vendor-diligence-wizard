@@ -12,6 +12,7 @@ function extractOf(partial: Partial<PitchExtract>): PitchExtract {
   return {
     vendor_name_candidates: ["Acme AI"],
     domains: ["acmeai.example.com"],
+    addresses: [],
     sender_email: null,
     people: [],
     named_customers: [],
@@ -35,6 +36,7 @@ describe("mergeExtracts provenance rules", () => {
       extractOf({
         vendor_name_candidates: ["Deloitte", "Acme AI"],
         domains: ["deloitte.com"],
+        addresses: [],
         sender_email: "x@deloitte.com",
         state_mentioned: "TX",
         urgency_language: ["limited-time offer"],
@@ -187,6 +189,7 @@ describe("isDegenerateExtract: the thin-extract retry trigger", () => {
   const empty = {
     vendor_name_candidates: ["Acme AI"],
     domains: [],
+    addresses: [],
     sender_email: null,
     people: [],
     named_customers: [],

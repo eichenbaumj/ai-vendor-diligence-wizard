@@ -165,6 +165,25 @@ const ID_COLS = [
   "registry_number",
   "id",
 ];
+/* Tying-signal columns (identity-ties.ts): facts the datasets already
+   return that connect a record to a company — captured, never rendered.
+   Column names verified against the live datasets' fixtures: Colorado
+   carries principal address + entity type + jurisdiction (the dataset's
+   own misspelled "jurisdictonofformation"), Connecticut carries billing
+   city/state + state_of_formation + a Domestic/Foreign citizenship flag,
+   Texas carries taxpayer city/state. */
+const STREET_COLS = ["principaladdress1", "address_1", "address1", "street_address"];
+const CITY_COLS = ["principalcity", "billing_city", "taxpayer_city"];
+const ADDR_STATE_COLS = ["principalstate", "billing_state", "taxpayer_state"];
+const ENTITY_TYPE_COLS = ["entitytype", "business_type", "entity_type"];
+const JURISDICTION_COLS = [
+  "jurisdictonofformation",
+  "jurisdiction_of_formation",
+  "state_of_formation",
+  "jurisdiction",
+];
+const DOMESTIC_FLAG_COLS = ["citizenship"];
+const AGENT_COLS = ["agentname", "agent_name", "registered_agent", "registeredagentname"];
 
 /* Statuses that usually mean a late annual report, common at young firms.
    These are informational, never alarm findings. */
@@ -256,6 +275,19 @@ interface LaneMatch {
   date: string | null;
   record_id: string | null;
   confidence: "exact" | "name_similarity";
+  /* Which side contained the other on a similarity match (sam.ts
+     CompanyMatch.containment); attribution promotes only query_in_record. */
+  containment?: "query_in_record" | "record_in_query";
+  /* Record-side tying-signal facts, when the dataset returns them.
+     Capture-only in this module; identity-ties.ts consumes them. */
+  street?: string | null;
+  city?: string | null;
+  addr_state?: string | null;
+  entity_type?: string | null;
+  jurisdiction?: string | null;
+  domestic_flag?: string | null; // e.g. Connecticut's "Domestic"/"Foreign"
+  agent?: string | null;
+  officers?: string[];
 }
 
 async function runSocrataLane(
@@ -299,6 +331,14 @@ async function runSocrataLane(
             date: trimDate(firstString(row, DATE_COLS)),
             record_id: firstString(row, ID_COLS),
             confidence: match.confidence,
+            ...(match.containment ? { containment: match.containment } : {}),
+            street: firstString(row, STREET_COLS),
+            city: firstString(row, CITY_COLS),
+            addr_state: firstString(row, ADDR_STATE_COLS),
+            entity_type: firstString(row, ENTITY_TYPE_COLS),
+            jurisdiction: firstString(row, JURISDICTION_COLS),
+            domestic_flag: firstString(row, DOMESTIC_FLAG_COLS),
+            agent: firstString(row, AGENT_COLS),
           });
         }
         /* The $where fallback only runs when $q found nothing. */
@@ -458,6 +498,9 @@ async function runNyDosLane(
           date: trimDate(firstString(rec, ["initialFilingDate"])),
           record_id: firstString(rec, ["dosID"]),
           confidence: match.confidence,
+          ...(match.containment ? { containment: match.containment } : {}),
+          entity_type: firstString(rec, ["entityType"]),
+          jurisdiction: firstString(rec, ["jurisdiction"]),
         });
       }
       if (matches.some((m) => m.confidence === "exact")) break;
@@ -500,12 +543,34 @@ async function runNyDosLane(
           { SearchID: best.record_id, EntityName: best.name, AssumedNameFlag: "false" },
           ctx,
         );
-        const info = asRecord(asRecord(payload)?.["entityGeneralInfo"]) ?? {};
+        const root = asRecord(payload) ?? {};
+        const info = asRecord(root["entityGeneralInfo"]) ?? {};
         reason = firstString(info, ["reasonForStatus"]);
         inactiveDate = trimDate(firstString(info, ["inactiveDate"]));
         entityType = firstString(info, ["entityType"]);
         const detailStatus = firstString(info, ["entityStatus"]);
         if (detailStatus) best.status = detailStatus;
+        /* Tying-signal facts from the detail record (field names verified
+           live 2026-08-31 on the Citymart record): the CEO and registered
+           agent names, the service-of-process address, and the formation
+           jurisdiction. Capture-only; identity-ties.ts consumes them. */
+        best.jurisdiction = firstString(info, ["jurisdiction"]);
+        const ceoName = firstString(asRecord(root["ceo"]) ?? {}, ["name"]);
+        if (ceoName) best.officers = [ceoName];
+        best.agent = firstString(asRecord(root["registeredAgent"]) ?? {}, ["name"]);
+        const sop =
+          asRecord(asRecord(root["sopAddress"])?.["address"]) ?? {};
+        /* Both address lines join: the digit-bearing street line is often
+           line 2 behind a "C/O ..." line 1. */
+        const sopStreet = [
+          firstString(sop, ["streetAddress1", "streetAddress"]),
+          firstString(sop, ["addressLine2", "streetAddress2"]),
+        ]
+          .filter((part): part is string => Boolean(part))
+          .join(" ");
+        best.street = sopStreet || null;
+        best.city = firstString(sop, ["city"]);
+        best.addr_state = firstString(sop, ["state"]);
       } catch {
         /* keep the search-level fields */
       }

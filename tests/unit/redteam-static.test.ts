@@ -138,6 +138,7 @@ describe("citation-level invariant: composed URLs never verify", () => {
       extract: {
         vendor_name_candidates: ["Acme AI"],
         domains: ["acmeai.example.com"],
+        addresses: [],
         sender_email: null,
         people: [],
         named_customers: ["Franklin County"],

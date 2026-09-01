@@ -48,13 +48,16 @@ export function isDegenerateExtract(
 const SITE_CLAIM_TYPES = new Set(["identity", "customer", "compliance", "team"]);
 
 const SITE_CUSTOMER_CAP = 6;
+const SITE_ADDRESS_CAP = 4;
 
 export interface MergedExtract {
   extract: PitchExtract;
-  /* How many leading entries of people / named_customers are pitch-origin.
-     The adverse aggregates in assembly count only those. */
+  /* How many leading entries of people / named_customers / addresses are
+     pitch-origin. The adverse aggregates in assembly count only those, and
+     tying signals carry the provenance into their vendor_source label. */
   pitch_person_count: number;
   pitch_customer_count: number;
+  pitch_address_count: number;
   /* Verbatim quotes of site-origin claims, for report attribution
      ("the vendor's website states..."). */
   site_claim_quotes: string[];
@@ -87,6 +90,22 @@ export function mergeExtracts(
     siteCustomers += 1;
   }
 
+  /* Vendor addresses merge like people: site-origin entries append after
+     the pitch's, capped, deduped. They feed tying signals only (an address
+     can corroborate that a registry record belongs to this vendor) — never
+     identity on their own, never an adverse aggregate. */
+  const addresses = [...pitch.addresses];
+  const seenAddresses = new Set(addresses.map((a) => norm(a)));
+  let siteAddresses = 0;
+  for (const a of site.addresses) {
+    if (addresses.length >= 6 || siteAddresses >= SITE_ADDRESS_CAP) break;
+    const k = norm(a);
+    if (!k || seenAddresses.has(k)) continue;
+    seenAddresses.add(k);
+    addresses.push(a);
+    siteAddresses += 1;
+  }
+
   const claims = [...pitch.claims];
   const siteClaimQuotes: string[] = [];
   for (const c of site.claims) {
@@ -104,12 +123,14 @@ export function mergeExtracts(
          and injection_screen are pitch-only by taking ...pitch above. */
       people,
       named_customers: customers,
+      addresses,
       claims,
       use_case_description:
         pitch.use_case_description || site.use_case_description,
     },
     pitch_person_count: pitch.people.length,
     pitch_customer_count: pitch.named_customers.length,
+    pitch_address_count: pitch.addresses.length,
     site_claim_quotes: siteClaimQuotes,
   };
 }

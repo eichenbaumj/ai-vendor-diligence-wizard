@@ -4,9 +4,11 @@ import { lintText } from "../../../supabase/functions/_shared/lint.ts";
 import {
   checkSamEntity,
   checkSamExclusions,
+  hasCorporateSuffix,
   isProductOnlyName,
   matchCompanyName,
   normalizeCompanyName,
+  normalizeUnstripped,
   productOnlyTokens,
 } from "../../../supabase/functions/_shared/registry/sam.ts";
 import type { RegistryCtx } from "../../../supabase/functions/_shared/registry/sam.ts";
@@ -69,6 +71,43 @@ describe("name normalization", () => {
       matchCompanyName("GOVASSIST AI SOLUTIONS", ["GovAssist AI"]),
     ).toMatchObject({ kind: "match", confidence: "name_similarity" });
   });
+
+  it("labels the containment direction on similarity matches", () => {
+    /* Record ⊇ query: the direction attribution may promote with a tie. */
+    expect(
+      matchCompanyName("ZENCITY TECHNOLOGIES US, INC.", ["Zencity"]),
+    ).toMatchObject({
+      kind: "match",
+      confidence: "name_similarity",
+      containment: "query_in_record",
+    });
+    /* Record ⊂ query: the namesake direction, never promoted. */
+    expect(
+      matchCompanyName("POLCO INC.", ["Polco Analytics Platform"]),
+    ).toMatchObject({
+      kind: "match",
+      confidence: "name_similarity",
+      containment: "record_in_query",
+    });
+    /* Exact matches carry no containment label. */
+    const exact = matchCompanyName("GOVASSIST AI INC", ["GovAssist AI"]);
+    expect(exact.kind === "match" && exact.containment).toBeUndefined();
+  });
+
+  it("hasCorporateSuffix requires a suffix and at least two tokens", () => {
+    expect(hasCorporateSuffix("Citymart US Inc.")).toBe(true);
+    expect(hasCorporateSuffix("ZENCITY TECHNOLOGIES US, INC.")).toBe(true);
+    expect(hasCorporateSuffix("Citymart")).toBe(false);
+    expect(hasCorporateSuffix("Inc")).toBe(false);
+  });
+
+  it("normalizeUnstripped keeps corporate suffixes", () => {
+    expect(normalizeUnstripped("Citymart US Inc.")).toBe("CITYMART US INC");
+    expect(normalizeUnstripped("CITYMART US INC.")).toBe("CITYMART US INC");
+    expect(normalizeUnstripped("Citymart")).not.toBe(
+      normalizeUnstripped("Citymart US Inc."),
+    );
+  });
 });
 
 describe("checkSamEntity", () => {
@@ -83,6 +122,16 @@ describe("checkSamEntity", () => {
     expect(check.evidence_url).toBe("https://sam.gov/entity/ABC123DEF456");
     expect(check.data).toMatchObject({ uei: "ABC123DEF456" });
     expect(check.retrieved_at).toBe("2026-08-28T12:00:00.000Z");
+  });
+
+  it("captures the physical address as tying-signal facts", async () => {
+    const check = await checkSamEntity(
+      { companyNames: ["GovAssist AI, Inc."] },
+      ctxWith(makeFetch([{ match: "entity-information/v3", body: entityHit }])),
+    );
+    expect(check.data).toMatchObject({
+      physical_address: { street: null, city: "AUSTIN", state: "TX" },
+    });
   });
 
   it("frames a definitive miss as normal for state/local vendors", async () => {

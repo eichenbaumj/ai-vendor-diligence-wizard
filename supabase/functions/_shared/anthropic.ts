@@ -48,6 +48,7 @@ export const EXTRACT_SCHEMA = {
   required: [
     "vendor_name_candidates",
     "domains",
+    "addresses",
     "sender_email",
     "people",
     "named_customers",
@@ -60,6 +61,7 @@ export const EXTRACT_SCHEMA = {
   properties: {
     vendor_name_candidates: { type: "array", items: { type: "string" } },
     domains: { type: "array", items: { type: "string" } },
+    addresses: { type: "array", items: { type: "string" } },
     sender_email: { type: ["string", "null"] },
     people: {
       type: "array",

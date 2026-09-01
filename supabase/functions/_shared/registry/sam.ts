@@ -73,6 +73,21 @@ export function normalizeCompanyName(raw: string): string {
   return tokens.join(" ");
 }
 
+/* True when the name ends in a corporate suffix (INC, LLC, ...). The
+   full-legal-name tying signal requires the record's suffix to be part of
+   what the buyer typed, so a bare brand can never earn it. */
+export function hasCorporateSuffix(raw: string): boolean {
+  const tokens = tokensOf(raw);
+  return tokens.length >= 2 && CORPORATE_SUFFIXES.has(tokens[tokens.length - 1]);
+}
+
+/* Unstripped normalized form: case-fold and strip punctuation but KEEP
+   corporate suffixes, so "Citymart US Inc." equals "CITYMART US INC."
+   while brand-only "Citymart" does not. */
+export function normalizeUnstripped(raw: string): string {
+  return tokensOf(raw).join(" ");
+}
+
 /* People: punctuation-stripped, case-folded, whitespace-collapsed. */
 export function normalizePersonName(raw: string): string {
   return tokensOf(raw).join(" ");
@@ -93,7 +108,18 @@ export function isInvestmentVehicleMismatch(
 }
 
 export type CompanyMatch =
-  | { kind: "match"; confidence: "exact" | "name_similarity"; query: string }
+  | {
+      kind: "match";
+      confidence: "exact" | "name_similarity";
+      query: string;
+      /* Which side contained the other on a name_similarity match.
+         "query_in_record" = the record name carries the query plus more
+         ("ZENCITY TECHNOLOGIES US, INC." for query "Zencity") — the
+         direction attribution may promote with a tying signal.
+         "record_in_query" = the record name sits inside the query — the
+         namesake direction, never promoted. Absent on exact matches. */
+      containment?: "query_in_record" | "record_in_query";
+    }
   | { kind: "vehicle_rejected"; query: string }
   | { kind: "none" };
 
@@ -139,7 +165,12 @@ export function matchCompanyName(
     const cContainsQ = qTokens.every((t) => cTokens.has(t));
     const contained = qContainsC ? cNorm : cContainsQ ? qNorm : null;
     if (contained !== null && containedSideStrongEnough(contained) && !similarity) {
-      similarity = { kind: "match", confidence: "name_similarity", query };
+      similarity = {
+        kind: "match",
+        confidence: "name_similarity",
+        query,
+        containment: cContainsQ ? "query_in_record" : "record_in_query",
+      };
     }
   }
   return similarity ?? rejected ?? { kind: "none" };
@@ -267,6 +298,11 @@ interface SamEntityHit {
   cageCode: string | null;
   registrationStatus: string | null;
   confidence: "exact" | "name_similarity";
+  /* Physical address from coreData — tying-signal facts (identity-ties.ts).
+     Capture-only: never rendered, never adverse. */
+  street: string | null;
+  city: string | null;
+  state: string | null;
 }
 
 export async function checkSamEntity(
@@ -323,12 +359,17 @@ export async function checkSamEntity(
           continue;
         }
         if (match.kind !== "match") continue;
+        const physical =
+          asRecord(asRecord(rec["coreData"])?.["physicalAddress"]) ?? {};
         const hit: SamEntityHit = {
           legalBusinessName: legal,
           uei: firstString(reg, ["ueiSAM", "uei"]),
           cageCode: firstString(reg, ["cageCode"]),
           registrationStatus: firstString(reg, ["registrationStatus", "status"]),
           confidence: match.confidence,
+          street: firstString(physical, ["addressLine1"]),
+          city: firstString(physical, ["city"]),
+          state: firstString(physical, ["stateOrProvinceCode"]),
         };
         if (!best || (best.confidence !== "exact" && match.confidence === "exact")) {
           best = hit;
@@ -356,6 +397,11 @@ export async function checkSamEntity(
           cage_code: best.cageCode,
           registration_status: best.registrationStatus,
           legal_business_name: best.legalBusinessName,
+          physical_address: {
+            street: best.street,
+            city: best.city,
+            state: best.state,
+          },
           rejected_investment_vehicles: rejectedVehicles,
         },
       };

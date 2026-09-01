@@ -192,6 +192,9 @@ export function buildTieCorpus(args: {
   primaryDomain: string | null;
   productNames: string[];
   citations: Citation[];
+  /* The SITE extract's own claimed state (never merged into the pitch
+     extract): a tie source per the design's site-claimed-HQ rule. */
+  siteState?: string | null;
 }): VendorTieCorpus {
   const { extract } = args;
   const peopleNames = extract.people.map((p, i) => ({
@@ -210,6 +213,7 @@ export function buildTieCorpus(args: {
     if (code && !states.some((s) => s.code === code)) states.push({ code, source });
   };
   addState(stateCodeOf(extract.state_mentioned), "pitch");
+  addState(stateCodeOf(args.siteState ?? null), "site");
   for (const a of addresses) {
     for (const code of statesInAddress(a.value)) addState(code, a.source);
   }

@@ -108,6 +108,7 @@ export interface TailState {
   /* Optional: callers predating the tying-signal build omit them. */
   pitchAddressCount?: number;
   productNames?: string[];
+  siteStateMentioned?: string | null;
   siteClaimQuotes: string[];
   /* Marks the report as a deep-mode result in the usage jsonb. */
   deep?: boolean;
@@ -219,6 +220,7 @@ export async function runPipelineTail(
     primaryDomain: state.primaryDomain,
     productNames: state.productNames ?? [],
     citations,
+    siteState: state.siteStateMentioned ?? null,
   });
   adjudicateChecks(checks, tieCorpus);
 

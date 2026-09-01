@@ -59,6 +59,7 @@ interface Checkpoint {
      the tail defaults them (0 addresses, no product names). */
   pitchAddressCount?: number;
   productNames?: string[];
+  siteStateMentioned?: string | null;
   siteClaimQuotes: string[];
   researchDomains: string[];
   usage: Usage;
@@ -267,6 +268,7 @@ async function runDeep(
       pitchCustomerCount: cp.pitchCustomerCount,
       pitchAddressCount: cp.pitchAddressCount ?? 0,
       productNames: cp.productNames ?? [],
+      siteStateMentioned: cp.siteStateMentioned ?? null,
       siteClaimQuotes: cp.siteClaimQuotes,
       deep: true,
     },

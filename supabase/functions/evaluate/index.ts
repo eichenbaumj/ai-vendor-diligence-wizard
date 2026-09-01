@@ -791,6 +791,12 @@ async function runPipeline(
   let pitchCustomerCount = extract.named_customers.length;
   let pitchAddressCount = extract.addresses.length;
   let siteClaimQuotes: string[] = [];
+  /* The site's own claimed state, kept OUT of the merged extract (names,
+     states, and domains stay pitch-only for queries) but fed to the tie
+     corpus: the design's tie list includes a site-claimed HQ state, and it
+     is the stable tie source for containment records ("ZENCITY
+     TECHNOLOGIES US, INC." for a site that says New York). */
+  let siteStateMentioned: string | null = null;
   let discoveredDomain: string | null = null;
   let discoveredConfirmed = false;
   {
@@ -884,6 +890,7 @@ async function runPipeline(
           pitchCustomerCount = merged.pitch_customer_count;
           pitchAddressCount = merged.pitch_address_count;
           siteClaimQuotes = merged.site_claim_quotes;
+          siteStateMentioned = siteExtract.state_mentioned;
           await emit({
             stage: "parse",
             kind: "micro_finding",
@@ -1052,6 +1059,7 @@ async function runPipeline(
       primaryDomain,
       productNames: split.productNames,
       citations: [],
+      siteState: siteStateMentioned,
     }),
   );
   const identity = registry.resolveIdentity(checks);
@@ -1090,6 +1098,7 @@ async function runPipeline(
           pitchCustomerCount,
           pitchAddressCount,
           productNames: split.productNames,
+          siteStateMentioned,
           siteClaimQuotes,
           researchDomains,
           usage: usageBox.value,
@@ -1225,6 +1234,7 @@ async function runPipeline(
       pitchCustomerCount,
       pitchAddressCount,
       productNames: split.productNames,
+      siteStateMentioned,
       siteClaimQuotes,
       ...(deepHandoffFailed ? { deepHandoffFailed: true } : {}),
     },

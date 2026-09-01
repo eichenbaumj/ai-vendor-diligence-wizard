@@ -344,6 +344,7 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
         reason: string | null;
         effective_date: string | null;
         domestic: boolean | null;
+        designation_class?: "dissolution" | "withdrawal";
       };
     }).dissolved;
     if (!dissolved) continue;
@@ -354,6 +355,35 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
     const whenPart = dissolved.effective_date
       ? `, effective ${dissolved.effective_date}`
       : "";
+    /* WITHDRAWAL-class designations ("Terminated", "Surrendered") on a
+       record that is not the entity's home-state registration are routine
+       record-keeping — a company ending its authority in one state it once
+       operated in — reported as record-only information, never
+       dissolution-class severity (the CivicPlus rule). A domestic
+       withdrawal is an affirmative end and keeps dissolution treatment;
+       so does an unknown-class record from older data. */
+    const designationClass = dissolved.designation_class ?? "dissolution";
+    if (
+      check.attribution === "attributed" &&
+      designationClass === "withdrawal" &&
+      dissolved.domestic !== true
+    ) {
+      ledger.push({
+        id: uniqueRowId(`withdrawn-${slugPart(dissolved.legal_name)}`),
+        dimension: "D1",
+        claim_quote: null,
+        what_checked: `The current registration status of ${dissolved.legal_name} in ${check.source}`.slice(0, 300),
+        result: "OFFICIAL_RECORD_FOUND",
+        evidence_tier: "T1",
+        severity: "INFO",
+        sources: src(check),
+        note: `${check.source} lists ${dissolved.legal_name} with status "${dissolved.status}"${reasonPart}${whenPart}. Ending a registration in one state where a company once did business is routine record-keeping; it is not a dissolution of the company. Ask the vendor which legal entity would sign a contract today.`.slice(0, 700),
+        methodology_ref: "d1-1",
+        ...(check.confidence ? { match_confidence: check.confidence } : {}),
+        attribution: "attributed",
+      });
+      continue;
+    }
     if (check.attribution === "attributed") {
       const severity = dissolved.domestic === true ? "CRITICAL" : "HIGH";
       const tieBasis = check.tie?.signals.find((s) => s.strength === "strong");

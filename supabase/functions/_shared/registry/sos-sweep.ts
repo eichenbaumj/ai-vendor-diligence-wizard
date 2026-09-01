@@ -33,6 +33,7 @@
   Pure module: no Deno APIs, no module state.
 */
 import type { RegistryCheck } from "../schemas.ts";
+import { stateCodeOf } from "../identity-ties.ts";
 import {
   asRecord,
   dedupeNames,
@@ -189,15 +190,24 @@ const AGENT_COLS = ["agentname", "agent_name", "registered_agent", "registeredag
    These are informational, never alarm findings. */
 const LAPSE_STATUS = /non-?compliant|past due|delinquent|not in good standing/i;
 
-/* Affirmative end-of-registration designations. Only these can arm the
-   dissolution finding downstream (the affirmative-designation rule: vague
-   language like a bare "Inactive" never fires an adverse path). Mergers and
-   foreign-state withdrawals are deliberately EXCLUDED: an acquired company
-   merging out of a registry, or a company ending its authority in one
-   foreign state, is routine corporate housekeeping, not an end of the
-   business. */
-const AFFIRMATIVE_INACTIVE =
-  /voluntar\w*\s+dissol\w*|dissolution|dissolved|revoked|revocation|forfeit\w*|surrender\w*|terminat\w*/i;
+/* Affirmative end-of-registration designations, split into two classes.
+   DISSOLUTION-class words mean the company itself ended; WITHDRAWAL-class
+   words ("Terminated", "Surrendered", "Withdrawn") on a FOREIGN
+   registration mean the company ended its authority to do business in one
+   state it once operated in — ordinary housekeeping, reported as
+   record-only information downstream, never dissolution-class severity
+   (the CivicPlus rule: an "Inactive: Terminated" foreign registration is
+   not a dissolution). On a DOMESTIC record the withdrawal words are an
+   affirmative end and keep dissolution-class treatment. Mergers stay
+   excluded entirely. Vague language like a bare "Inactive" never fires
+   any adverse path. */
+const DISSOLUTION_CLASS =
+  /voluntar\w*\s+dissol\w*|dissolution|dissolved|revoked|revocation|forfeit\w*/i;
+const WITHDRAWAL_CLASS = /surrender\w*|terminat\w*|withdraw\w*/i;
+const AFFIRMATIVE_INACTIVE = new RegExp(
+  `${DISSOLUTION_CLASS.source}|${WITHDRAWAL_CLASS.source}`,
+  "i",
+);
 
 export interface DissolvedDesignation {
   legal_name: string;
@@ -209,6 +219,10 @@ export interface DissolvedDesignation {
      dissolution ends the company); false for foreign registrations; null
      when the lane cannot tell. Downstream severity keys on this. */
   domestic: boolean | null;
+  /* "dissolution" = the company itself ended; "withdrawal" = it ended its
+     registration in one state (Terminated/Surrendered/Withdrawn). Optional
+     for data recorded before the split; absent means dissolution. */
+  designation_class?: "dissolution" | "withdrawal";
 }
 
 /* Detect an affirmative end-of-registration designation on the lane's best
@@ -230,6 +244,7 @@ export function detectDissolvedDesignation(args: {
     /* A lapse status alongside no affirmative reason stays informational. */
     if (!AFFIRMATIVE_INACTIVE.test(args.status ?? "")) return null;
   }
+  const corpusText = `${args.status ?? ""} ${args.reason ?? ""}`;
   return {
     legal_name: args.legalName,
     status: args.status ?? "",
@@ -237,6 +252,11 @@ export function detectDissolvedDesignation(args: {
     effective_date: args.effectiveDate ?? null,
     record_id: args.recordId ?? null,
     domestic: args.domestic ?? null,
+    /* Dissolution-class words win when both appear ("Dissolved after
+       termination of..."): the stronger designation governs. */
+    designation_class: DISSOLUTION_CLASS.test(corpusText)
+      ? "dissolution"
+      : "withdrawal",
   };
 }
 
@@ -370,11 +390,31 @@ async function runSocrataLane(
       }
       /* An affirmative end-of-registration status on the best match is
          recorded at any confidence; attribution decides downstream whether
-         it arms a finding or renders as a candidate record. */
+         it arms a finding or renders as a candidate record. The datasets
+         already say whether the record is the entity's home-state
+         registration: Connecticut's citizenship flag, Colorado's
+         "Foreign Corporation" entity type, and the formation-jurisdiction
+         columns compared against the lane's own state. */
+      const laneState = lane.checkId.slice(4).toUpperCase();
+      const jurisdictionCode = stateCodeOf(best.jurisdiction ?? null);
+      const domestic = best.domestic_flag
+        ? /domestic/i.test(best.domestic_flag)
+          ? true
+          : /foreign/i.test(best.domestic_flag)
+            ? false
+            : null
+        : best.entity_type && /foreign/i.test(best.entity_type)
+          ? false
+          : best.entity_type && /domestic/i.test(best.entity_type)
+            ? true
+            : jurisdictionCode
+              ? jurisdictionCode === laneState
+              : null;
       const dissolved = detectDissolvedDesignation({
         legalName: best.name,
         status: best.status,
         recordId: best.record_id,
+        domestic,
       });
       return {
         check_id: lane.checkId,

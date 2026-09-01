@@ -11,6 +11,7 @@ import { RegistryCheck } from "../../../supabase/functions/_shared/schemas.ts";
 import { lintText } from "../../../supabase/functions/_shared/lint.ts";
 import {
   checkSosSweep,
+  detectDissolvedDesignation,
   resolveIdentity,
 } from "../../../supabase/functions/_shared/registry/sos-sweep.ts";
 import {
@@ -355,6 +356,89 @@ describe("checkSosSweep: mechanics", () => {
     expect(checks.sos_co.summary).toMatch(/could not reach/i);
     expect(checks.sos_ct.status).toBe("hit");
     expect(checks.sos_ny.status).toBe("definitive_miss");
+  });
+});
+
+describe("detectDissolvedDesignation: designation classes (the CivicPlus rule)", () => {
+  it("dissolution-class words classify as dissolution", () => {
+    for (const status of [
+      "Voluntarily Dissolved",
+      "Dissolution by Proclamation",
+      "Revoked",
+      "Forfeited existence",
+    ]) {
+      const d = detectDissolvedDesignation({ legalName: "ACME INC.", status });
+      expect(d?.designation_class).toBe("dissolution");
+    }
+  });
+
+  it("withdrawal-class words classify as withdrawal", () => {
+    for (const status of [
+      "Inactive: Terminated",
+      "Surrender of Authority",
+      "Withdrawn",
+    ]) {
+      const d = detectDissolvedDesignation({ legalName: "ACME INC.", status });
+      expect(d?.designation_class).toBe("withdrawal");
+    }
+  });
+
+  it("when both classes appear, dissolution governs", () => {
+    const d = detectDissolvedDesignation({
+      legalName: "ACME INC.",
+      status: "Dissolved",
+      reason: "Termination of existence",
+    });
+    expect(d?.designation_class).toBe("dissolution");
+  });
+
+  it("a bare Inactive or a lapse still arms nothing", () => {
+    expect(
+      detectDissolvedDesignation({ legalName: "ACME INC.", status: "Inactive" }),
+    ).toBeNull();
+    expect(
+      detectDissolvedDesignation({
+        legalName: "ACME INC.",
+        status: "Noncompliant",
+      }),
+    ).toBeNull();
+  });
+
+  it("a Socrata lane derives domestic=false from the citizenship flag (terminated foreign registration)", async () => {
+    const ctTerminated = [
+      {
+        business_id: "7777777",
+        name: "CIVICSIGNAL INC",
+        status: "Terminated",
+        business_type: "Stock Corporation",
+        citizenship: "Foreign",
+        state_of_formation: "DE",
+        date_registration: "2015-01-05T00:00:00.000",
+        billing_city: "Manchester",
+        billing_state: "NH",
+      },
+    ];
+    const checks = byId(
+      await checkSosSweep(
+        { companyNames: ["CivicSignal Inc"] },
+        {
+          fetchFn: makeFetch([
+            { match: NY, body: sosEmpty },
+            { match: CO, body: sosEmpty },
+            { match: CT, body: ctTerminated },
+            { match: TX, body: sosEmpty },
+            { match: OR, body: sosEmpty },
+          ]),
+          now: NOW,
+        },
+      ),
+    );
+    const data = checks.sos_ct.data as {
+      dissolved?: { domestic: boolean | null; designation_class?: string };
+    };
+    expect(data.dissolved).toBeDefined();
+    expect(data.dissolved!.designation_class).toBe("withdrawal");
+    expect(data.dissolved!.domestic).toBe(false);
   });
 });
 

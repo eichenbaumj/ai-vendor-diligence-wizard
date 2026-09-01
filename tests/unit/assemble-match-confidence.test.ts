@@ -281,6 +281,60 @@ describe("dissolution designations (the Citymart class)", () => {
     expect(out.questions.some((q) => q.id === "gap-dissolved")).toBe(false);
   });
 
+  it("an attributed TERMINATED foreign registration is record-only information (the CivicPlus rule)", () => {
+    const terminated = {
+      ...dissolvedNy,
+      data: {
+        dissolved: {
+          legal_name: "CIVICSIGNAL INC",
+          status: "Inactive: Terminated",
+          reason: null,
+          effective_date: "2019-12-09",
+          record_id: "5555555",
+          domestic: false,
+          designation_class: "withdrawal",
+        },
+      },
+    };
+    const out = assemble(
+      input({
+        extract: baseExtract({ vendor_name_candidates: ["CivicSignal"] }),
+        checks: [terminated],
+      }),
+    );
+    const row = out.ledger.find((r) => r.id.startsWith("withdrawn-"));
+    expect(row).toBeDefined();
+    expect(row!.severity).toBe("INFO");
+    expect(row!.note).toContain("routine record-keeping");
+    expect(row!.note).toContain("not a dissolution");
+    expect(row!.note).toContain("which legal entity would sign a contract today");
+    expect(lintText(row!.note).filter((v) => v.kind === "banned")).toHaveLength(0);
+    /* No finding of any severity: the tier cannot move. */
+    expect(out.tierInputs.findings.some((f) => f.id.startsWith("dissolved"))).toBe(false);
+    expect(out.ledger.some((r) => r.id.startsWith("dissolved-"))).toBe(false);
+  });
+
+  it("an attributed DOMESTIC withdrawal keeps dissolution-class treatment", () => {
+    const domesticTerminated = {
+      ...dissolvedNy,
+      data: {
+        dissolved: {
+          legal_name: "CIVICSIGNAL INC",
+          status: "Terminated",
+          reason: null,
+          effective_date: "2019-12-09",
+          record_id: "5555555",
+          domestic: true,
+          designation_class: "withdrawal",
+        },
+      },
+    };
+    const out = assemble(input({ checks: [domesticTerminated] }));
+    const finding = out.tierInputs.findings.find((f) => f.id.startsWith("dissolved-"));
+    expect(finding).toBeDefined();
+    expect(finding!.severity).toBe("CRITICAL");
+  });
+
   it("an unadjudicated dissolution (no attribution field) defaults to candidate", () => {
     const { tie: _tie, attribution: _attr, ...bare } = dissolvedNy;
     const out = assemble(

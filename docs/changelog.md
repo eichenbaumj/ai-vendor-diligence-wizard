@@ -31,6 +31,21 @@ their full legal names; vendors whose materials offer nothing to compare
 against may see identity move to an honest "could not verify" rather than
 credit from an unverifiable match.
 
+**A terminated foreign registration is information, not a dissolution.**
+End-of-registration words now carry a class: "Dissolved," "Revoked," and
+"Forfeited" mean the company ended; "Terminated," "Surrendered," and
+"Withdrawn" on a registration outside the entity's home state mean it
+ended its authority to do business in that one state — routine
+record-keeping that previously produced a High warning. The state lanes
+now read the home-state signals their datasets already carry
+(Connecticut's citizenship flag, Colorado's entity type and formation
+jurisdiction, New York's entity type), and a foreign withdrawal renders
+as a record-only informational row that names the record and asks which
+legal entity would sign a contract today. A domestic withdrawal, and
+every dissolution-class designation, keeps full treatment. Expected
+effect: companies that once registered in a state and later left it stop
+carrying a warning for the housekeeping; true dissolutions are untouched.
+
 **SEC full-text hits are anchored to the filing company.** A full-text
 result now counts only when the FILING COMPANY's name matches the vendor
 under the same matcher every registry lane uses: same normalization,

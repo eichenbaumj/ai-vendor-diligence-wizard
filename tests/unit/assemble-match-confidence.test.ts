@@ -502,6 +502,240 @@ describe("person titles are attributed; role-change coverage is dated", () => {
   });
 });
 
+describe("feed containment credit (v1.6, the Tyler FedRAMP class)", () => {
+  const tylerFedramp = check({
+    check_id: "fedramp_marketplace",
+    source: "FedRAMP Marketplace",
+    confidence: "name_similarity",
+    summary:
+      "The FedRAMP Marketplace feed lists Tyler Technologies Data & Insights with status Authorized. Confirm at the link that the listed product is the one being pitched to you.",
+    data: {
+      matches: [
+        {
+          provider: "Tyler Technologies Data & Insights",
+          status: "Authorized",
+          confidence: "name_similarity",
+          containment: "query_in_record",
+          matched_query: "Tyler Technologies",
+        },
+      ],
+      claimed_fedramp: false,
+    },
+  });
+
+  it("a listed name containing the vendor's full multi-token name earns credit", () => {
+    const out = assemble(
+      input({
+        extract: baseExtract({ vendor_name_candidates: ["Tyler Technologies"] }),
+        checks: [tylerFedramp],
+      }),
+    );
+    const row = out.ledger.find((r) => r.methodology_ref === "d3-1");
+    expect(row).toBeDefined();
+    expect(row!.result).toBe("VERIFIED");
+    expect(row!.match_confidence).toBe("name_similarity");
+    /* The product-scope caveat stays in the code-templated note. */
+    expect(row!.note).toContain("Confirm at the link");
+    expect(out.tierInputs.green_dimensions).toContain("D3");
+  });
+
+  it("the namesake direction (record_in_query) never credits this way", () => {
+    const namesake = {
+      ...tylerFedramp,
+      data: {
+        matches: [
+          {
+            provider: "Tyler",
+            status: "Authorized",
+            confidence: "name_similarity",
+            containment: "record_in_query",
+            matched_query: "Tyler Technologies Data & Insights",
+          },
+        ],
+        claimed_fedramp: false,
+      },
+    };
+    const out = assemble(
+      input({
+        extract: baseExtract({
+          vendor_name_candidates: ["Tyler Technologies Data & Insights"],
+        }),
+        checks: [namesake],
+      }),
+    );
+    const row = out.ledger.find((r) => r.methodology_ref === "d3-1");
+    expect(row!.result).toBe("COULD_NOT_VERIFY");
+    expect(row!.attribution).toBe("candidate");
+    expect(out.tierInputs.green_dimensions).not.toContain("D3");
+  });
+
+  it("a single-token or degenerate contained query never credits", () => {
+    const shortQuery = {
+      ...tylerFedramp,
+      data: {
+        matches: [
+          {
+            provider: "Zip Recruiting Technologies",
+            status: "Authorized",
+            confidence: "name_similarity",
+            containment: "query_in_record",
+            matched_query: "Zip",
+          },
+        ],
+        claimed_fedramp: false,
+      },
+    };
+    const out = assemble(
+      input({
+        extract: baseExtract({ vendor_name_candidates: ["Zip"] }),
+        checks: [shortQuery],
+      }),
+    );
+    const row = out.ledger.find((r) => r.methodology_ref === "d3-1");
+    expect(row!.result).toBe("COULD_NOT_VERIFY");
+    expect(row!.attribution).toBe("candidate");
+  });
+
+  it("a stacked-suffix query that strips to a degenerate brand never credits (the Zip Co Ltd class)", () => {
+    const stacked = {
+      ...tylerFedramp,
+      data: {
+        matches: [
+          {
+            provider: "Zip Payments Technologies",
+            status: "Authorized",
+            confidence: "name_similarity",
+            containment: "query_in_record",
+            matched_query: "Zip Co Ltd",
+          },
+        ],
+        claimed_fedramp: false,
+      },
+    };
+    const out = assemble(
+      input({
+        extract: baseExtract({ vendor_name_candidates: ["Zip Co Ltd"] }),
+        checks: [stacked],
+      }),
+    );
+    const row = out.ledger.find((r) => r.methodology_ref === "d3-1");
+    expect(row!.result).toBe("COULD_NOT_VERIFY");
+    expect(row!.attribution).toBe("candidate");
+  });
+
+  it("a PRODUCT name from the pitch never earns containment credit, only the vendor's own name", () => {
+    /* The feed lanes receive product names from the "X by Y" split; a
+       product name matching an unrelated firm's listing must never turn
+       into that firm's compliance credit. */
+    const productMatch = {
+      ...tylerFedramp,
+      data: {
+        matches: [
+          {
+            provider: "Civic Sense Technologies",
+            status: "Authorized",
+            confidence: "name_similarity",
+            containment: "query_in_record",
+            matched_query: "Civic Sense",
+          },
+        ],
+        claimed_fedramp: false,
+      },
+    };
+    const out = assemble(
+      input({
+        extract: baseExtract({
+          vendor_name_candidates: ["Civic Sense by Acme Labs"],
+        }),
+        checks: [productMatch],
+      }),
+    );
+    const row = out.ledger.find((r) => r.methodology_ref === "d3-1");
+    expect(row!.result).toBe("COULD_NOT_VERIFY");
+    expect(row!.attribution).toBe("candidate");
+    expect(out.tierInputs.green_dimensions).not.toContain("D3");
+  });
+
+  it("a token-subset that is not an ordered prefix never credits (the Alto Networks class)", () => {
+    /* "Alto Networks" is a token subset of "Palo Alto Networks" but the
+       listing does not BEGIN with it: crediting scrambled subsets would
+       let any two-token fragment inherit an unrelated provider's
+       authorization. */
+    const subset = {
+      ...tylerFedramp,
+      data: {
+        matches: [
+          {
+            provider: "Palo Alto Networks",
+            status: "Authorized",
+            confidence: "name_similarity",
+            containment: "query_in_record",
+            matched_query: "Alto Networks",
+          },
+        ],
+        claimed_fedramp: false,
+      },
+    };
+    const out = assemble(
+      input({
+        extract: baseExtract({ vendor_name_candidates: ["Alto Networks"] }),
+        checks: [subset],
+      }),
+    );
+    const row = out.ledger.find((r) => r.methodology_ref === "d3-1");
+    expect(row!.result).toBe("COULD_NOT_VERIFY");
+    expect(row!.attribution).toBe("candidate");
+    expect(out.tierInputs.green_dimensions).not.toContain("D3");
+  });
+
+  it("a similarity match with no containment metadata stays a candidate (older lanes)", () => {
+    const bare = {
+      ...tylerFedramp,
+      data: {
+        matches: [
+          {
+            provider: "Tyler Technologies Data & Insights",
+            status: "Authorized",
+            confidence: "name_similarity",
+          },
+        ],
+        claimed_fedramp: false,
+      },
+    };
+    const out = assemble(
+      input({
+        extract: baseExtract({ vendor_name_candidates: ["Tyler Technologies"] }),
+        checks: [bare],
+      }),
+    );
+    const row = out.ledger.find((r) => r.methodology_ref === "d3-1");
+    expect(row!.result).toBe("COULD_NOT_VERIFY");
+  });
+});
+
+describe("site_discovery disclosure surfaces in the honesty panel (v1.6)", () => {
+  it("renders as could_not_check with the template as reason, grouped unavailable", () => {
+    const disclosure = check({
+      check_id: "site_discovery",
+      source: "Vendor website discovery",
+      status: "coverage_limited",
+      confidence: null,
+      summary:
+        "We could not find this vendor's website from its name alone, so the website checks did not run. This does not count against the vendor. To include those checks, run a new check with the vendor's web address pasted in.",
+      evidence_url: null,
+      data: { failure_kind: "not_found" },
+    });
+    const out = assemble(input({ checks: [disclosure] }));
+    const row = out.honesty.find((h) => h.check_id === "site_discovery");
+    expect(row).toBeDefined();
+    expect(row!.status).toBe("could_not_check");
+    expect(row!.label).toBe("Vendor website discovery");
+    expect(row!.reason).toBe(disclosure.summary);
+    expect(row!.reason!.length).toBeLessThanOrEqual(300);
+    expect(row!.group).toBe("unavailable");
+  });
+});
+
 describe("domain-age rows on claim-less runs", () => {
   it("the row says no claims existed and the note is the check summary", () => {
     const rdap = check({

@@ -169,6 +169,31 @@ describe("buildOverviewModel: the minimal report", () => {
     const keys = buildOverviewModel(nameRun).found.tiles.map((t) => t.key);
     expect(keys).not.toContain("adv-findings");
   });
+
+  it("shows the site notice exactly when the site_discovery row could not check (v1.6)", () => {
+    const withDisclosure = Report.parse({
+      ...minimal,
+      honesty_panel: [
+        {
+          check_id: "site_discovery",
+          label: "Vendor website discovery",
+          status: "could_not_check",
+          reason:
+            "We could not find this vendor's website from its name alone, so the website checks did not run. This does not count against the vendor. To include those checks, run a new check with the vendor's web address pasted in.",
+          group: "unavailable",
+        },
+      ],
+    });
+    const notice = buildOverviewModel(withDisclosure).siteNotice;
+    /* The notice must stay accurate in EVERY failure branch: only the
+       page-reading checks are always missing (domain-record checks can
+       still run in the unreadable and late-found cases), so it may never
+       claim "website checks" are missing wholesale. */
+    expect(notice).toContain("checks that read its pages are missing");
+    expect(notice).not.toContain("website checks are missing");
+    expect(notice).toContain("web address");
+    expect(buildOverviewModel(minimal).siteNotice).toBeNull();
+  });
 });
 
 describe("buildOverviewModel: copy discipline", () => {
@@ -179,6 +204,7 @@ describe("buildOverviewModel: copy discipline", () => {
       const corpus = {
         bluf: m.bluf,
         partial: m.partialNotice ?? "",
+        site: m.siteNotice ?? "",
         groups: Object.values(OVERVIEW_GROUP_LABELS),
         tiles: allTiles(m).map((t) => `${t.label} ${t.detail ?? ""}`),
         claims: m.found.claims

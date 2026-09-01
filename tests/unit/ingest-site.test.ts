@@ -150,6 +150,77 @@ describe("fetchVendorSite", () => {
   });
 });
 
+describe("fetchVendorSite attempts (v1.6 full-pass retry)", () => {
+  const LONG = "Acme AI serves Littleton and Suisun City. ".repeat(10);
+
+  /* A fetchFn whose FIRST N calls throw (transient network fault), then
+     serves normally. Counts every call. */
+  function flakyFetch(failFirst: number) {
+    let calls = 0;
+    const fn = (async (input: RequestInfo | URL): Promise<Response> => {
+      calls += 1;
+      if (calls <= failFirst) throw new TypeError("network flake");
+      const path = new URL(String(input)).pathname.replace(/\/$/, "") || "/";
+      if (path === "/") {
+        return new Response(page(`Acme AI homepage. ${LONG}`), {
+          status: 200,
+          headers: { "content-type": "text/html" },
+        });
+      }
+      return new Response("nope", { status: 404 });
+    }) as typeof fetch;
+    return { fn, count: () => calls };
+  }
+
+  it("attempts: 2 re-runs the whole pass after a total first-pass failure", async () => {
+    /* Pass 1 burns two calls (apex throw, www throw) and returns null;
+       pass 2 succeeds on the apex. */
+    const flaky = flakyFetch(2);
+    const site = await fetchVendorSite("acmeai.com", {
+      fetchFn: flaky.fn,
+      attempts: 2,
+    });
+    expect(site).not.toBeNull();
+    expect(site!.pages[0].url).toBe("https://acmeai.com/");
+    expect(flaky.count()).toBeGreaterThanOrEqual(3);
+  });
+
+  it("the default stays a single pass", async () => {
+    const flaky = flakyFetch(2);
+    const site = await fetchVendorSite("acmeai.com", { fetchFn: flaky.fn });
+    expect(site).toBeNull();
+    expect(flaky.count()).toBe(2);
+  });
+
+  it("never re-runs when the first pass returned pages", async () => {
+    let homeServes = 0;
+    const fn = (async (input: RequestInfo | URL): Promise<Response> => {
+      const path = new URL(String(input)).pathname.replace(/\/$/, "") || "/";
+      if (path === "/") {
+        homeServes += 1;
+        return new Response(page(`Acme AI homepage. ${LONG}`), {
+          status: 200,
+          headers: { "content-type": "text/html" },
+        });
+      }
+      return new Response("nope", { status: 404 });
+    }) as typeof fetch;
+    const site = await fetchVendorSite("acmeai.com", { fetchFn: fn, attempts: 2 });
+    expect(site).not.toBeNull();
+    expect(homeServes).toBe(1);
+  });
+
+  it("attempts: 2 still returns null when both passes fail", async () => {
+    const flaky = flakyFetch(Infinity);
+    const site = await fetchVendorSite("acmeai.com", {
+      fetchFn: flaky.fn,
+      attempts: 2,
+    });
+    expect(site).toBeNull();
+    expect(flaky.count()).toBe(4);
+  });
+});
+
 describe("stripHiddenHtml", () => {
   it("removes every pattern detectHiddenHtml matches", () => {
     const html = `<p>keep</p><div style="display:none">${"h".repeat(50)}</div><!--${"c".repeat(90)}-->`;

@@ -314,7 +314,6 @@ export const DEEP_MODE = {
   ],
   perLane: { searches: 15, fetches: 6 } satisfies ResearchBudget,
   laneDeadlineMs: 300_000,
-  laneIdleTimeoutMs: 90_000,
 } as const;
 
 export function buildResearchRequest(

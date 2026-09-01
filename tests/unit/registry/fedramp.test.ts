@@ -103,6 +103,51 @@ describe("checkFedramp", () => {
   });
 });
 
+describe("containment metadata on similarity matches (v1.6)", () => {
+  it("records the containment direction and the matched query", async () => {
+    /* "CloudCourt" is contained in the listed "CloudCourt Inc" — after
+       suffix normalization they may match exactly; use a two-token query
+       contained in a longer listed name to force a similarity match. */
+    const feedWithSubsidiary = {
+      meta: { generated: "2026-08-28T06:00:00Z", source: "test" },
+      data: {
+        Providers: [
+          {
+            name: "Tyler Technologies Data & Insights",
+            designation: "Authorized",
+            cso: "Open Data Platform",
+            impact_level: "Moderate",
+          },
+        ],
+        Products: [],
+      },
+    };
+    const check = await checkFedramp(
+      { companyNames: ["Tyler Technologies"], claimedFedramp: false },
+      ctxWith(makeFetch(feedWithSubsidiary)),
+    );
+    RegistryCheck.parse(check);
+    expect(check.status).toBe("hit");
+    expect(check.confidence).toBe("name_similarity");
+    const m = (check.data as { matches: Record<string, unknown>[] }).matches[0];
+    expect(m).toMatchObject({
+      containment: "query_in_record",
+      matched_query: "Tyler Technologies",
+    });
+  });
+
+  it("records no containment fields on an exact match", async () => {
+    const check = await checkFedramp(
+      { companyNames: ["CloudCourt, Inc."], claimedFedramp: false },
+      ctxWith(makeFetch(feed)),
+    );
+    expect(check.status).toBe("hit");
+    expect(check.confidence).toBe("exact");
+    const m = (check.data as { matches: Record<string, unknown>[] }).matches[0];
+    expect(m.containment).toBeUndefined();
+  });
+});
+
 describe("cached-feed fallback", () => {
   it("uses a fresh cached copy when the live fetch fails", async () => {
     const check = await checkFedramp(

@@ -4,15 +4,74 @@ Every change to checks, weights, tier criteria, or language rules lands here
 with its date and its expected effect on verdicts. The methodology document
 states the current rules; this file records how they got there.
 
+## Version 1.6 (September 2026)
+
+**Name-only checks get a steadier website step, and the report says so
+when the website cannot be found.** On a name-only submission, the
+vendor's website is the gateway to the second identity identifier. That
+chain was only as reliable as its flakiest link. The website search ran
+once with no retry, and so did the site fetch. A hidden time gate
+silently skipped the site step on slow runs. A real vendor's verdict
+could land at "not enough to evaluate" because one lookup had a bad
+minute. Each link now retries once on
+infrastructure-class failures, under budgeted time cutoffs sized against
+the run's own clock. The website search retries, but a search that ran
+and found nothing is an answer and is never retried. The site fetch
+retries, but a fetch that returned pages never re-runs. The site reading
+step retries. The domain registration lookup's retry now stops the
+moment its time allowance ends, and never re-asks a registry that
+answered. The direct
+mail-record stand-in for an unavailable registration lookup now also
+runs when the first mail lookup itself failed or returned an unusable
+answer. Previously an unusable answer silently blocked that stand-in
+from running at all. Expected effect: name-only checks of real vendors stop losing
+identity resolution to transient lookup failures. The retries add no
+new adverse rule: a retry only turns a failure into whatever answer the
+source would have given a healthy first attempt.
+
+**A failed website step is disclosed, not silent.** Before this version,
+when the website search or the site fetch failed, the report carried no
+trace of it: the honesty panel was silent and a "not enough to evaluate"
+verdict gave no hint that website checks were missing. A "Vendor website
+discovery" row now appears in the honesty panel whenever the step
+failed on a name-only check. It states that the website checks did not run, that this does
+not count against the vendor, and that re-running the check with the
+vendor's web address will include them. The report overview repeats the
+notice. When
+research later in the same run surfaces the site's address, the row says
+that instead. Expected effect on verdicts: none; the row is
+informational, and the change is that missing coverage is now visible.
+
+**A FedRAMP listing that begins with the vendor's full name is that
+company's entry.** The attribution rule for compliance feeds demanded a
+product-metadata tie for every similar-name listing, which no name-only
+run can supply, so a feed listing "Tyler Technologies Data & Insights"
+earned the vendor "Tyler Technologies" no credit and rendered as a
+candidate record. On the FedRAMP Marketplace feed, a similarity listing
+now earns credit when the listed name begins with the vendor's own
+complete name. The rule is deliberately narrow. It accepts only the
+vendor's company name, never a product name from the pitch. The name
+must have at least two words and not be a short, collision-prone name.
+A listing that merely contains the vendor's words somewhere inside it
+never credits, and neither does the reverse direction (a shorter listed
+name inside the vendor's longer name). The credited row keeps its note
+to confirm at the link that the listed product is the one being
+pitched. The other compliance feeds keep the product-metadata rule
+unchanged. Expected effect: established vendors listed in the FedRAMP
+feed under subsidiary-style names regain the credit the feed's
+publisher intended. The namesake directions that caused false credit
+remain demoted.
+
 ## Version 1.5 (September 2026)
 
 **Registry records must be tied to the vendor before they count.** A
-record that matches by name — even exactly — now earns identity, credit,
-or a warning only when a second detail ties it to this vendor: an officer
-or registered agent the vendor's materials or independent coverage names,
-an address the vendor uses, the vendor's web domain, the compliance feed's
-own product entry, the complete legal name the buyer typed, or (for
-favorable credit only, never warnings) a matching state. The lanes now
+record that matches by name, even exactly, now earns identity, credit,
+or a warning only when a second detail ties it to this vendor. The
+qualifying details: an officer or registered agent the vendor's
+materials or independent coverage names, an address the vendor uses,
+the vendor's web domain, the compliance feed's own product entry, the
+complete legal name the buyer typed, or (for favorable credit only,
+never warnings) a matching state. The lanes now
 capture those details from the records they already receive, and the New
 York detail record's CEO, registered agent, and service-of-process address
 join the comparison. Untied records appear as labeled candidate records:
@@ -24,24 +83,24 @@ revocations) arm only on records tied by one of the stronger details; an
 ended registration under a merely matching name becomes a candidate record
 with a one-line question instead of a Critical warning. The debarment
 follow-up search now keys only on legal names from tied records. Expected
-effect: namesake records stop drowning short- and common-named vendors in
-both directions — false identity credit and false dissolution warnings
-both disappear — while true records gain a path to recognition under
-their full legal names; vendors whose materials offer nothing to compare
-against may see identity move to an honest "could not verify" rather than
-credit from an unverifiable match.
+effect: namesake records stop drowning short- and common-named vendors
+in both directions, so false identity credit and false dissolution
+warnings both disappear, while true records gain a path to recognition
+under their full legal names. Vendors whose materials offer nothing to
+compare against may see identity move to an honest "could not verify"
+rather than credit from an unverifiable match.
 
 **Performance numbers get their arithmetic unpacked.** A performance
 claim carrying a dollar or percentage figure now shows "what this number
 implies" on its ledger row: the figure divided against a denominator the
 pitch itself states, or the honest line that the pitch gives no basis to
 check it against. The arithmetic is computed in code from the verbatim
-quotes (the extractor's structured fields are hints only and never reach
-a sentence), the pitch's own basis span is always displayed with the
-division, evaluative adjectives are banned on the surface and enforced by
-the language lint with a fallback template, and the note never moves any
-weight, finding, or tier — it exists to arm the question, which now leads
-with the computed implication. Expected effect on verdicts: none, by
+quotes; the extractor's structured fields are hints only and never
+reach a sentence. The pitch's own basis span is always displayed with
+the division. Evaluative adjectives are banned on the surface and
+enforced by the language lint with a fallback template. The note never
+moves any weight, finding, or tier; it exists to arm the question,
+which now leads with the computed implication. Expected effect on verdicts: none, by
 construction; the change is what the buyer can see.
 
 **Hidden text on submitted web pages punishes injection, not web
@@ -50,13 +109,12 @@ real pages hide menus, build timestamps, and screen-reader labels, and
 two such artifacts capped a real page's verdict live. On URL submissions,
 hidden text now caps only when it is instruction-like (the
 machine-directed pattern set, run over the hidden spans) or when it
-carries a claim figure the visible page does not; anything else is
-reported as an informational finding with the passage quoted, and the
-hidden text no longer feeds the extraction stage (matching the
-auto-fetched site pass). Pasted documents and PDFs keep the strict cap —
-a prepared document with hidden content is the attack this tool exists
-for — and machine-directed text in visible content caps on every input
-kind. The existing hidden-instruction red-team twin still caps by
+carries a claim figure the visible page does not. Anything else is
+reported as an informational finding with the passage quoted. The
+hidden text no longer feeds the extraction stage, matching the
+auto-fetched site pass. Pasted documents and PDFs keep the strict cap, because a prepared
+document with hidden content is the attack this tool exists for.
+Machine-directed text in visible content caps on every input kind. The existing hidden-instruction red-team twin still caps by
 construction. Expected effect: ordinary websites submitted by URL stop
 landing at Tier 2 for their own engineering; every injection fixture
 still caps.
@@ -65,7 +123,7 @@ still caps.
 previously fired on a single invisible Unicode character, and one stray
 zero-width character in ordinary web text capped a real page's verdict at
 Tier 2. Tag characters and bidirectional embedding controls still fire on
-one character — those classes exist to smuggle or rewrite content. The
+one character; those classes exist to smuggle or rewrite content. The
 ubiquitous classes (zero-width spaces and joiners, directional marks,
 byte-order marks) now fire only at volume: a run of 8 or more, or 20 or
 more in total; below that they are stripped silently and counted in the
@@ -74,24 +132,24 @@ artifacts; every existing red-team fixture still caps.
 
 **Every retrieved official page is accounted for.** Research regularly
 retrieved official and independent pages that the structuring stage then
-discarded without a trace — on one audited company, the run's own
+discarded without a trace. On one audited company, the run's own
 citations held the central adverse story while the verdict read "no
-unresolved high-severity findings." Two invariants now hold: every class
-1-2 citation appears in the report as a row's source, a follow-up lead,
-or a new "retrieved but not assessed" list at the end; and any ledger row
-marked High or Critical reconciles against the finding list the verdict
-rules read (a row no finding covers steps down to Medium), so the
-verdict's rationale can never describe a cleaner page than the one above
-it. Expected effect: presentation honesty — research spend is visible and
+unresolved high-severity findings." Two invariants now hold. Every class 1-2 citation appears in the report
+as a row's source, a follow-up lead, or a new "retrieved but not
+assessed" list at the end. And any ledger row marked High or Critical
+reconciles against the finding list the verdict rules read (a row no
+finding covers steps down to Medium), so the verdict's rationale can
+never describe a cleaner page than the one above it. Expected effect: presentation honesty. Research spend is visible and
 the rationale sentence is mechanically true; tiers move only where a row
 was overstating a finding-less severity.
 
 **Identity survives third-party outages.** When the domain-registration
-lookup (RDAP) is unavailable and identity needs a second identifier, the
-pipeline now runs a direct mail-record lookup itself — one DNS query —
-instead of relying on whether that check happened to have already run and
-hit; working mail records take precedence over certificate-transparency
-history, which is often unavailable and is never load-bearing. The
+lookup (RDAP) is unavailable and identity needs a second identifier,
+the pipeline now runs a direct mail-record lookup itself (one DNS
+query) instead of relying on whether that check happened to have
+already run and hit. Working mail records take precedence over
+certificate-transparency history, which is often unavailable and is
+never load-bearing. The
 transparency-log row in the honesty panel now says the tool never relies
 on it alone. Expected effect: fewer verdicts dropping to "not enough to
 evaluate" because a lookup service had a bad minute; no change when
@@ -101,41 +159,41 @@ services are up.
 registry record could be credited to the vendor but research retrieved a
 fuller legal name from a registry-grade official source (SEC, SAM.gov, a
 state registry's data service, OpenCorporates, GLEIF), the registry lanes
-now run again under that name — previously the registry stage ran once,
+now run again under that name. Previously the registry stage ran once,
 before research, with no feedback loop, so a company whose brand differs
 from its legal name could sit at "not enough to evaluate" while the
-answer sat in the run's own citations. The bridge accepts names only from
-an allowlist of official record hosts, requires the name to share a root
-with the vendor's own, never displaces results the first sweep found, and
-adjudicates re-found records under the same attribution rules. The report
+answer sat in the run's own citations. The bridge accepts names only from an allowlist of official record
+hosts and requires the name to share a root with the vendor's own. It
+never displaces results the first sweep found, and it adjudicates
+re-found records under the same attribution rules. The report
 states the discovered name, its source, and asks the buyer to confirm.
 Expected effect: vendors operating under a brand name gain identity
 resolution from their true records; nothing changes for vendors whose
 records were already found.
 
 **A terminated foreign registration is information, not a dissolution.**
-End-of-registration words now carry a class: "Dissolved," "Revoked," and
-"Forfeited" mean the company ended; "Terminated," "Surrendered," and
-"Withdrawn" on a registration outside the entity's home state mean it
-ended its authority to do business in that one state — routine
+End-of-registration words now carry a class. "Dissolved," "Revoked,"
+and "Forfeited" mean the company ended. "Terminated," "Surrendered,"
+and "Withdrawn" on a registration outside the entity's home state mean
+it ended its authority to do business in that one state, routine
 record-keeping that previously produced a High warning. The state lanes
-now read the home-state signals their datasets already carry
-(Connecticut's citizenship flag, Colorado's entity type and formation
-jurisdiction, New York's entity type), and a foreign withdrawal renders
-as a record-only informational row that names the record and asks which
+now read the home-state signals their datasets already carry:
+Connecticut's citizenship flag, Colorado's entity type and formation
+jurisdiction, New York's entity type. A foreign withdrawal renders as a
+record-only informational row that names the record and asks which
 legal entity would sign a contract today. A domestic withdrawal, and
 every dissolution-class designation, keeps full treatment. Expected
 effect: companies that once registered in a state and later left it stop
 carrying a warning for the housekeeping; true dissolutions are untouched.
 
 **SEC full-text hits are anchored to the filing company.** A full-text
-result now counts only when the FILING COMPANY's name matches the vendor
-under the same matcher every registry lane uses: same normalization,
-containment in both directions, the under-four-character exact-only rule,
-and investment-vehicle rejection. Previously the EDGAR lane kept its own
-looser matcher, so a short name like "17A" could earn similarity credit
-from an unrelated registrant, and passages of other companies' filings
-containing the name could read as corroboration. Searches whose text hits
+result now counts only when the FILING COMPANY's name matches the
+vendor under the same matcher every registry lane uses. That means the
+same normalization, containment in both directions, the
+under-four-character exact-only rule, and investment-vehicle rejection. Previously the EDGAR lane kept its own looser matcher. A short name
+like "17A" could earn similarity credit from an unrelated registrant,
+and passages of other companies' filings containing the name could read
+as corroboration. Searches whose text hits
 all belong to unmatched filers now report a definitive miss that records
 the noise count. Expected effect: short-named and common-word vendors stop
 earning federal corroboration from other companies' filings; correctly

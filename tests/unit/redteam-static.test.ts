@@ -351,6 +351,30 @@ describe("site twin: the auto-fetched vendor site channel", () => {
     expect(injected!.hidden_span_total).toBeGreaterThan(clean!.hidden_span_total);
   });
 
+  it("twin invariant holds on the v1.6 retried pass: a second attempt serving the injected page still strips", async () => {
+    /* Retries must never widen a trust boundary. Pin it in code: pass 1
+       fails entirely (apex and www both throw), pass 2 serves the
+       injected site — the stripped corpus must equal the clean
+       single-pass corpus, exactly as if no retry happened. */
+    const { fetchVendorSite } = await import("@shared/ingest-site.ts");
+    let calls = 0;
+    const flakyInjected = (async (input: RequestInfo | URL): Promise<Response> => {
+      calls += 1;
+      if (calls <= 2) throw new TypeError("network flake");
+      return (siteFetch(true) as (i: RequestInfo | URL) => Promise<Response>)(input);
+    }) as typeof fetch;
+    const clean = await fetchVendorSite("acmeai.com", { fetchFn: siteFetch(false) });
+    const retried = await fetchVendorSite("acmeai.com", {
+      fetchFn: flakyInjected,
+      attempts: 2,
+    });
+    expect(retried).not.toBeNull();
+    expect(retried!.combinedText).not.toContain("Deloitte");
+    expect(retried!.combinedText).not.toContain("City of Austin");
+    expect(retried!.combinedText).toBe(clean!.combinedText);
+    expect(retried!.hidden_span_total).toBeGreaterThan(0);
+  });
+
   it("ordinary AI-product marketing copy trips text forensics (why site findings stay informational)", () => {
     /* "Customize the system prompt" appears on virtually every AI vendor's
        docs. runForensics flags it as ADV-02 — correct for a PITCH, ruinous

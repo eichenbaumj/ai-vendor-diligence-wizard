@@ -179,7 +179,6 @@ async function runDeep(
         ),
         {
           apiKey: env.anthropicKey,
-          timeoutMs: DEEP_MODE.laneIdleTimeoutMs,
           deadlineMs: DEEP_MODE.laneDeadlineMs,
         },
       );

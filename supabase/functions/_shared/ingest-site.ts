@@ -108,6 +108,23 @@ export function discoverSitePaths(
 
 export async function fetchVendorSite(
   domain: string,
+  opts: { fetchFn?: typeof fetch; deadlineMs?: number; attempts?: 1 | 2 } = {},
+): Promise<VendorSite | null> {
+  /* One full-pass retry (attempts: 2): the observed failure class is a
+     transient network fault or a slow seed page eating the shared
+     deadline, so the second pass gets a FRESH deadline. Per-page retries
+     under one shared deadline would starve each other instead. A pass
+     that returned pages never re-runs — partial coverage is a result. */
+  const attempts = opts.attempts ?? 1;
+  for (let attempt = 1; ; attempt++) {
+    const site = await fetchVendorSitePass(domain, opts);
+    if (site !== null || attempt >= attempts) return site;
+    console.log(`site fetch pass ${attempt} empty for ${domain}; retrying once`);
+  }
+}
+
+async function fetchVendorSitePass(
+  domain: string,
   opts: { fetchFn?: typeof fetch; deadlineMs?: number } = {},
 ): Promise<VendorSite | null> {
   const fetchFn = opts.fetchFn ?? globalThis.fetch;

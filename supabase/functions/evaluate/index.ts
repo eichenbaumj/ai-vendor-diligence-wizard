@@ -33,7 +33,6 @@ import {
 } from "../_shared/forensics.ts";
 import {
   buildClassifyRequest,
-  buildDiscoveryRequest,
   buildExtractRequest,
   buildResearchRequest,
   buildReviewRequest,
@@ -69,7 +68,16 @@ import {
   buildTieCorpus,
   siteStatesFromText,
 } from "../_shared/identity-ties.ts";
-import { inferPrimaryDomain } from "../_shared/domain-inference.ts";
+import { discoverVendorSite } from "../_shared/discovery.ts";
+import {
+  canRetrySiteExtract,
+  canStartSitePass,
+  siteFetchAttempts,
+} from "../_shared/s1b-budget.ts";
+import {
+  type SiteDiscoveryFailureKind,
+  siteDiscoveryFailureCheck,
+} from "../_shared/site-degradation.ts";
 import { isNamedOrganization, splitNameCandidates } from "../_shared/text-match.ts";
 import { PROGRAMS, affirmsProgram } from "../_shared/claim-status.ts";
 import {
@@ -806,9 +814,17 @@ async function runPipeline(
   let siteStatesFound: string[] = [];
   let discoveredDomain: string | null = null;
   let discoveredConfirmed = false;
+  /* Name-run website-step failure, disclosed in the honesty panel (the
+     check is pushed once the checks array exists below). */
+  let siteDiscoveryFailure: SiteDiscoveryFailureKind | null = null;
+  let siteDiscoveryData: Record<string, unknown> = {};
   {
     let siteHost: string | null = null;
     let siteSourceLabel = "";
+    /* True once the site's text was fetched AND extracted, whatever the
+       name-match verdict — an unconfirmed match is an answer, not a
+       failure. */
+    let siteReadCompleted = false;
     if (inputKind === "url" && sourceUrl) {
       try {
         siteHost = new URL(sourceUrl).hostname;
@@ -822,19 +838,18 @@ async function runPipeline(
       siteSourceLabel =
         "text extracted from a public website the pitch identifies as the vendor's, authored by the vendor";
     } else if (inputKind === "name") {
-      const disc = await runResearchLoop(buildDiscoveryRequest(companyNames), {
+      /* discoverVendorSite retries once on infrastructure-class failures
+         (empty content from an aborted or non-ok call) while the S1b
+         budget allows; an honest miss is an answer and never retried.
+         The domain is still picked by code, and the discovered record
+         still needs the site's own extracted name to match before it can
+         count toward identity. */
+      const disc = await discoverVendorSite(companyNames, feedNames, {
         apiKey: env.anthropicKey,
-        timeoutMs: 20_000,
-        deadlineMs: 30_000,
-        maxContinuations: 1,
+        elapsedMs: () => Date.now() - pipelineStart,
       });
       usageBox.value = addUsage(usageBox.value, disc.usage);
-      const discCitations = harvestCitations(
-        { citations: disc.citations, narrative: disc.narrative },
-        [],
-        new Date().toISOString(),
-      );
-      discoveredDomain = inferPrimaryDomain(discCitations, feedNames, 1);
+      discoveredDomain = disc.domain;
       markStage("s1b_discovery");
       if (discoveredDomain) {
         siteHost = discoveredDomain;
@@ -845,10 +860,27 @@ async function runPipeline(
           kind: "micro_finding",
           label: `Found a likely vendor website: ${discoveredDomain}`,
         });
+      } else {
+        /* The report must say this happened: the disclosure check is
+           pushed once the checks array exists (below), and the tail can
+           upgrade its story if research later finds the site. */
+        siteDiscoveryFailure = "not_found";
+        siteDiscoveryData = {
+          discovery_outcome: disc.outcome,
+          discovery_attempts: disc.attempts,
+        };
+        await emit({
+          stage: "parse",
+          kind: "micro_finding",
+          label: "We could not find a website for the vendor by name search",
+        });
       }
     }
-    if (siteHost && Date.now() - pipelineStart < 60_000) {
-      const site = await fetchVendorSite(siteHost);
+    const s1bElapsed = Date.now() - pipelineStart;
+    if (siteHost && canStartSitePass(s1bElapsed)) {
+      const site = await fetchVendorSite(siteHost, {
+        attempts: siteFetchAttempts(s1bElapsed),
+      });
       markStage("s1b_site_fetch");
       /* 60 chars admits a title-plus-description JS shell — enough for
          the name-match confirmation even when the body is client-rendered. */
@@ -859,16 +891,43 @@ async function runPipeline(
            and hidden text was already subtracted before this point. */
         const siteForensics = runForensics(site.combinedText);
         siteStatesFound = siteStatesFromText(siteForensics.normalized);
-        const res = await callAnthropic(
-          buildExtractRequest(siteSourceLabel, siteForensics.normalized),
-          { apiKey: env.anthropicKey, timeoutMs: STAGE_TIMEOUTS.extract },
-        );
-        usageBox.value = addUsage(usageBox.value, res.usage);
-        stageUsage.s1b = res.usage;
-        const parsed = res.ok ? parseStructured<unknown>(res) : null;
-        const validated = parsed ? PitchExtract.safeParse(parsed) : null;
-        if (validated?.success) {
-          const siteExtract = validated.data;
+        /* The site extract mirrors the pitch extractor's 2-attempt loop:
+           a parse failure or degenerate thin extract here silently costs
+           the name-match confirmation (and with it identity resolution)
+           on name runs. Same quarantined extractor and verbatim guards on
+           every attempt; a second thin result is accepted as genuine. */
+        let siteValidated: PitchExtract | null = null;
+        for (let attempt = 0; attempt < 2; attempt++) {
+          const res = await callAnthropic(
+            buildExtractRequest(siteSourceLabel, siteForensics.normalized),
+            { apiKey: env.anthropicKey, timeoutMs: STAGE_TIMEOUTS.extract },
+          );
+          usageBox.value = addUsage(usageBox.value, res.usage);
+          stageUsage.s1b = stageUsage.s1b
+            ? addUsage(stageUsage.s1b, res.usage)
+            : res.usage;
+          const parsed = res.ok ? parseStructured<unknown>(res) : null;
+          const validated = parsed ? PitchExtract.safeParse(parsed) : null;
+          if (validated?.success) {
+            if (
+              !isDegenerateExtract(
+                validated.data,
+                siteForensics.normalized.length,
+              )
+            ) {
+              siteValidated = validated.data;
+              break;
+            }
+            siteValidated ??= validated.data;
+            console.warn(`s1b degenerate site extract on attempt ${attempt + 1}`);
+          } else {
+            console.warn(`s1b site extract parse failure on attempt ${attempt + 1}`);
+          }
+          if (!canRetrySiteExtract(Date.now() - pipelineStart)) break;
+        }
+        if (siteValidated) {
+          siteReadCompleted = true;
+          const siteExtract = siteValidated;
           const siteLoose = looseText(siteForensics.normalized);
           siteExtract.named_customers = siteExtract.named_customers.filter(
             (c) => siteLoose.includes(looseText(c)) && isNamedOrganization(c),
@@ -927,6 +986,24 @@ async function runPipeline(
         }
         markStage("s1b_site_extract");
       }
+    }
+    /* On a name run the discovered site is the gateway to the second
+       identity identifier; when its pages never made it through fetch +
+       extract, the report must say so instead of leaving an unexplained
+       identity gap. An unconfirmed name match is NOT a failure and is
+       already covered by the domain_inference caveat. */
+    if (inputKind === "name" && discoveredDomain && !siteReadCompleted) {
+      siteDiscoveryFailure = "unreadable";
+      siteDiscoveryData = {
+        step: !canStartSitePass(s1bElapsed)
+          ? "budget_gate"
+          : "fetch_or_extract",
+      };
+      await emit({
+        stage: "parse",
+        kind: "micro_finding",
+        label: `Found ${discoveredDomain} but could not read its pages this run`,
+      });
     }
   }
 
@@ -1048,6 +1125,19 @@ async function runPipeline(
       track(annotate(registry.checkGithubOrg({ candidates: feedNames, domain: discoveredDomain }, ctx()))),
     );
   }
+  if (siteDiscoveryFailure) {
+    /* Honest disclosure for the failed name-run website step: renders as
+       a could_not_check honesty row. The tail upgrades a not_found story
+       when research later infers the site (reconcileLateFoundSite). */
+    checks.push(
+      siteDiscoveryFailureCheck(
+        siteDiscoveryFailure,
+        discoveredDomain,
+        new Date().toISOString(),
+        siteDiscoveryData,
+      ),
+    );
+  }
   await Promise.allSettled(tasks);
 
   markStage("s2_registry");
@@ -1165,11 +1255,11 @@ async function runPipeline(
       user_state: userState,
     }, opts.budgetOverride),
     {
-      /* Research streams (idle timeout, not total). Its deadline is dynamic:
-         whatever remains of the 400s function wall clock after the stages
-         already run, minus a reserve for synthesis and review. */
+      /* The research deadline is dynamic: whatever remains of the 400s
+         function wall clock after the stages already run, minus a reserve
+         for synthesis and review. Per-cycle request timeouts derive from
+         this deadline inside runResearchLoop. */
       apiKey: env.anthropicKey,
-      timeoutMs: 90_000,
       /* The post-research reserve covers synthesis + review; name-only runs
          reserve extra for the S2b inferred-domain checks (8-12s). */
       deadlineMs: Math.max(

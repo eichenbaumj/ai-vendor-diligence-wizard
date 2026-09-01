@@ -119,12 +119,26 @@ export async function checkFedramp(
   const names = dedupeNames(companyNames);
   const report = (payload: unknown): RegistryCheck => {
     const entries = collectFeedEntries(payload);
-    const matches: (FeedEntry & { confidence: "exact" | "name_similarity" })[] =
-      [];
+    const matches: (FeedEntry & {
+      confidence: "exact" | "name_similarity";
+      /* Containment direction + the vendor-side name that matched, kept so
+         the crediting rule downstream (assemble.ts feedCredited) can tell
+         "Tyler Technologies" inside "Tyler Technologies Data & Insights"
+         (query_in_record, creditable) from a namesake record sitting
+         inside the query (record_in_query, never credited). */
+      containment?: "query_in_record" | "record_in_query";
+      matched_query?: string;
+    })[] = [];
     for (const entry of entries) {
       const match = matchCompanyName(entry.provider, names);
       if (match.kind === "match") {
-        matches.push({ ...entry, confidence: match.confidence });
+        matches.push({
+          ...entry,
+          confidence: match.confidence,
+          ...(match.containment
+            ? { containment: match.containment, matched_query: match.query }
+            : {}),
+        });
       }
     }
     if (matches.length > 0) {
@@ -141,11 +155,17 @@ export async function checkFedramp(
         confidence: best.confidence,
         retrieved_at: nowIso(ctx),
         data: {
-          matches: matches.map((m) => ({
+          /* The credited entry leads: downstream credit rules read
+             matches[0], and the check's own confidence/summary come from
+             `best`, so the two must never diverge. */
+          matches: [best, ...matches.filter((m) => m !== best)].map((m) => ({
             provider: m.provider,
             product: m.product,
             status: m.status,
             confidence: m.confidence,
+            ...(m.containment
+              ? { containment: m.containment, matched_query: m.matched_query }
+              : {}),
           })),
           claimed_fedramp: claimedFedramp,
         },

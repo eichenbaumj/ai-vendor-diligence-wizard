@@ -45,7 +45,7 @@ export interface CallOpts {
   fetchFn?: typeof fetch;
 }
 
-const ZERO_USAGE: Usage = {
+export const ZERO_USAGE: Usage = {
   input_tokens: 0,
   output_tokens: 0,
   cache_creation_input_tokens: 0,
@@ -320,7 +320,13 @@ export interface ResearchRunResult {
    cycle survive. */
 export async function runResearchLoop(
   initial: AnthropicRequestBody,
-  opts: CallOpts & { deadlineMs: number; maxContinuations?: number },
+  /* No timeoutMs: the per-cycle request timeout always derives from the
+     remaining deadline (set below), so a passed value would be dead —
+     and historically was passed and silently ignored. */
+  opts: Omit<CallOpts, "timeoutMs"> & {
+    deadlineMs: number;
+    maxContinuations?: number;
+  },
 ): Promise<ResearchRunResult> {
   const start = Date.now();
   const maxCont = opts.maxContinuations ?? 12;

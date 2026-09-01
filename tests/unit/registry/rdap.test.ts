@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { checkDomainAge } from "@shared/registry/rdap.ts";
 import { RegistryCheck } from "@shared/schemas.ts";
@@ -6,6 +6,11 @@ import { lintText } from "@shared/lint.ts";
 
 const FIXED_NOW = new Date("2026-08-28T12:00:00.000Z");
 const ctxBase = { now: () => FIXED_NOW };
+
+/* Fake timers must never leak past a failing test. */
+afterEach(() => {
+  vi.useRealTimers();
+});
 
 function fixture(name: string): string {
   return readFileSync(
@@ -84,16 +89,22 @@ describe("checkDomainAge (RDAP)", () => {
   });
 
   it("returns coverage_limited on a non-404 upstream failure", async () => {
-    const result = await checkDomainAge(
+    /* Both attempts 502: fake timers skip the real inter-attempt pause. */
+    vi.useFakeTimers();
+    const p = checkDomainAge(
       { domain: "civicsignal.ai", claimedFoundingYear: null },
       { ...ctxBase, fetchFn: fetchStub(() => new Response("", { status: 502 })) },
     );
+    await vi.runAllTimersAsync();
+    const result = await p;
+    vi.useRealTimers();
     expect(result.status).toBe("coverage_limited");
     expectClean(result);
   });
 
   it("returns status error when the network fails, and never throws", async () => {
-    const result = await checkDomainAge(
+    vi.useFakeTimers();
+    const p = checkDomainAge(
       { domain: "civicsignal.ai", claimedFoundingYear: 2018 },
       {
         ...ctxBase,
@@ -102,9 +113,91 @@ describe("checkDomainAge (RDAP)", () => {
         }),
       },
     );
+    await vi.runAllTimersAsync();
+    const result = await p;
+    vi.useRealTimers();
     expect(RegistryCheck.parse(result)).toBeTruthy();
     expect(result.status).toBe("error");
     expect(result.summary.toLowerCase()).toContain("could not");
+    expectClean(result);
+  });
+});
+
+describe("retry semantics (v1.6): one signal-bounded retry on unavailability", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("retries once after a failed first attempt and uses the second answer", async () => {
+    vi.useFakeTimers();
+    let calls = 0;
+    const p = checkDomainAge(
+      { domain: "civicsignal.ai", claimedFoundingYear: null },
+      {
+        ...ctxBase,
+        fetchFn: fetchStub(() => {
+          calls += 1;
+          if (calls === 1) return new Response("", { status: 502 });
+          return new Response(fixture("rdap-example.json"), { status: 200 });
+        }),
+      },
+    );
+    await vi.runAllTimersAsync();
+    const result = await p;
+    expect(calls).toBe(2);
+    expect(result.status).toBe("hit");
+    expect(result.data?.registered_year).toBe(2025);
+  });
+
+  it("makes exactly one request when the first attempt succeeds", async () => {
+    let calls = 0;
+    const result = await checkDomainAge(
+      { domain: "civicsignal.ai", claimedFoundingYear: null },
+      {
+        ...ctxBase,
+        fetchFn: fetchStub(() => {
+          calls += 1;
+          return new Response(fixture("rdap-example.json"), { status: 200 });
+        }),
+      },
+    );
+    expect(calls).toBe(1);
+    expect(result.status).toBe("hit");
+  });
+
+  it("never retries a 404: the registry answered", async () => {
+    let calls = 0;
+    const result = await checkDomainAge(
+      { domain: "does-not-exist.example", claimedFoundingYear: null },
+      {
+        ...ctxBase,
+        fetchFn: fetchStub(() => {
+          calls += 1;
+          return new Response('{"title":"Domain not found"}', { status: 404 });
+        }),
+      },
+    );
+    expect(calls).toBe(1);
+    expect(result.status).toBe("definitive_miss");
+  });
+
+  it("skips the retry when the endpoint signal has already aborted", async () => {
+    const ctrl = new AbortController();
+    ctrl.abort();
+    let calls = 0;
+    const result = await checkDomainAge(
+      { domain: "civicsignal.ai", claimedFoundingYear: null },
+      {
+        ...ctxBase,
+        signal: ctrl.signal,
+        fetchFn: fetchStub(() => {
+          calls += 1;
+          throw new DOMException("aborted", "AbortError");
+        }),
+      },
+    );
+    expect(calls).toBe(1);
+    expect(result.status).toBe("error");
     expectClean(result);
   });
 });

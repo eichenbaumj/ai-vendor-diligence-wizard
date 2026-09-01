@@ -26,6 +26,7 @@ import type {
 } from "./schemas.ts";
 import { lintText } from "./lint.ts";
 import { isDegenerateBrandName } from "./identity-ties.ts";
+import { normalizeCompanyName } from "./registry/sam.ts";
 import { computeImplication } from "./plausibility.ts";
 import { PROGRAMS } from "./claim-status.ts";
 import { computeTier } from "./tier.ts";
@@ -38,6 +39,7 @@ import {
   hostCovers,
   isNamedOrganization,
   norm,
+  splitNameCandidates,
   urlMentions,
 } from "./text-match.ts";
 
@@ -756,12 +758,36 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
      multi-token listing keeps credit as before; a similarity listing, or
      an exact listing under a degenerate short name, earns credit only when
      the feed's own product metadata ties it to this vendor (a feed_product
-     signal from identity-ties.ts). Everything else renders as a labeled
-     candidate row. */
+     signal from identity-ties.ts) OR (1.6, FedRAMP lane) the listed name
+     BEGINS WITH the vendor's own complete name: a curated feed listing
+     "Tyler Technologies Data & Insights" for the vendor "Tyler
+     Technologies" is that company's own entry, and the row's standing
+     "confirm the listed product" caveat still applies. Four guards keep
+     the wrong-namesake class closed (the review that shipped with 1.6
+     confirmed each is load-bearing): the matched query must be one of the
+     vendor's IDENTITY names (feed lanes also receive product names from
+     the "X by Y" split, and a product name matching an unrelated firm's
+     listing must never credit); it must be multi-token and
+     non-degenerate; the containment direction must be query_in_record;
+     and the listed name must START with the query's tokens in order (a
+     token-subset like "Alto Networks" inside "Palo Alto Networks" never
+     credits — subsidiary-style listings are brand-plus-qualifier, not
+     scrambled subsets). Everything else renders as a labeled candidate
+     row. */
+  const vendorIdentityNorms = new Set(
+    splitNameCandidates(extract.vendor_name_candidates)
+      .identityNames.map((n) => normalizeCompanyName(n))
+      .filter(Boolean),
+  );
   const feedCredited = (c: RegistryCheck | undefined): boolean => {
     if (c?.status !== "hit") return false;
     const d = (c.data ?? {}) as {
-      matches?: { provider?: string; supplier?: string }[];
+      matches?: {
+        provider?: string;
+        supplier?: string;
+        containment?: string;
+        matched_query?: string;
+      }[];
     };
     const listed = d.matches?.[0]?.provider ?? d.matches?.[0]?.supplier ?? null;
     const productTie =
@@ -771,7 +797,19 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
     if (c.confidence !== "name_similarity") {
       return !isDegenerateBrandName(listed ?? vendorName) || productTie;
     }
-    return productTie;
+    const m0 = d.matches?.[0];
+    const containedQuery =
+      m0?.containment === "query_in_record" ? (m0.matched_query ?? null) : null;
+    let containmentCreditable = false;
+    if (containedQuery !== null && listed !== null) {
+      const qNorm = normalizeCompanyName(containedQuery);
+      containmentCreditable =
+        vendorIdentityNorms.has(qNorm) &&
+        qNorm.split(" ").filter(Boolean).length >= 2 &&
+        !isDegenerateBrandName(containedQuery) &&
+        normalizeCompanyName(listed).startsWith(`${qNorm} `);
+    }
+    return productTie || containmentCreditable;
   };
   const pushFeedCandidateRow = (
     c: RegistryCheck,

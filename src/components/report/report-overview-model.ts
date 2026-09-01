@@ -70,6 +70,10 @@ export interface OverviewTile {
 export interface OverviewModel {
   bluf: string;
   partialNotice: string | null;
+  /* Set when the name-run website step failed (the site_discovery honesty
+     row): the reader should know the website checks are missing and how
+     to get them. */
+  siteNotice: string | null;
   found: {
     claims: {
       targetId: string;
@@ -134,6 +138,19 @@ export function buildOverviewModel(report: Report): OverviewModel {
 
   const partialNotice = report.meta.research_partial
     ? "Some sources could not be reached during this run. Gaps are marked in the ledger and in the honesty panel."
+    : null;
+
+  /* Mirrors the site_discovery disclosure check (site-degradation.ts): on
+     a name run whose website step failed, the missing coverage should be
+     visible at the top, not only in the honesty panel. Worded for every
+     failure branch: the checks that READ the site's pages are missing in
+     all of them, while the domain-record checks may still have run (the
+     unreadable and late-found cases), so the notice never claims more
+     coverage is missing than actually is. */
+  const siteNotice = report.honesty_panel.some(
+    (h) => h.check_id === "site_discovery" && h.status === "could_not_check",
+  )
+    ? "We could not find or read this vendor's website during this run, so the checks that read its pages are missing. The honesty panel has the details. To include those checks, run a new check with the vendor's web address pasted in."
     : null;
 
   /* ------------------------------------------------------- what we found */
@@ -283,6 +300,7 @@ export function buildOverviewModel(report: Report): OverviewModel {
   return {
     bluf,
     partialNotice,
+    siteNotice,
     found: { claims, tiles: foundTiles },
     coverage,
     next: { tiles: nextTiles },

@@ -9,6 +9,7 @@
   Pure module: no Deno APIs, no module-level state. Never throws.
 */
 import type { RegistryCheck } from "../schemas.ts";
+import { retryOnce } from "../retry.ts";
 
 export interface RegistryCtx {
   fetchFn?: typeof fetch;
@@ -57,17 +58,20 @@ export async function checkDomainAge(
   try {
     /* rdap.org flakes routinely (most of QA run 1 on 2026-08-29). One quick
        retry inside the check turns a bad minute into a result instead of a
-       coverage gap; the shared endpoint signal still bounds total time. */
+       coverage gap. retryOnce keeps the pause inside the endpoint signal's
+       bounds and skips the second attempt once that signal aborts; a 404 is
+       an answer (see below), never retried. */
     const fetchOnce = () =>
       resolveFetch(ctx)(`https://rdap.org/domain/${encodeURIComponent(domain)}`, {
         signal: ctx.signal,
         headers: { accept: "application/rdap+json, application/json" },
       });
-    let res = await fetchOnce().catch(() => null);
-    if (res === null || (!res.ok && res.status !== 404)) {
-      await new Promise((r) => setTimeout(r, 800));
-      res = await fetchOnce();
-    }
+    const res = await retryOnce(fetchOnce, {
+      retryIf: (r, err) =>
+        err !== undefined || r === null || (!r.ok && r.status !== 404),
+      sleepMs: 800,
+      signal: ctx.signal,
+    });
 
     if (res.status === 404) {
       /* A 404 means two very different things: the registry answered "not

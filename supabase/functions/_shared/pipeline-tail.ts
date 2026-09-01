@@ -42,6 +42,7 @@ import {
 } from "./anthropic-client.ts";
 import { detectPlantedCorroboration } from "./adv-corroboration.ts";
 import { inferPrimaryDomain } from "./domain-inference.ts";
+import { reconcileLateFoundSite } from "./site-degradation.ts";
 import {
   adjudicateChecks,
   buildTieCorpus,
@@ -54,7 +55,7 @@ import { STATE_ITEMS } from "./state-items.ts";
 import type { S5UserInput } from "./prompts/s5-structure.ts";
 import * as registry from "./registry/index.ts";
 
-export const METHODOLOGY_VERSION = "1.5";
+export const METHODOLOGY_VERSION = "1.6";
 
 const TAIL_TIMEOUTS = {
   registryPerEndpoint: 8_000,
@@ -203,6 +204,10 @@ export async function runPipelineTail(
         track(registry.checkSubdomains({ domain: inferred }, ctx(10_000))),
         track(registry.checkGithubOrg({ candidates: state.feedNames, domain: inferred }, ctx())),
       ]);
+      /* The head disclosed "could not find the website"; research just
+         found it. Upgrade that row's story (pages still unread — the
+         hygiene checks above are what the panel now shows). */
+      reconcileLateFoundSite(checks);
     }
   }
 
@@ -329,9 +334,7 @@ export async function runPipelineTail(
                 .confirmed_name_match === true,
           };
         }
-        const existing = checks.findIndex((c) => c.check_id === "dns_email_hygiene");
-        if (existing === -1) checks.push(retry);
-        else if (checks[existing].status === "error") checks[existing] = retry;
+        mergeMxRetryResult(checks, retry);
       } catch (err) {
         console.error(`mx retry failed: ${String(err)}`);
       }
@@ -830,8 +833,11 @@ export async function runPipelineTail(
    claiming an EDGAR search that did not happen is the same class of
    coverage lie the template exists to prevent. */
 /* The MX retry fires when RDAP was unavailable (never on a definitive
-   unregistered-domain miss) and no working dns_email_hygiene hit exists —
-   either the check never ran, or it errored. Pure predicate, exported for
+   unregistered-domain miss) and no COMPLETED dns_email_hygiene check
+   exists — never ran, errored, or came back coverage_limited (the DoH
+   SERVFAIL class resolves to coverage_limited, not error, and before 1.6
+   that answer silently blocked the whole fallback). A hit or a definitive
+   miss is an answer and never retried. Pure predicate, exported for
    tests. */
 export function needsMxRetry(checks: RegistryCheck[]): boolean {
   const rdap = checks.find((c) => c.check_id === "rdap_domain_age");
@@ -839,8 +845,34 @@ export function needsMxRetry(checks: RegistryCheck[]): boolean {
     rdap !== undefined &&
     (rdap.status === "error" || rdap.status === "coverage_limited");
   if (!rdapUnavailable) return false;
-  const dns = checks.find((c) => c.check_id === "dns_email_hygiene");
-  return dns === undefined || dns.status === "error";
+  /* ANY answered dns row (hit or definitive miss) makes a retry
+     pointless, whatever else the list holds. */
+  const dnsRows = checks.filter((c) => c.check_id === "dns_email_hygiene");
+  return !dnsRows.some(
+    (c) => c.status === "hit" || c.status === "definitive_miss",
+  );
+}
+
+/* Fold the MX retry's result into the check list: replace an existing
+   dns_email_hygiene row only when it recorded an infrastructure failure
+   (error or coverage_limited); a hit or definitive miss the first pass
+   produced always stands. Pure, exported for tests. Pre-1.6, an
+   unusable (coverage_limited) first answer blocked the stand-in from
+   running at all, and the inline merge would also have refused to
+   replace such a row. */
+export function mergeMxRetryResult(
+  checks: RegistryCheck[],
+  retry: RegistryCheck,
+): void {
+  const existing = checks.findIndex((c) => c.check_id === "dns_email_hygiene");
+  if (existing === -1) {
+    checks.push(retry);
+    return;
+  }
+  const status = checks[existing].status;
+  if (status === "error" || status === "coverage_limited") {
+    checks[existing] = retry;
+  }
 }
 
 export function identityMissNote(retrievedAt: string, searchedEdgar: boolean): string {

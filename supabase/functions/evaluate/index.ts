@@ -64,7 +64,11 @@ import { lintObject, lintText, looseQuoteInSource, looseText, tidyProse } from "
 import { harvestCitations } from "../_shared/harvest.ts";
 import { fetchVendorSite } from "../_shared/ingest-site.ts";
 import { isDegenerateExtract, mergeExtracts } from "../_shared/extract-merge.ts";
-import { adjudicateChecks, buildTieCorpus } from "../_shared/identity-ties.ts";
+import {
+  adjudicateChecks,
+  buildTieCorpus,
+  siteStatesFromText,
+} from "../_shared/identity-ties.ts";
 import { inferPrimaryDomain } from "../_shared/domain-inference.ts";
 import { isNamedOrganization, splitNameCandidates } from "../_shared/text-match.ts";
 import { PROGRAMS, affirmsProgram } from "../_shared/claim-status.ts";
@@ -797,6 +801,9 @@ async function runPipeline(
      is the stable tie source for containment records ("ZENCITY
      TECHNOLOGIES US, INC." for a site that says New York). */
   let siteStateMentioned: string | null = null;
+  /* Deterministic footer-state harvest from the fetched site text (code,
+     not model): the stable tie source. */
+  let siteStatesFound: string[] = [];
   let discoveredDomain: string | null = null;
   let discoveredConfirmed = false;
   {
@@ -851,6 +858,7 @@ async function runPipeline(
            set — "system prompt" appears on every AI vendor's docs pages,
            and hidden text was already subtracted before this point. */
         const siteForensics = runForensics(site.combinedText);
+        siteStatesFound = siteStatesFromText(siteForensics.normalized);
         const res = await callAnthropic(
           buildExtractRequest(siteSourceLabel, siteForensics.normalized),
           { apiKey: env.anthropicKey, timeoutMs: STAGE_TIMEOUTS.extract },
@@ -1060,6 +1068,7 @@ async function runPipeline(
       productNames: split.productNames,
       citations: [],
       siteState: siteStateMentioned,
+      siteStates: siteStatesFound,
     }),
   );
   const identity = registry.resolveIdentity(checks);
@@ -1099,6 +1108,7 @@ async function runPipeline(
           pitchAddressCount,
           productNames: split.productNames,
           siteStateMentioned,
+          siteStatesFound,
           siteClaimQuotes,
           researchDomains,
           usage: usageBox.value,
@@ -1235,6 +1245,7 @@ async function runPipeline(
       pitchAddressCount,
       productNames: split.productNames,
       siteStateMentioned,
+      siteStatesFound,
       siteClaimQuotes,
       ...(deepHandoffFailed ? { deepHandoffFailed: true } : {}),
     },

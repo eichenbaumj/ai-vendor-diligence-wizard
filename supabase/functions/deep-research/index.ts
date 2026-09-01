@@ -60,6 +60,7 @@ interface Checkpoint {
   pitchAddressCount?: number;
   productNames?: string[];
   siteStateMentioned?: string | null;
+  siteStatesFound?: string[];
   siteClaimQuotes: string[];
   researchDomains: string[];
   usage: Usage;
@@ -269,6 +270,7 @@ async function runDeep(
       pitchAddressCount: cp.pitchAddressCount ?? 0,
       productNames: cp.productNames ?? [],
       siteStateMentioned: cp.siteStateMentioned ?? null,
+      siteStatesFound: cp.siteStatesFound ?? [],
       siteClaimQuotes: cp.siteClaimQuotes,
       deep: true,
     },

@@ -150,6 +150,21 @@ export function streetFragment(raw: string): string | null {
   return null;
 }
 
+/* Deterministic footer-state harvest: two-letter codes in ADDRESS POSITION
+   ("New York, NY 10014" — a comma-or-word boundary before, a zip after)
+   in fetched site text. Code over quarantined text, no model: the model's
+   address extraction is run-variable, and a tie corpus that flaps makes
+   identity flap (Zencity resolved on one run and not the next,
+   2026-09-01). Zip REQUIRED here, unlike statesInAddress: free page text
+   needs the strictest shape. */
+export function siteStatesFromText(text: string): string[] {
+  const out: string[] = [];
+  for (const m of text.toUpperCase().matchAll(/,\s*([A-Z]{2})[\s,]+\d{5}(?:-\d{4})?\b/g)) {
+    if (STATE_CODES.has(m[1]) && !out.includes(m[1])) out.push(m[1]);
+  }
+  return out;
+}
+
 /* Two-letter state codes appearing in an address string, in address
    position (followed by a zip or at the end): "Austin, TX 78701" -> TX. */
 function statesInAddress(raw: string): string[] {
@@ -195,6 +210,8 @@ export function buildTieCorpus(args: {
   /* The SITE extract's own claimed state (never merged into the pitch
      extract): a tie source per the design's site-claimed-HQ rule. */
   siteState?: string | null;
+  /* Deterministic footer states harvested by siteStatesFromText. */
+  siteStates?: string[];
 }): VendorTieCorpus {
   const { extract } = args;
   const peopleNames = extract.people.map((p, i) => ({
@@ -214,6 +231,7 @@ export function buildTieCorpus(args: {
   };
   addState(stateCodeOf(extract.state_mentioned), "pitch");
   addState(stateCodeOf(args.siteState ?? null), "site");
+  for (const s of args.siteStates ?? []) addState(stateCodeOf(s), "site");
   for (const a of addresses) {
     for (const code of statesInAddress(a.value)) addState(code, a.source);
   }

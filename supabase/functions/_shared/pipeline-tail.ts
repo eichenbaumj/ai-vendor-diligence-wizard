@@ -109,6 +109,7 @@ export interface TailState {
   pitchAddressCount?: number;
   productNames?: string[];
   siteStateMentioned?: string | null;
+  siteStatesFound?: string[];
   siteClaimQuotes: string[];
   /* Marks the report as a deep-mode result in the usage jsonb. */
   deep?: boolean;
@@ -221,6 +222,7 @@ export async function runPipelineTail(
     productNames: state.productNames ?? [],
     citations,
     siteState: state.siteStateMentioned ?? null,
+    siteStates: state.siteStatesFound ?? [],
   });
   adjudicateChecks(checks, tieCorpus);
 

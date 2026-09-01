@@ -718,3 +718,19 @@ describe("coverage-sourced state ties (weak, favorable-only)", () => {
     expect(class3.states).toEqual([]);
   });
 });
+
+describe("siteStatesFromText: deterministic footer-state harvest", () => {
+  it("finds City, ST ZIP shapes and nothing looser", async () => {
+    const { siteStatesFromText } = await import(
+      "../../../supabase/functions/_shared/identity-ties.ts"
+    );
+    expect(
+      siteStatesFromText("Contact us: 175 Varick St, New York, NY 10014 USA"),
+    ).toEqual(["NY"]);
+    expect(siteStatesFromText("Ship OR store your data. Sign IN today.")).toEqual([]);
+    expect(siteStatesFromText("Austin, TX 78701 and Madison, WI 53703")).toEqual([
+      "TX",
+      "WI",
+    ]);
+  });
+});

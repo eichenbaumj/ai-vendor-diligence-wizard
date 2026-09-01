@@ -371,9 +371,12 @@ describe("attributionFor: the verdict table", () => {
   });
   const untied = { tied: false, strong: false, checkable: true, signals: [] };
 
-  it("isDegenerateBrandName judges the suffix-stripped brand", () => {
+  it("isDegenerateBrandName judges the FULLY suffix-stripped brand", () => {
     expect(isDegenerateBrandName("17A")).toBe(true);
     expect(isDegenerateBrandName("ZIP, LLC")).toBe(true);
+    /* Stacked suffixes strip the way the matcher strips: "Zip Co Ltd"
+       exact-matches the query "Zip", so it must be judged as "ZIP". */
+    expect(isDegenerateBrandName("Zip Co Ltd")).toBe(true);
     expect(isDegenerateBrandName("POLCO INC.")).toBe(false); // POLCO = 5 chars
     expect(isDegenerateBrandName("ZENCITY TECHNOLOGIES US, INC.")).toBe(false);
   });

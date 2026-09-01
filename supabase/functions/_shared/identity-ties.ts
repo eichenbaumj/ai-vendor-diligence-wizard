@@ -629,11 +629,13 @@ export function tieFactsForCheck(check: RegistryCheck): RecordTieFacts | null {
    false-attribution class, so their attribution requires a STRONG tie —
    a same-state namesake is common exactly where short names collide. */
 export function isDegenerateBrandName(name: string): boolean {
-  const tokens = normalizeUnstripped(name).split(" ").filter(Boolean);
-  if (tokens.length === 0) return true;
-  /* Judge the SUFFIX-STRIPPED form: "ZIP, LLC" is still the brand "ZIP". */
-  const stripped =
-    tokens.length > 1 && hasCorporateSuffix(name) ? tokens.slice(0, -1) : tokens;
+  /* Judge the FULLY suffix-stripped form, using the same loop the matcher
+     normalizes with: "Zip Co Ltd" strips to the brand "ZIP" exactly as it
+     exact-matches the query "Zip" — stripping only one suffix let the
+     Australian Zip Co Ltd attribute as a distinctive name and green-flag
+     the wrong company's SEC filing (zipsec eye-read, 2026-09-01). */
+  const stripped = normalizeCompanyName(name).split(" ").filter(Boolean);
+  if (stripped.length === 0) return true;
   return stripped.length === 1 && stripped[0].length < 4;
 }
 

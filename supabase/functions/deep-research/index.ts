@@ -55,6 +55,10 @@ interface Checkpoint {
   senderDomain: string | null;
   pitchPersonCount: number;
   pitchCustomerCount: number;
+  /* Optional: checkpoints written before the tying-signal build lack them;
+     the tail defaults them (0 addresses, no product names). */
+  pitchAddressCount?: number;
+  productNames?: string[];
   siteClaimQuotes: string[];
   researchDomains: string[];
   usage: Usage;
@@ -261,6 +265,8 @@ async function runDeep(
       senderDomain: cp.senderDomain,
       pitchPersonCount: cp.pitchPersonCount,
       pitchCustomerCount: cp.pitchCustomerCount,
+      pitchAddressCount: cp.pitchAddressCount ?? 0,
+      productNames: cp.productNames ?? [],
       siteClaimQuotes: cp.siteClaimQuotes,
       deep: true,
     },

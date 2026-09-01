@@ -18,8 +18,11 @@ world-readable.
   `forensics.ts`, and the quarantined S1 extractor. Site text can create
   things to CHECK but never mints identity, never expands registry-query
   names, never feeds the ADV tier ceiling, and never creates absence-based
-  adverse findings (see `extract-merge.ts`). Keep the typed stage
-  boundaries in schemas.ts.
+  adverse findings (see `extract-merge.ts`). Site-derived TYPED facts
+  (people, addresses) may corroborate attribution of a record a name match
+  already surfaced (`identity-ties.ts`) — corroborate only: they still
+  never expand query names and never mint identity without the registry
+  record. Keep the typed stage boundaries in schemas.ts.
 - Small-vendor fairness: absence of any single credential (SAM, FedRAMP,
   GitHub, press) is never adverse on its own.
 

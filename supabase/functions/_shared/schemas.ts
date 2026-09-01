@@ -128,6 +128,13 @@ export const RegistryCheck = z.object({
      by the S2c step in the tail. Optional: checks stored before the field
      existed, and non-hit checks, omit it. */
   tie: TieEvidence.optional(),
+  /* The adjudication verdict: "attributed" hits may mint identity and earn
+     credit; "candidate" hits render as labeled candidate rows and never
+     count for or against the vendor. Adverse findings additionally require
+     a STRONG tie (read from `tie`). Absent on non-hit checks and on checks
+     stored before the field existed — consumers treat absent as candidate,
+     so an unadjudicated hit can never mint. */
+  attribution: z.enum(["attributed", "candidate"]).optional(),
 });
 export type RegistryCheck = z.infer<typeof RegistryCheck>;
 

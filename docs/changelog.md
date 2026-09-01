@@ -6,6 +6,31 @@ states the current rules; this file records how they got there.
 
 ## Version 1.5 (September 2026)
 
+**Registry records must be tied to the vendor before they count.** A
+record that matches by name — even exactly — now earns identity, credit,
+or a warning only when a second detail ties it to this vendor: an officer
+or registered agent the vendor's materials or independent coverage names,
+an address the vendor uses, the vendor's web domain, the compliance feed's
+own product entry, the complete legal name the buyer typed, or (for
+favorable credit only, never warnings) a matching state. The lanes now
+capture those details from the records they already receive, and the New
+York detail record's CEO, registered agent, and service-of-process address
+join the comparison. Untied records appear as labeled candidate records:
+visible, linked, and earning nothing. In the other direction, a legal name
+that contains the vendor's brand plus corporate boilerplate can now be
+credited WITH a tie, where the old rule demoted the true record for not
+being letter-exact. End-of-registration findings (dissolutions,
+revocations) arm only on records tied by one of the stronger details; an
+ended registration under a merely matching name becomes a candidate record
+with a one-line question instead of a Critical warning. The debarment
+follow-up search now keys only on legal names from tied records. Expected
+effect: namesake records stop drowning short- and common-named vendors in
+both directions — false identity credit and false dissolution warnings
+both disappear — while true records gain a path to recognition under
+their full legal names; vendors whose materials offer nothing to compare
+against may see identity move to an honest "could not verify" rather than
+credit from an unverifiable match.
+
 **SEC full-text hits are anchored to the filing company.** A full-text
 result now counts only when the FILING COMPANY's name matches the vendor
 under the same matcher every registry lane uses: same normalization,

@@ -24,6 +24,7 @@ import type {
   SectorContext,
 } from "./schemas.ts";
 import { lintText } from "./lint.ts";
+import { isDegenerateBrandName } from "./identity-ties.ts";
 import { PROGRAMS } from "./claim-status.ts";
 import { computeTier } from "./tier.ts";
 import type { Finding, T1Trigger, TierInputs } from "./tier.ts";
@@ -150,6 +151,16 @@ const ROLE_CHANGE = {
   },
 };
 
+/* Plain-language labels for tie kinds, used in code-templated notes. */
+const TIE_KIND_PHRASES: Record<string, string> = {
+  officer: "a named officer",
+  address: "a shared address",
+  domain: "the vendor's web domain",
+  feed_product: "the product named in the feed",
+  full_legal_name: "the full legal name the buyer submitted",
+  state: "a matching state",
+};
+
 function slugPart(name: string): string {
   return (
     name
@@ -182,18 +193,25 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
   if (identity.identity_resolved) {
     greenDims.add("D1");
     const basis = identity.identifiers_found.slice(0, 3).join("; ");
-    /* Only an EXACT-confidence record may put a legal name on the identity
-       surfaces: naming a similarity match's record printed the wrong
+    /* Only an ATTRIBUTED record may put a legal name on the identity
+       surfaces: naming an unattributed match's record printed the wrong
        company's name live (Granicus read "Granicus Property Solutions,
-       LLC", 2026-08-29). Identity itself now resolves only from exact
-       identifiers, so an exact anchor normally exists; the fallback keeps
-       a source link without naming any record. */
-    const exactAnchor =
-      sosHits.find((c) => c.confidence === "exact") ??
-      (edgar?.status === "hit" && edgar.confidence === "exact" ? edgar : null) ??
-      (sam?.status === "hit" && sam.confidence === "exact" ? sam : null);
+       LLC", 2026-08-29). Identity itself now resolves only from attributed
+       records — a name match joined by a tying signal (identity-ties.ts) —
+       so an attributed anchor normally exists; the fallback keeps a source
+       link without naming any record. Attribution covers containment
+       promotions, so "ZENCITY TECHNOLOGIES US, INC." may anchor the brand
+       "Zencity" when a tie connects them. */
+    const attributedSos = sosHits.filter((c) => c.attribution === "attributed");
+    const anchor =
+      attributedSos.find((c) => c.confidence === "exact") ??
+      attributedSos[0] ??
+      (edgar?.status === "hit" && edgar.attribution === "attributed"
+        ? edgar
+        : null) ??
+      (sam?.status === "hit" && sam.attribution === "attributed" ? sam : null);
     const sourceCheck =
-      exactAnchor ?? sosHits[0] ?? (edgar?.status === "hit" ? edgar : sam);
+      anchor ?? sosHits[0] ?? (edgar?.status === "hit" ? edgar : sam);
     ledger.push({
       id: uniqueRowId("identity"),
       dimension: "D1",
@@ -210,13 +228,14 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
       ].slice(0, 4),
       note: "", // phrased by S5
       methodology_ref: "d1-1",
-      ...(exactAnchor ? { match_confidence: "exact" as const } : {}),
+      ...(anchor?.confidence ? { match_confidence: anchor.confidence } : {}),
+      ...(anchor ? { attribution: "attributed" as const } : {}),
     });
-    if (exactAnchor) {
+    if (anchor) {
       /* When the record's legal name differs from the pitch's display name
          (compound names like "TrueTax by Govra" resolving to GOVRA, INC.),
          say so — the D1 row must not conflate product and company. */
-      const bestData = (exactAnchor.data ?? {}) as {
+      const bestData = (anchor.data ?? {}) as {
         matches?: { name?: string }[];
         legal_business_name?: string;
       };
@@ -228,8 +247,8 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
         fact: differs
           ? `A registered legal entity was found for ${vendorName} under the legal name ${differs} (${basis})`
           : `A registered legal entity was found for ${vendorName} (${basis})`,
-        source_name: exactAnchor.source,
-        date: dateOf(exactAnchor),
+        source_name: anchor.source,
+        date: dateOf(anchor),
       });
     } else if (sourceCheck) {
       greenFlagFacts.push({
@@ -270,9 +289,10 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
        the row must say that — otherwise the narrative model reads the
        COULD_NOT_VERIFY result plus the state sources and writes "we
        searched Texas and found nothing" over a Texas hit. Only an
-       EXACT-confidence hit counts as "the registration found": a similar-
-       name record is a candidate, not this vendor's registration. */
-    const partialHit = sosHits.find((c) => c.confidence === "exact") ?? null;
+       ATTRIBUTED hit counts as "the registration found": an untied record
+       is a candidate, not this vendor's registration. */
+    const partialHit =
+      sosHits.find((c) => c.attribution === "attributed") ?? null;
     ledger.push({
       id: uniqueRowId("identity"),
       dimension: "D1",
@@ -302,13 +322,19 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
     });
   }
 
-  /* Affirmative end-of-registration designations on EXACT-match registry
-     records (the lanes set data.dissolved only for exact matches, and only
-     for affirmative designations like "Voluntarily Dissolved" — a bare
-     "Inactive" or a late annual report never arms this). The language rule:
-     report what the record shows, never failure or wrongdoing framing. A
-     domestic end-of-registration is CRITICAL (the registered company itself
-     ended); anything else stays HIGH. */
+  /* Affirmative end-of-registration designations on registry records (the
+     lanes set data.dissolved only for affirmative designations like
+     "Voluntarily Dissolved" — a bare "Inactive" or a late annual report
+     never arms this). Arming requires ATTRIBUTION, which for a dissolved
+     record requires a STRONG tie (officer, address, domain, or the full
+     legal name — identity-ties.ts): a namesake's ended registration was
+     pinned on a live company by bare name equality (POLCO INC., 2004-2011,
+     attributed to today's Polco; 2026-08-31). An unattributed designation
+     renders as a labeled candidate record with a question, never a
+     finding. The language rule holds everywhere: report what the record
+     shows, never failure or wrongdoing framing. A domestic
+     end-of-registration is CRITICAL (the registered company itself ended);
+     anything else stays HIGH. */
   for (const check of sosChecks) {
     if (check.status !== "hit") continue;
     const dissolved = ((check.data ?? {}) as {
@@ -321,7 +347,6 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
       };
     }).dissolved;
     if (!dissolved) continue;
-    const severity = dissolved.domestic === true ? "CRITICAL" : "HIGH";
     const reasonPart =
       dissolved.reason && dissolved.reason !== dissolved.status
         ? `: ${dissolved.reason}`
@@ -329,27 +354,88 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
     const whenPart = dissolved.effective_date
       ? `, effective ${dissolved.effective_date}`
       : "";
-    const rowId = uniqueRowId(`dissolved-${slugPart(dissolved.legal_name)}`);
+    if (check.attribution === "attributed") {
+      const severity = dissolved.domestic === true ? "CRITICAL" : "HIGH";
+      const tieBasis = check.tie?.signals.find((s) => s.strength === "strong");
+      const tiePart = tieBasis
+        ? ` A second detail connects this record to the vendor (${TIE_KIND_PHRASES[tieBasis.kind] ?? "a matching detail"}: ${tieBasis.value}).`
+        : "";
+      const rowId = uniqueRowId(`dissolved-${slugPart(dissolved.legal_name)}`);
+      ledger.push({
+        id: rowId,
+        dimension: "D1",
+        claim_quote: null,
+        what_checked: `The current registration status of ${dissolved.legal_name} in ${check.source}`.slice(0, 300),
+        result: "OFFICIAL_RECORD_FOUND",
+        evidence_tier: "T1",
+        severity,
+        sources: src(check),
+        note: `${check.source} lists ${dissolved.legal_name} with status "${dissolved.status}"${reasonPart}${whenPart}.${tiePart} This is what the public record shows as of the check date; it does not by itself say anything about the people or products involved. Ask the vendor which legal entity would sign a contract today and how it relates to this record.`.slice(0, 700),
+        methodology_ref: "d1-1",
+        ...(check.confidence ? { match_confidence: check.confidence } : {}),
+        attribution: "attributed",
+      });
+      findings.push({
+        id: `dissolved-${slugPart(dissolved.legal_name)}`,
+        dimension: "D1",
+        severity,
+        resolved: false,
+        detail: `${check.source} shows the registration for ${dissolved.legal_name} ended (${dissolved.status}${reasonPart}${whenPart}).`,
+      });
+    } else {
+      /* Candidate record: visible, labeled, tier-neutral. The MEDIUM
+         finding exists to mint the candidate-record question (MEDIUM
+         findings never move the tier); the row itself carries no
+         severity. */
+      const rowId = uniqueRowId(`dissolved-${slugPart(dissolved.legal_name)}`);
+      ledger.push({
+        id: rowId,
+        dimension: "D1",
+        claim_quote: null,
+        what_checked: `The current registration status of ${dissolved.legal_name} in ${check.source}`.slice(0, 300),
+        result: "OFFICIAL_RECORD_FOUND",
+        evidence_tier: "T1",
+        severity: null,
+        sources: src(check),
+        note: `${check.source} lists ${dissolved.legal_name} with status "${dissolved.status}"${reasonPart}${whenPart}, under a name matching this vendor's. No detail connecting that record to this vendor was found, so it is shown as a candidate record only: it earns no credit and drives no warning. Ask the vendor whether this record is theirs.`.slice(0, 700),
+        methodology_ref: "d1-1",
+        ...(check.confidence ? { match_confidence: check.confidence } : {}),
+        attribution: "candidate",
+      });
+      findings.push({
+        id: `dissolved-candidate-${slugPart(dissolved.legal_name)}`,
+        dimension: "D1",
+        severity: "MEDIUM",
+        resolved: false,
+        detail: `${check.source} lists an ended registration under a matching name (${dissolved.legal_name}) that no detail ties to this vendor.`,
+      });
+    }
+  }
+
+  /* Untied live registry hits render as labeled candidate records too (cap
+     2; dissolved candidates already rendered above). The check summaries
+     are candidate-framed by the lanes, so they serve as the notes. */
+  let candidateRows = 0;
+  for (const check of sosChecks) {
+    if (candidateRows >= 2) break;
+    if (check.status !== "hit") continue;
+    if (check.attribution === "attributed") continue;
+    if (((check.data ?? {}) as { dissolved?: unknown }).dissolved) continue;
     ledger.push({
-      id: rowId,
+      id: uniqueRowId(`candidate-${check.check_id.replace(/^sos_/, "")}`),
       dimension: "D1",
       claim_quote: null,
-      what_checked: `The current registration status of ${dissolved.legal_name} in ${check.source}`.slice(0, 300),
-      result: "OFFICIAL_RECORD_FOUND",
-      evidence_tier: "T1",
-      severity,
+      what_checked: `Whether a registry record found in ${check.source} belongs to this vendor`.slice(0, 300),
+      result: "COULD_NOT_VERIFY",
+      evidence_tier: "T4",
+      severity: null,
       sources: src(check),
-      note: `${check.source} lists ${dissolved.legal_name} with status "${dissolved.status}"${reasonPart}${whenPart}. This is what the public record shows as of the check date; it does not by itself say anything about the people or products involved. Ask the vendor which legal entity would sign a contract today and how it relates to this record.`.slice(0, 700),
+      note: check.summary.slice(0, 700),
       methodology_ref: "d1-1",
-      match_confidence: "exact",
+      ...(check.confidence ? { match_confidence: check.confidence } : {}),
+      attribution: "candidate",
     });
-    findings.push({
-      id: `dissolved-${slugPart(dissolved.legal_name)}`,
-      dimension: "D1",
-      severity,
-      resolved: false,
-      detail: `${check.source} shows the registration for ${dissolved.legal_name} ended (${dissolved.status}${reasonPart}${whenPart}).`,
-    });
+    candidateRows += 1;
   }
 
   /* Exclusions. */
@@ -457,7 +543,19 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
   /* -------------------------------------------------- D2: government track record */
 
   const usasp = find(checks, "usaspending_awards");
-  if (usasp?.status === "hit" && usasp.confidence === "exact") {
+  const usaspRecipient =
+    ((usasp?.data ?? {}) as { recipient_name?: string }).recipient_name ?? null;
+  /* Federal-award credit requires an exact recipient match on a
+     non-degenerate name: a name this tool can't tell apart from strangers
+     ("17A", "Zip") earns no credit from a bare equality — the live "17A"
+     run collected 17A WASHINGTON STREET, LLC's awards (2026-08-29). No
+     recipient-side tie facts exist for this lane yet, so degenerate names
+     always stay candidates here. */
+  const usaspCredit =
+    usasp?.status === "hit" &&
+    usasp.confidence === "exact" &&
+    !isDegenerateBrandName(usaspRecipient ?? vendorName);
+  if (usaspCredit && usasp) {
     greenDims.add("D2");
     greenFlagFacts.push({
       fact: `Federal payment records show awards to ${vendorName}`,
@@ -476,13 +574,13 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
       note: "",
       methodology_ref: "d2-1",
       match_confidence: "exact",
+      attribution: "attributed",
     });
   } else if (usasp?.status === "hit") {
-    /* A similar-name recipient is a candidate record, never favorable
-       credit: the live "17A" run credited 17A WASHINGTON STREET, LLC's
-       federal awards as a green row (2026-08-29). The row stays visible,
-       labeled, and neutral; the check's own candidate-framed summary is
-       the note (code-templated, so no model can upgrade it to credit). */
+    /* A candidate recipient record, never favorable credit. The row stays
+       visible, labeled, and neutral; the note is code-templated so no
+       model can upgrade it to credit. */
+    const degenerateExact = usasp.confidence === "exact";
     ledger.push({
       id: uniqueRowId("usaspending"),
       dimension: "D2",
@@ -492,9 +590,12 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
       evidence_tier: "T4",
       severity: null,
       sources: src(usasp),
-      note: usasp.summary.slice(0, 700),
+      note: degenerateExact
+        ? `Federal payment records list awards under the name ${usaspRecipient ?? "a matching name"}. Names this short appear on unrelated companies, so this record is shown for your review and earns no credit until a second detail connects it to this vendor.`.slice(0, 700)
+        : usasp.summary.slice(0, 700),
       methodology_ref: "d2-1",
-      match_confidence: "name_similarity",
+      ...(usasp.confidence ? { match_confidence: usasp.confidence } : {}),
+      attribution: "candidate",
     });
   }
 
@@ -606,6 +707,50 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
 
   /* --------------------------------------------- D3: security & compliance */
 
+  /* Compliance-feed credit rule (the calibration guard): an exact
+     multi-token listing keeps credit as before; a similarity listing, or
+     an exact listing under a degenerate short name, earns credit only when
+     the feed's own product metadata ties it to this vendor (a feed_product
+     signal from identity-ties.ts). Everything else renders as a labeled
+     candidate row. */
+  const feedCredited = (c: RegistryCheck | undefined): boolean => {
+    if (c?.status !== "hit") return false;
+    const d = (c.data ?? {}) as {
+      matches?: { provider?: string; supplier?: string }[];
+    };
+    const listed = d.matches?.[0]?.provider ?? d.matches?.[0]?.supplier ?? null;
+    const productTie =
+      c.tie?.signals.some((s) => s.kind === "feed_product") === true;
+    /* The lanes set confidence on every hit; a null here is a non-name-
+       matched caller and takes the exact path. */
+    if (c.confidence !== "name_similarity") {
+      return !isDegenerateBrandName(listed ?? vendorName) || productTie;
+    }
+    return productTie;
+  };
+  const pushFeedCandidateRow = (
+    c: RegistryCheck,
+    rowId: string,
+    whatChecked: string,
+    dimension: LedgerRow["dimension"],
+    ref: string,
+  ) => {
+    ledger.push({
+      id: uniqueRowId(rowId),
+      dimension,
+      claim_quote: null,
+      what_checked: whatChecked,
+      result: "COULD_NOT_VERIFY",
+      evidence_tier: "T4",
+      severity: null,
+      sources: src(c),
+      note: `${c.summary} No detail connects that listing to this vendor, so it is shown as a candidate record and earns no credit. Confirm with the vendor that the listing is theirs.`.slice(0, 700),
+      methodology_ref: ref,
+      ...(c.confidence ? { match_confidence: c.confidence } : {}),
+      attribution: "candidate",
+    });
+  };
+
   const fedramp = find(checks, "fedramp_marketplace");
   const fedrampData = (fedramp?.data ?? {}) as { claimed_but_absent?: boolean };
   const claimsFedramp = extract.claims.some(
@@ -641,7 +786,7 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
         resolved: false,
         detail: "A FedRAMP authorization described in the pitch is absent from the FedRAMP Marketplace feed.",
       });
-    } else if (fedramp.status === "hit") {
+    } else if (fedramp.status === "hit" && feedCredited(fedramp)) {
       greenDims.add("D3");
       greenFlagFacts.push({
         fact: registryHitFact(vendorName, "in the FedRAMP Marketplace", fedramp),
@@ -663,7 +808,16 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
         note: fedramp.summary.slice(0, 700),
         methodology_ref: "d3-1",
         ...(fedramp.confidence ? { match_confidence: fedramp.confidence } : {}),
+        attribution: "attributed",
       });
+    } else if (fedramp.status === "hit") {
+      pushFeedCandidateRow(
+        fedramp,
+        "fedramp_marketplace",
+        "The FedRAMP Marketplace authorization feed",
+        "D3",
+        "d3-1",
+      );
     } else if (claimsFedramp) {
       ledger.push({
         id: uniqueRowId("fedramp_marketplace"),
@@ -718,7 +872,7 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
         resolved: false,
         detail: "A GovRAMP status described in the pitch is absent from the GovRAMP participant list.",
       });
-    } else if (govramp.status === "hit") {
+    } else if (govramp.status === "hit" && feedCredited(govramp)) {
       greenDims.add("D3");
       greenFlagFacts.push({
         fact: registryHitFact(vendorName, "on the GovRAMP program participant list", govramp),
@@ -739,7 +893,16 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
         note: govramp.summary.slice(0, 700),
         methodology_ref: "d3-2",
         ...(govramp.confidence ? { match_confidence: govramp.confidence } : {}),
+        attribution: "attributed",
       });
+    } else if (govramp.status === "hit") {
+      pushFeedCandidateRow(
+        govramp,
+        "govramp",
+        "The GovRAMP program participant list",
+        "D3",
+        "d3-2",
+      );
     } else if (claimsGovramp) {
       ledger.push({
         id: uniqueRowId("govramp"),
@@ -792,7 +955,7 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
         detail:
           "A TX-RAMP certification described in the pitch is absent from the published TX-RAMP list. That list is known to lag actual certifications.",
       });
-    } else if (txramp.status === "hit") {
+    } else if (txramp.status === "hit" && feedCredited(txramp)) {
       greenDims.add("D3");
       greenFlagFacts.push({
         fact: registryHitFact(vendorName, "on the TX-RAMP certified cloud products list", txramp),
@@ -813,7 +976,16 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
         note: txramp.summary.slice(0, 700),
         methodology_ref: "d3-3",
         ...(txramp.confidence ? { match_confidence: txramp.confidence } : {}),
+        attribution: "attributed",
       });
+    } else if (txramp.status === "hit") {
+      pushFeedCandidateRow(
+        txramp,
+        "txramp",
+        "The TX-RAMP certified cloud products list",
+        "D3",
+        "d3-3",
+      );
     } else if (claimsTxramp) {
       ledger.push({
         id: uniqueRowId("txramp"),
@@ -861,7 +1033,7 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
       resolved: false,
       detail: "A cooperative contract described in the pitch is absent from the cooperative's own holder list.",
     });
-  } else if (sourcewell?.status === "hit") {
+  } else if (sourcewell?.status === "hit" && feedCredited(sourcewell)) {
     greenDims.add("D2");
     greenFlagFacts.push({
       fact: registryHitFact(vendorName, "on the Sourcewell cooperative contract holder list", sourcewell),
@@ -884,7 +1056,16 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
       note: sourcewell.summary.slice(0, 700),
       methodology_ref: "d2-2",
       ...(sourcewell.confidence ? { match_confidence: sourcewell.confidence } : {}),
+      attribution: "attributed",
     });
+  } else if (sourcewell?.status === "hit") {
+    pushFeedCandidateRow(
+      sourcewell,
+      "sourcewell",
+      "The Sourcewell cooperative contract holder list",
+      "D2",
+      "d2-2",
+    );
   }
 
   /* Nonexistent-certification vocabulary. */
@@ -1150,8 +1331,9 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
   }
 
   /* Domain-age contradiction escalates to a trigger only with zero verified
-     customers (methodology tier-1 criteria). */
-  if (rdapContradiction && verifiedCustomers === 0 && usasp?.status !== "hit") {
+     customers (methodology tier-1 criteria). A candidate award record
+     (uncredited) does not rescue the escalation. */
+  if (rdapContradiction && verifiedCustomers === 0 && !usaspCredit) {
     triggers.push({
       trigger: "domain_age_contradiction_no_customers",
       check_id: "rdap_domain_age",
@@ -1163,14 +1345,14 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
 
   /* ---------------------------------------------------------- tier inputs */
 
-  /* Favorable credit follows the match-confidence rule: identity-class
-     connectors count only on exact matches (a namesake's records must not
-     clear the startup bar). */
+  /* Favorable credit follows the attribution rule: identity-class
+     connectors count only when the record is credited to THIS vendor (a
+     namesake's records must not clear the startup bar). */
   const startupBar =
-    govramp?.status === "hit" ||
+    (govramp?.status === "hit" && feedCredited(govramp)) ||
     verifiedCustomers > 0 ||
-    (usasp?.status === "hit" && usasp.confidence === "exact") ||
-    (edgar?.status === "hit" && edgar.confidence === "exact");
+    usaspCredit ||
+    (edgar?.status === "hit" && edgar.attribution === "attributed");
 
   const tierInputs: TierInputs = {
     resolvable: input.resolvable,

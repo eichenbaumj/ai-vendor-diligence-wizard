@@ -119,6 +119,14 @@ function RowBody({ row }: { row: LedgerRow }) {
   );
 }
 
+/* A row resting on a registry record we could not tie to this vendor.
+   Newer reports carry the attribution field; older ones only labeled
+   similarity matches, which were candidates by the old rule. */
+export function isCandidateRow(row: LedgerRow): boolean {
+  if (row.attribution) return row.attribution === "candidate";
+  return row.match_confidence === "name_similarity";
+}
+
 function RowHeader({ row }: { row: LedgerRow }) {
   return (
     <div className="flex flex-wrap items-center gap-2.5">
@@ -127,6 +135,14 @@ function RowHeader({ row }: { row: LedgerRow }) {
       <span className="font-mono text-xs font-bold tabular-nums text-brand-steel">
         {row.dimension}
       </span>
+      {isCandidateRow(row) && (
+        <span
+          title="A public record under a matching or similar name that we could not tie to this vendor. Shown for your review; it earns no credit and drives no warning."
+          className="inline-flex cursor-help items-center rounded-pill bg-brand-vellum px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide text-brand-charcoal-soft"
+        >
+          Candidate record
+        </span>
+      )}
     </div>
   );
 }

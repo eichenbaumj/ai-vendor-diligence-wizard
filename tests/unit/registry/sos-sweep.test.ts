@@ -13,6 +13,10 @@ import {
   checkSosSweep,
   resolveIdentity,
 } from "../../../supabase/functions/_shared/registry/sos-sweep.ts";
+import {
+  adjudicateChecks,
+  buildTieCorpus,
+} from "../../../supabase/functions/_shared/identity-ties.ts";
 import coPolimorphic from "../../fixtures/registry-responses/sos-co-polimorphic.json";
 import ctPolimorphic from "../../fixtures/registry-responses/sos-ct-polimorphic.json";
 import nyEmpty from "../../fixtures/registry-responses/sos-ny-empty.json";
@@ -75,7 +79,44 @@ const fabricatedEdgarHit: RegistryCheck = {
   confidence: "exact",
   retrieved_at: "2026-08-28T12:00:00.000Z",
   data: { inc_states: ["DE"], cik: "0001880550" },
+  /* Adjudication verdict, stamped as the pipeline's S2c step would. */
+  attribution: "attributed",
 };
+
+/* Adjudicate a sweep's checks the way the pipeline's S2c step does, with a
+   pitch corpus claiming a New York headquarters — the Polimorphic records
+   carry NY principal/billing addresses, so the weak state tie attributes
+   them. */
+function adjudicateAsPipeline(checks: RegistryCheck[]): RegistryCheck[] {
+  adjudicateChecks(
+    checks,
+    buildTieCorpus({
+      extract: {
+        vendor_name_candidates: ["Polimorphic", "Polimorphic, Inc."],
+        domains: [],
+        addresses: [],
+        sender_email: null,
+        people: [],
+        named_customers: [],
+        claims: [],
+        use_case_description: "",
+        urgency_language: [],
+        state_mentioned: "NY",
+        injection_screen: {
+          injection_suspected: false,
+          addressed_to_ai: false,
+          suspicious_spans: [],
+        },
+      },
+      pitchPersonCount: 0,
+      pitchAddressCount: 0,
+      primaryDomain: null,
+      productNames: [],
+      citations: [],
+    }),
+  );
+  return checks;
+}
 
 describe("checkSosSweep: the Polimorphic case", () => {
   async function runPolimorphicSweep(): Promise<RegistryCheck[]> {
@@ -158,16 +199,21 @@ describe("checkSosSweep: the Polimorphic case", () => {
   });
 
   it("resolves identity from customer-state hits plus an EDGAR Form D", async () => {
-    const checks = await runPolimorphicSweep();
+    const checks = adjudicateAsPipeline(await runPolimorphicSweep());
     const resolution = resolveIdentity([...checks, fabricatedEdgarHit]);
     expect(resolution.identity_resolved).toBe(true);
     expect(resolution.identifiers_found.length).toBeGreaterThanOrEqual(3);
   });
 
   it("resolves identity from two state registrations even without EDGAR", async () => {
-    const checks = await runPolimorphicSweep();
+    const checks = adjudicateAsPipeline(await runPolimorphicSweep());
     const resolution = resolveIdentity(checks);
     expect(resolution.identity_resolved).toBe(true);
+  });
+
+  it("unadjudicated hits never mint identity", async () => {
+    const checks = await runPolimorphicSweep();
+    expect(resolveIdentity(checks).identity_resolved).toBe(false);
   });
 
   it("all summaries pass the legal-language lint", async () => {
@@ -322,6 +368,7 @@ describe("resolveIdentity", () => {
     confidence: "exact",
     retrieved_at: "2026-08-28T12:00:00.000Z",
     data: null,
+    attribution: "attributed",
   };
   const rdapHit: RegistryCheck = {
     check_id: "rdap_domain",
@@ -342,6 +389,7 @@ describe("resolveIdentity", () => {
     confidence: "exact",
     retrieved_at: "2026-08-28T12:00:00.000Z",
     data: null,
+    attribution: "attributed",
   };
   const exclusionsHit: RegistryCheck = {
     ...samEntityHit,
@@ -459,6 +507,7 @@ describe("resolveIdentity: discovered-domain provenance", () => {
     confidence: "exact",
     retrieved_at: "2026-08-28T12:00:00.000Z",
     data: { matches: [{ name: "GOVRA, INC." }] },
+    attribution: "attributed",
   };
   const rdapOf = (data: Record<string, unknown> | null): RegistryCheck => ({
     check_id: "rdap_domain_age",
@@ -706,6 +755,7 @@ describe("resolveIdentity: RDAP availability fallback (the Govra tier cliff)", (
     confidence: "exact",
     retrieved_at: "2026-08-28T12:00:00.000Z",
     data: null,
+    attribution: "attributed",
   };
   const rdapDown: RegistryCheck = {
     check_id: "rdap_domain_age",

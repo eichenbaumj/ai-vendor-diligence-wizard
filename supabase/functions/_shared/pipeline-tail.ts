@@ -41,6 +41,12 @@ import {
 } from "./anthropic-client.ts";
 import { detectPlantedCorroboration } from "./adv-corroboration.ts";
 import { inferPrimaryDomain } from "./domain-inference.ts";
+import {
+  adjudicateChecks,
+  buildTieCorpus,
+  tieFactsForCheck,
+} from "./identity-ties.ts";
+import { splitNameCandidates } from "./text-match.ts";
 import { PACKS, PACK_RELEASE } from "./packs.gen.ts";
 import { STATE_ITEMS } from "./state-items.ts";
 import type { S5UserInput } from "./prompts/s5-structure.ts";
@@ -97,6 +103,9 @@ export interface TailState {
   senderDomain: string | null;
   pitchPersonCount: number;
   pitchCustomerCount: number;
+  /* Optional: callers predating the tying-signal build omit them. */
+  pitchAddressCount?: number;
+  productNames?: string[];
   siteClaimQuotes: string[];
   /* Marks the report as a deep-mode result in the usage jsonb. */
   deep?: boolean;
@@ -190,6 +199,95 @@ export async function runPipelineTail(
         track(registry.checkSubdomains({ domain: inferred }, ctx(10_000))),
         track(registry.checkGithubOrg({ candidates: state.feedNames, domain: inferred }, ctx())),
       ]);
+    }
+  }
+
+  /* ----------------------------------------------- S2c attribution pass */
+
+  /* Authoritative adjudication: the head's provisional pass ran before
+     research, so coverage-based ties (an officer's name in class 1-2
+     press) could not exist yet. Ties are monotone-add — re-running with
+     citations can only attribute more records, never fewer. Identity is
+     recomputed from the adjudicated checks; this is the authoritative
+     value for assembly on both the standard and deep paths. */
+  adjudicateChecks(
+    checks,
+    buildTieCorpus({
+      extract,
+      pitchPersonCount: state.pitchPersonCount,
+      pitchAddressCount: state.pitchAddressCount ?? 0,
+      primaryDomain: state.primaryDomain,
+      productNames: state.productNames ?? [],
+      citations,
+    }),
+  );
+  const adjudicatedIdentity = registry.resolveIdentity(checks);
+  if (adjudicatedIdentity.identity_resolved !== identity.identity_resolved) {
+    await emit({
+      stage: "registry",
+      kind: "micro_finding",
+      label: adjudicatedIdentity.identity_resolved
+        ? "Identity resolved: research coverage tied a registry record to this vendor"
+        : "Identity not resolved: no detail ties the matched records to this vendor",
+    });
+  }
+
+  /* Debarment follows the ATTRIBUTED entity: when an attributed registry
+     record carries a legal name the original exclusion queries did not
+     cover (the single-token "Govra" case), re-run the exclusions lane
+     under that name; replace only when the follow-up finds a record.
+     Candidate records' names are never searched here — querying the
+     exclusion list under a namesake's legal name manufactures exact-match
+     false CRITICALs. */
+  {
+    const rawNames = extract.vendor_name_candidates;
+    const nameSplit = splitNameCandidates(rawNames);
+    const alreadyQueried = new Set(
+      [
+        ...rawNames,
+        ...nameSplit.anchorNames.filter(
+          (n) => !rawNames.includes(n) && n.trim().split(/\s+/).length >= 2,
+        ),
+      ].map((n) => registry.normalizeCompanyName(n)),
+    );
+    const attributedLegalNames = checks
+      .filter(
+        (c) =>
+          c.attribution === "attributed" &&
+          (c.check_id.startsWith("sos_") || c.check_id === "sam_entity"),
+      )
+      .flatMap((c) => {
+        const facts = tieFactsForCheck(c);
+        return facts ? [facts.legal_name] : [];
+      });
+    const freshLegalNames = registry
+      .dedupeNames(attributedLegalNames)
+      .filter((n) => !alreadyQueried.has(registry.normalizeCompanyName(n)));
+    if (freshLegalNames.length > 0) {
+      try {
+        const follow = await registry.checkSamExclusions(
+          { companyNames: freshLegalNames.slice(0, 4), people: [] },
+          ctx(),
+        );
+        const existing = checks.findIndex((c) => c.check_id === "sam_exclusions");
+        if (
+          follow.status === "hit" &&
+          (existing === -1 || checks[existing].status !== "hit")
+        ) {
+          if (existing >= 0) checks[existing] = follow;
+          else checks.push(follow);
+          await emit({
+            stage: "registry",
+            kind: "check_result",
+            label: follow.summary,
+            check_id: follow.check_id,
+            status: follow.status,
+            evidence_url: follow.evidence_url,
+          });
+        }
+      } catch (err) {
+        console.error(`exclusions follow-up failed: ${String(err)}`);
+      }
     }
   }
 
@@ -298,7 +396,7 @@ export async function runPipelineTail(
   const skeleton = assemble({
     extract,
     checks,
-    identity,
+    identity: adjudicatedIdentity,
     citations,
     adv_findings: adv,
     sector,

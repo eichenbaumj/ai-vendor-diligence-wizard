@@ -95,14 +95,45 @@ describe("USAspending favorable credit requires an exact match", () => {
     expect(out.greenFlagFacts.some((f) => /federal payment/i.test(f.fact))).toBe(false);
   });
 
-  it("an exact recipient still earns the verified row and green flag", () => {
+  it("an exact recipient on a distinctive name earns the verified row and green flag", () => {
     const out = assemble(
-      input({ checks: [{ ...similarityUsasp, confidence: "exact" }] }),
+      input({
+        extract: baseExtract({ vendor_name_candidates: ["Polimorphic"] }),
+        checks: [
+          {
+            ...similarityUsasp,
+            confidence: "exact",
+            data: { recipient_name: "POLIMORPHIC, INC." },
+          },
+        ],
+      }),
     );
     const row = out.ledger.find((r) => r.methodology_ref === "d2-1");
     expect(row!.result).toBe("VERIFIED");
     expect(row!.match_confidence).toBe("exact");
+    expect(row!.attribution).toBe("attributed");
     expect(out.tierInputs.green_dimensions).toContain("D2");
+  });
+
+  it("an exact recipient on a degenerate short name stays a candidate (the seventeen-a lock, now in code)", () => {
+    const out = assemble(
+      input({
+        checks: [
+          {
+            ...similarityUsasp,
+            confidence: "exact",
+            data: { recipient_name: "17A" },
+          },
+        ],
+      }),
+    );
+    const row = out.ledger.find((r) => r.methodology_ref === "d2-1");
+    expect(row!.result).toBe("COULD_NOT_VERIFY");
+    expect(row!.attribution).toBe("candidate");
+    expect(row!.note).toContain("earns no credit");
+    expect(lintText(row!.note).filter((v) => v.kind === "banned")).toHaveLength(0);
+    expect(out.tierInputs.green_dimensions).not.toContain("D2");
+    expect(out.tierInputs.startup_bar_met).toBe(false);
   });
 });
 
@@ -131,12 +162,29 @@ describe("identity surfaces name entities only from exact records", () => {
 });
 
 describe("dissolution designations (the Citymart class)", () => {
+  /* An ATTRIBUTED dissolution: the record carries a strong tie (the CEO
+     named in class 1-2 coverage), stamped by adjudication. */
+  const strongTie = {
+    tied: true,
+    strong: true,
+    checkable: true,
+    signals: [
+      {
+        kind: "officer" as const,
+        strength: "strong" as const,
+        value: "SASCHA HASELMAYER",
+        vendor_source: "coverage" as const,
+      },
+    ],
+  };
   const dissolvedNy = check({
     check_id: "sos_ny",
     source: "New York Department of State (public inquiry service)",
     confidence: "exact",
     summary:
       'New York business records include an entry under a matching name: CITYMART US INC., registered 2014-08-27, status listed as "Inactive" (Voluntarily Dissolved, effective 2022-12-30). The identity check weighs whether this record belongs to this vendor.',
+    tie: strongTie,
+    attribution: "attributed",
     data: {
       dissolved: {
         legal_name: "CITYMART US INC.",
@@ -149,7 +197,7 @@ describe("dissolution designations (the Citymart class)", () => {
     },
   });
 
-  it("a domestic dissolution becomes a CRITICAL record row and finding", () => {
+  it("an attributed domestic dissolution becomes a CRITICAL record row and finding", () => {
     const out = assemble(
       input({
         extract: baseExtract({ vendor_name_candidates: ["Citymart"] }),
@@ -162,8 +210,11 @@ describe("dissolution designations (the Citymart class)", () => {
     expect(row!.severity).toBe("CRITICAL");
     expect(row!.evidence_tier).toBe("T1");
     expect(row!.match_confidence).toBe("exact");
+    expect(row!.attribution).toBe("attributed");
     expect(row!.note).toContain("Voluntarily Dissolved");
     expect(row!.note).toContain("2022-12-30");
+    /* The note names the tie that connects the record to the vendor. */
+    expect(row!.note).toContain("SASCHA HASELMAYER");
     /* Record-only language: never failure or illegitimacy framing. */
     expect(lintText(row!.note).filter((v) => v.kind === "banned")).toHaveLength(0);
     const finding = out.tierInputs.findings.find((f) => f.id.startsWith("dissolved-"));
@@ -173,7 +224,7 @@ describe("dissolution designations (the Citymart class)", () => {
     expect(out.questions.some((q) => q.id === "gap-dissolved")).toBe(true);
   });
 
-  it("a non-domestic designation stays HIGH", () => {
+  it("an attributed non-domestic designation stays HIGH", () => {
     const foreign = {
       ...dissolvedNy,
       data: {
@@ -186,6 +237,61 @@ describe("dissolution designations (the Citymart class)", () => {
     const out = assemble(input({ checks: [foreign] }));
     const finding = out.tierInputs.findings.find((f) => f.id.startsWith("dissolved-"));
     expect(finding!.severity).toBe("HIGH");
+  });
+
+  it("an UNTIED dissolution is a candidate row and a question, never a finding (the Polco class)", () => {
+    const untied = {
+      ...dissolvedNy,
+      tie: { tied: false, strong: false, checkable: true, signals: [] },
+      attribution: "candidate" as const,
+      data: {
+        dissolved: {
+          legal_name: "POLCO INC.",
+          status: "Inactive",
+          reason: "Dissolution by Proclamation",
+          effective_date: "2011-01-26",
+          record_id: "3084913",
+          domestic: true,
+        },
+      },
+    };
+    const out = assemble(
+      input({
+        extract: baseExtract({ vendor_name_candidates: ["Polco"] }),
+        checks: [untied],
+      }),
+    );
+    const row = out.ledger.find((r) => r.id.startsWith("dissolved-"));
+    expect(row).toBeDefined();
+    expect(row!.severity).toBeNull();
+    expect(row!.attribution).toBe("candidate");
+    expect(row!.note).toContain("candidate record");
+    expect(row!.note).toContain("earns no credit and drives no warning");
+    expect(lintText(row!.note).filter((v) => v.kind === "banned")).toHaveLength(0);
+    /* No HIGH/CRITICAL finding: the tier cannot move. */
+    expect(
+      out.tierInputs.findings.some(
+        (f) =>
+          f.id.startsWith("dissolved-") &&
+          (f.severity === "HIGH" || f.severity === "CRITICAL"),
+      ),
+    ).toBe(false);
+    /* The candidate-record question still reaches the buyer. */
+    expect(out.questions.some((q) => q.id === "gap-dissolved-candidate")).toBe(true);
+    expect(out.questions.some((q) => q.id === "gap-dissolved")).toBe(false);
+  });
+
+  it("an unadjudicated dissolution (no attribution field) defaults to candidate", () => {
+    const { tie: _tie, attribution: _attr, ...bare } = dissolvedNy;
+    const out = assemble(
+      input({
+        extract: baseExtract({ vendor_name_candidates: ["Citymart"] }),
+        checks: [bare as typeof dissolvedNy],
+      }),
+    );
+    const row = out.ledger.find((r) => r.id.startsWith("dissolved-"));
+    expect(row!.severity).toBeNull();
+    expect(row!.attribution).toBe("candidate");
   });
 });
 
@@ -215,7 +321,49 @@ describe("registry-feed rows carry exact status in code-templated copy", () => {
     expect(fact!.fact).toContain('with status "Progressing"');
   });
 
-  it("a similarity feed match carries the listed name label in the fact", () => {
+  it("a similarity feed match with a product tie keeps labeled credit", () => {
+    const similar = {
+      ...govrampHit,
+      confidence: "name_similarity" as const,
+      tie: {
+        tied: true,
+        strong: true,
+        checkable: true,
+        signals: [
+          {
+            kind: "feed_product" as const,
+            strength: "strong" as const,
+            value: "Accela Civic Platform",
+            vendor_source: "pitch" as const,
+          },
+        ],
+      },
+      data: {
+        matches: [
+          {
+            provider: "Accela Government Solutions",
+            product: "Accela Civic Platform",
+            status: "Ready",
+            confidence: "name_similarity",
+          },
+        ],
+        claimed: false,
+      },
+    };
+    const out = assemble(
+      input({
+        extract: baseExtract({ vendor_name_candidates: ["Accela"] }),
+        checks: [similar],
+      }),
+    );
+    const fact = out.greenFlagFacts.find((f) => /GovRAMP/i.test(f.fact));
+    expect(fact!.fact).toContain("similar name Accela Government Solutions");
+    const row = out.ledger.find((r) => r.methodology_ref === "d3-2");
+    expect(row!.match_confidence).toBe("name_similarity");
+    expect(row!.result).toBe("VERIFIED");
+  });
+
+  it("a similarity feed match WITHOUT a product tie is a candidate row, never credit", () => {
     const similar = {
       ...govrampHit,
       confidence: "name_similarity" as const,
@@ -232,10 +380,13 @@ describe("registry-feed rows carry exact status in code-templated copy", () => {
         checks: [similar],
       }),
     );
-    const fact = out.greenFlagFacts.find((f) => /GovRAMP/i.test(f.fact));
-    expect(fact!.fact).toContain("similar name Accela Government Solutions");
+    expect(out.greenFlagFacts.some((f) => /GovRAMP/i.test(f.fact))).toBe(false);
+    expect(out.tierInputs.green_dimensions).not.toContain("D3");
     const row = out.ledger.find((r) => r.methodology_ref === "d3-2");
-    expect(row!.match_confidence).toBe("name_similarity");
+    expect(row!.result).toBe("COULD_NOT_VERIFY");
+    expect(row!.attribution).toBe("candidate");
+    expect(row!.note).toContain("candidate record");
+    expect(lintText(row!.note).filter((v) => v.kind === "banned")).toHaveLength(0);
   });
 });
 

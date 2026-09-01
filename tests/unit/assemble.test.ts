@@ -588,6 +588,15 @@ describe("partial-identity D1 row", () => {
         confidence: "exact",
         retrieved_at: AT,
         data: { matches: [{ name: "GOVRA, INC." }] },
+        tie: {
+          tied: true,
+          strong: false,
+          checkable: true,
+          signals: [
+            { kind: "state", strength: "weak", value: "TX", vendor_source: "pitch" },
+          ],
+        },
+        attribution: "attributed",
       },
       {
         check_id: "sos_ny",

@@ -211,9 +211,11 @@ export interface DissolvedDesignation {
   domestic: boolean | null;
 }
 
-/* Detect an affirmative end-of-registration designation on an EXACT-match
-   record. Similarity matches never arm adverse findings (methodology match-
-   confidence rule), so callers only invoke this for exact matches. */
+/* Detect an affirmative end-of-registration designation on the lane's best
+   match. Detection is a RECORD fact recorded at any match confidence;
+   whether it arms a finding is decided downstream by attribution (an
+   untied or namesake record renders as a candidate row, never a finding —
+   the tying-signal rule). */
 export function detectDissolvedDesignation(args: {
   legalName: string;
   status: string | null;
@@ -366,16 +368,14 @@ async function runSocrataLane(
         summary +=
           " A status note like this often reflects a late annual report filing, which is common at young companies. Treat it as informational.";
       }
-      /* Exact matches carrying an affirmative end-of-registration status
-         arm the dissolution surface downstream. */
-      const dissolved =
-        best.confidence === "exact"
-          ? detectDissolvedDesignation({
-              legalName: best.name,
-              status: best.status,
-              recordId: best.record_id,
-            })
-          : null;
+      /* An affirmative end-of-registration status on the best match is
+         recorded at any confidence; attribution decides downstream whether
+         it arms a finding or renders as a candidate record. */
+      const dissolved = detectDissolvedDesignation({
+        legalName: best.name,
+        status: best.status,
+        recordId: best.record_id,
+      });
       return {
         check_id: lane.checkId,
         source: lane.source,
@@ -576,17 +576,14 @@ async function runNyDosLane(
       }
     }
 
-    const dissolved =
-      best.confidence === "exact"
-        ? detectDissolvedDesignation({
-            legalName: best.name,
-            status: best.status,
-            reason,
-            effectiveDate: inactiveDate,
-            recordId: best.record_id,
-            domestic: entityType ? /domestic/i.test(entityType) : null,
-          })
-        : null;
+    const dissolved = detectDissolvedDesignation({
+      legalName: best.name,
+      status: best.status,
+      reason,
+      effectiveDate: inactiveDate,
+      recordId: best.record_id,
+      domestic: entityType ? /domestic/i.test(entityType) : null,
+    });
 
     let summary = `New York business records include an entry under a ${
       best.confidence === "exact" ? "matching" : "similar"
@@ -680,15 +677,27 @@ function classifyIdentifier(
   check: RegistryCheck,
 ): IdentifierClass | "rdap_discovered" | null {
   if (check.status !== "hit") return null;
-  /* Only exact-confidence matches can mint identity. A name-similarity hit
-     is a candidate record, not this vendor: collision matches were minting
-     the two-identifier floor live ("17A" earned identity from 17A
-     WASHINGTON STREET, LLC on 2026-08-29), which manufactures verdict
-     eligibility, not just decoration. */
-  if (check.confidence === "name_similarity") return null;
   const id = check.check_id;
-  if (id.startsWith("sos_")) return "sos";
   if (id === "sam_exclusions") return null;
+  /* Name-matched registry families mint only when ATTRIBUTED: a name match
+     (exact or containment) joined by a tying signal that connects the
+     record to this vendor (identity-ties.ts). Bare name equality stopped
+     being enough in both directions: "17A" earned identity from 17A
+     WASHINGTON STREET, LLC (2026-08-29, exact), while ZENCITY TECHNOLOGIES
+     US, INC. — the true record — was demoted for not being exact
+     (2026-08-31). A check no adjudication ran over never mints. */
+  if (id.startsWith("sos_")) {
+    return check.attribution === "attributed" ? "sos" : null;
+  }
+  if (/edgar|sec_/.test(id)) {
+    return check.attribution === "attributed" ? "edgar" : null;
+  }
+  if (/^sam(_entity)?$/.test(id)) {
+    return check.attribution === "attributed" ? "sam" : null;
+  }
+  /* Non-registry identifier classes keep the similarity guard: a
+     similarity-confidence domain or LEI record is never this vendor's. */
+  if (check.confidence === "name_similarity") return null;
   if (/rdap|whois|domain_registration/.test(id)) {
     /* A domain the pipeline DISCOVERED (rather than one the pitch stated)
        may count only as the second identifier, and only when the fetched
@@ -704,8 +713,6 @@ function classifyIdentifier(
     }
     return "rdap";
   }
-  if (/edgar|sec_/.test(id)) return "edgar";
-  if (/^sam(_entity)?$/.test(id)) return "sam";
   if (/gleif|lei/.test(id)) return "lei";
   return null;
 }

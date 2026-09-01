@@ -239,6 +239,16 @@ export interface RecordTieFacts {
   domain?: string | null;
   /* Compliance-feed service/product metadata, when the feed carries it. */
   product?: string | null;
+  /* How the record's name matched (from the lane's best match): drives the
+     attribution verdict, not the tie computation. */
+  match_confidence?: "exact" | "name_similarity";
+  containment?: "query_in_record" | "record_in_query";
+  /* The record carries an affirmative end-of-registration designation.
+     Such a record needs a STRONG tie to be attributed at all: without this,
+     a weak state tie could mint identity from a dissolved namesake while
+     the strong-tie rule kept its dissolution from arming — identity credit
+     and a suppressed red flag from the same record. */
+  dissolved?: boolean;
 }
 
 /* --------------------------------------------------------------- computeTies */
@@ -411,10 +421,14 @@ export function computeTies(
     }
   }
 
-  /* State (weak): registration or formation state matches a claimed state.
-     Weak by policy — enough to support favorable identity, never enough to
-     arm an adverse finding. */
-  for (const raw of [record.registration_state, record.jurisdiction]) {
+  /* State (weak): the record's registration, formation, or principal-
+     address state matches a claimed state. Weak by policy — enough to
+     support favorable identity, never enough to arm an adverse finding. */
+  for (const raw of [
+    record.registration_state,
+    record.jurisdiction,
+    record.addr_state,
+  ]) {
     const code = stateCodeOf(raw);
     if (!code) continue;
     const claimed = corpus.states.find((s) => s.code === code);
@@ -485,6 +499,8 @@ export function tieFactsForCheck(check: RegistryCheck): RecordTieFacts | null {
       matches.find((m) => str(m.confidence) === "exact") ?? matches[0];
     const name = str(best.name);
     if (!name) return null;
+    const confidence = str(best.confidence);
+    const containment = str((best as { containment?: unknown }).containment);
     return {
       legal_name: name,
       street: str(best.street),
@@ -494,6 +510,13 @@ export function tieFactsForCheck(check: RegistryCheck): RecordTieFacts | null {
       agent: str(best.agent),
       registration_state: SOS_LANE_STATE[check.check_id] ?? null,
       jurisdiction: str(best.jurisdiction),
+      ...(confidence === "exact" || confidence === "name_similarity"
+        ? { match_confidence: confidence }
+        : {}),
+      ...(containment === "query_in_record" || containment === "record_in_query"
+        ? { containment }
+        : {}),
+      ...(data["dissolved"] ? { dissolved: true } : {}),
     };
   }
 
@@ -506,6 +529,26 @@ export function tieFactsForCheck(check: RegistryCheck): RecordTieFacts | null {
       street: str(addr["street"]),
       city: str(addr["city"]),
       addr_state: str(addr["state"]),
+      ...(check.confidence ? { match_confidence: check.confidence } : {}),
+    };
+  }
+
+  if (
+    check.check_id === "fedramp_marketplace" ||
+    check.check_id === "govramp" ||
+    check.check_id === "txramp" ||
+    check.check_id === "sourcewell"
+  ) {
+    const matches = Array.isArray(data["matches"])
+      ? (data["matches"] as Record<string, unknown>[])
+      : [];
+    const best = matches[0]; /* the lanes sort exact-confidence first */
+    const name = best ? (str(best["provider"]) ?? str(best["supplier"])) : null;
+    if (!name) return null;
+    return {
+      legal_name: name,
+      product: str(best!["product"]),
+      ...(check.confidence ? { match_confidence: check.confidence } : {}),
     };
   }
 
@@ -517,18 +560,96 @@ export function tieFactsForCheck(check: RegistryCheck): RecordTieFacts | null {
       entities.find((e) => str(e["confidence"]) === "exact") ?? entities[0];
     const name = best ? str(best["name"]) : null;
     if (!name) return null;
+    const confidence = str(best!["confidence"]);
+    const containment = str(best!["containment"]);
     return {
       legal_name: name,
       jurisdiction: str(best!["inc_state"]),
+      ...(confidence === "exact" || confidence === "name_similarity"
+        ? { match_confidence: confidence }
+        : {}),
+      ...(containment === "query_in_record" || containment === "record_in_query"
+        ? { containment }
+        : {}),
     };
   }
 
   return null;
 }
 
-/* Write tie evidence onto every adjudicable hit. Mutates the checks in
-   place (they are pipeline-local values, not shared state). Checks whose
-   family carries no record facts are left untouched. */
+/* A brand that collides everywhere: a single normalized token under four
+   characters ("17A", "Zip"). Exact matches on such names are the proven
+   false-attribution class, so their attribution requires a STRONG tie —
+   a same-state namesake is common exactly where short names collide. */
+export function isDegenerateBrandName(name: string): boolean {
+  const tokens = normalizeUnstripped(name).split(" ").filter(Boolean);
+  if (tokens.length === 0) return true;
+  /* Judge the SUFFIX-STRIPPED form: "ZIP, LLC" is still the brand "ZIP". */
+  const stripped =
+    tokens.length > 1 && hasCorporateSuffix(name) ? tokens.slice(0, -1) : tokens;
+  return stripped.length === 1 && stripped[0].length < 4;
+}
+
+/* True when the record carried facts a strong tie could have matched
+   against (an address, an officer, a domain). When such facts existed and
+   none tied, the record earned its candidacy; when the lane offers no such
+   facts (an EDGAR filing carries only an incorporation state), an untied
+   exact match on a distinctive name is not evidence against the record. */
+export function hasStrongTieFacts(facts: RecordTieFacts): boolean {
+  return Boolean(
+    facts.street ||
+      (facts.city && facts.addr_state) ||
+      (facts.officers && facts.officers.length > 0) ||
+      facts.agent ||
+      facts.domain,
+  );
+}
+
+/* The attribution verdict for one adjudicated record:
+   - a DEGENERATE name (single token under four characters) requires a
+     STRONG tie no matter what — short names collide even inside the
+     vendor's own state (the "17A" class);
+   - an exact match on a distinctive name is attributed when any tie
+     exists, or when the record offered no strong-tie facts to check
+     (the EDGAR class: only an incorporation state to compare). A record
+     that DID carry checkable facts — an address, an officer — and tied on
+     none of them stays a candidate (the Polco class);
+   - a containment match in the promotable direction (record ⊇ query)
+     needs any tie; the namesake direction (record ⊂ query) is never
+     promoted;
+   - a record carrying an end-of-registration designation requires a
+     STRONG tie regardless (see RecordTieFacts.dissolved). */
+export function attributionFor(
+  facts: RecordTieFacts,
+  tie: TieEvidence,
+): "attributed" | "candidate" {
+  if (facts.dissolved && !tie.strong) return "candidate";
+  if (isDegenerateBrandName(facts.legal_name)) {
+    return tie.strong ? "attributed" : "candidate";
+  }
+  if (facts.match_confidence === "exact") {
+    if (tie.tied) return "attributed";
+    return hasStrongTieFacts(facts) ? "candidate" : "attributed";
+  }
+  if (facts.match_confidence === "name_similarity") {
+    /* Promotable direction (record ⊇ query): any tie promotes. Namesake
+       direction (record ⊂ query): only a STRONG tie promotes — a shared
+       officer or address means the shorter-named record is genuinely
+       connected, while a state coincidence means nothing there. */
+    if (facts.containment === "query_in_record") {
+      return tie.tied ? "attributed" : "candidate";
+    }
+    if (facts.containment === "record_in_query") {
+      return tie.strong ? "attributed" : "candidate";
+    }
+  }
+  return "candidate";
+}
+
+/* Write tie evidence and the attribution verdict onto every adjudicable
+   hit. Mutates the checks in place (they are pipeline-local values, not
+   shared state). Checks whose family carries no record facts are left
+   untouched — consumers treat a missing attribution as candidate. */
 export function adjudicateChecks(
   checks: RegistryCheck[],
   corpus: VendorTieCorpus,
@@ -537,5 +658,6 @@ export function adjudicateChecks(
     const facts = tieFactsForCheck(check);
     if (!facts) continue;
     check.tie = computeTies(facts, corpus);
+    check.attribution = attributionFor(facts, check.tie);
   }
 }

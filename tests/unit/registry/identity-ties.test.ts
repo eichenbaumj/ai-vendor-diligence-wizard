@@ -19,8 +19,11 @@ import type {
 } from "../../../supabase/functions/_shared/schemas.ts";
 import {
   adjudicateChecks,
+  attributionFor,
   buildTieCorpus,
   computeTies,
+  hasStrongTieFacts,
+  isDegenerateBrandName,
   stateCodeOf,
   streetFragment,
   tieFactsForCheck,
@@ -359,6 +362,102 @@ describe("computeTies: fairness guard and monotone-add invariant", () => {
   });
 });
 
+describe("attributionFor: the verdict table", () => {
+  const tied = (strong: boolean) => ({
+    tied: true,
+    strong,
+    checkable: true,
+    signals: [],
+  });
+  const untied = { tied: false, strong: false, checkable: true, signals: [] };
+
+  it("isDegenerateBrandName judges the suffix-stripped brand", () => {
+    expect(isDegenerateBrandName("17A")).toBe(true);
+    expect(isDegenerateBrandName("ZIP, LLC")).toBe(true);
+    expect(isDegenerateBrandName("POLCO INC.")).toBe(false); // POLCO = 5 chars
+    expect(isDegenerateBrandName("ZENCITY TECHNOLOGIES US, INC.")).toBe(false);
+  });
+
+  it("degenerate names require a STRONG tie (the 17A / Zip class)", () => {
+    const rec: RecordTieFacts = { legal_name: "17A", match_confidence: "exact" };
+    expect(attributionFor(rec, tied(false))).toBe("candidate"); // state tie only
+    expect(attributionFor(rec, tied(true))).toBe("attributed");
+    expect(attributionFor(rec, untied)).toBe("candidate");
+  });
+
+  it("distinctive exact + any tie attributes", () => {
+    const rec: RecordTieFacts = {
+      legal_name: "POLIMORPHIC, INC.",
+      addr_state: "NY",
+      city: "New York",
+      match_confidence: "exact",
+    };
+    expect(attributionFor(rec, tied(false))).toBe("attributed");
+  });
+
+  it("distinctive exact, untied, with checkable facts stays candidate (the Polco class)", () => {
+    const rec: RecordTieFacts = {
+      legal_name: "POLCO INC.",
+      street: "1 MAIN ST",
+      city: "ALBANY",
+      addr_state: "NY",
+      officers: ["SOMEONE ELSE"],
+      match_confidence: "exact",
+    };
+    expect(hasStrongTieFacts(rec)).toBe(true);
+    expect(attributionFor(rec, untied)).toBe("candidate");
+  });
+
+  it("distinctive exact, untied, with NO checkable facts attributes (the EDGAR class)", () => {
+    const rec: RecordTieFacts = {
+      legal_name: "POLIMORPHIC, INC.",
+      jurisdiction: "DE",
+      match_confidence: "exact",
+    };
+    expect(hasStrongTieFacts(rec)).toBe(false);
+    expect(attributionFor(rec, untied)).toBe("attributed");
+  });
+
+  it("containment promotes only record-contains-query, and only with a tie", () => {
+    const promotable: RecordTieFacts = {
+      legal_name: "ZENCITY TECHNOLOGIES US, INC.",
+      match_confidence: "name_similarity",
+      containment: "query_in_record",
+    };
+    expect(attributionFor(promotable, tied(false))).toBe("attributed");
+    expect(attributionFor(promotable, untied)).toBe("candidate");
+    /* Namesake direction: a weak tie never promotes (the Zipsec class —
+       "ZIP, LLC" inside "Zip Security"); a strong tie does, because a
+       shared officer or address means the record is genuinely connected. */
+    const namesake: RecordTieFacts = {
+      legal_name: "POLCO INC.",
+      match_confidence: "name_similarity",
+      containment: "record_in_query",
+    };
+    expect(attributionFor(namesake, tied(false))).toBe("candidate");
+    expect(attributionFor(namesake, tied(true))).toBe("attributed");
+    const degenerateNamesake: RecordTieFacts = {
+      legal_name: "ZIP, LLC",
+      match_confidence: "name_similarity",
+      containment: "record_in_query",
+    };
+    expect(attributionFor(degenerateNamesake, tied(false))).toBe("candidate");
+  });
+
+  it("a dissolved record requires a STRONG tie even when exact and distinctive", () => {
+    const rec: RecordTieFacts = {
+      legal_name: "CITYMART US INC.",
+      match_confidence: "exact",
+      dissolved: true,
+    };
+    expect(attributionFor(rec, tied(false))).toBe("candidate");
+    expect(attributionFor(rec, tied(true))).toBe("attributed");
+    /* And a dissolved record with no checkable facts never rides the
+       EDGAR-class fallback. */
+    expect(attributionFor(rec, untied)).toBe("candidate");
+  });
+});
+
 describe("tieFactsForCheck and adjudicateChecks", () => {
   const baseCheck = {
     source: "test",
@@ -434,7 +533,7 @@ describe("tieFactsForCheck and adjudicateChecks", () => {
     expect(tieFactsForCheck(rdap)).toBeNull();
   });
 
-  it("adjudicateChecks writes tie evidence onto adjudicable hits only", () => {
+  it("adjudicateChecks writes tie evidence and the verdict onto adjudicable hits only", () => {
     const checks: RegistryCheck[] = [
       {
         ...baseCheck,
@@ -457,6 +556,46 @@ describe("tieFactsForCheck and adjudicateChecks", () => {
     );
     expect(checks[0].tie).toBeDefined();
     expect(checks[0].tie!.tied).toBe(true);
+    expect(checks[0].attribution).toBe("attributed");
     expect(checks[1].tie).toBeUndefined();
+    expect(checks[1].attribution).toBeUndefined();
+  });
+
+  it("adjudication is monotone across corpora: research citations can only promote", () => {
+    const makeCheck = (): RegistryCheck => ({
+      ...baseCheck,
+      check_id: "sos_ny",
+      status: "hit",
+      confidence: "exact",
+      data: {
+        matches: [
+          {
+            name: "CITYMART US INC.",
+            confidence: "exact",
+            officers: ["SASCHA HASELMAYER"],
+          },
+        ],
+        dissolved: { legal_name: "CITYMART US INC.", status: "Inactive" },
+      },
+    });
+    /* Head pass: no citations yet — the dissolved record stays candidate. */
+    const headCheck = makeCheck();
+    adjudicateChecks([headCheck], corpusWith({}));
+    expect(headCheck.attribution).toBe("candidate");
+    /* Tail pass: coverage names the CEO — the record attributes. */
+    const tailCheck = makeCheck();
+    adjudicateChecks(
+      [tailCheck],
+      corpusWith({
+        citations: [
+          cite({
+            title: "Citymart founder Sascha Haselmayer on procurement",
+            domain_class: 2,
+          }),
+        ],
+      }),
+    );
+    expect(tailCheck.attribution).toBe("attributed");
+    expect(tailCheck.tie!.strong).toBe(true);
   });
 });

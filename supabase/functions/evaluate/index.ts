@@ -59,6 +59,7 @@ import { lintObject, lintText, looseQuoteInSource, looseText, tidyProse } from "
 import { harvestCitations } from "../_shared/harvest.ts";
 import { fetchVendorSite } from "../_shared/ingest-site.ts";
 import { isDegenerateExtract, mergeExtracts } from "../_shared/extract-merge.ts";
+import { adjudicateChecks, buildTieCorpus } from "../_shared/identity-ties.ts";
 import { inferPrimaryDomain } from "../_shared/domain-inference.ts";
 import { isNamedOrganization, splitNameCandidates } from "../_shared/text-match.ts";
 import { PROGRAMS, affirmsProgram } from "../_shared/claim-status.ts";
@@ -767,6 +768,7 @@ async function runPipeline(
      so cached results never pay for fetches; vendorKey never changes. */
   let pitchPersonCount = extract.people.length;
   let pitchCustomerCount = extract.named_customers.length;
+  let pitchAddressCount = extract.addresses.length;
   let siteClaimQuotes: string[] = [];
   let discoveredDomain: string | null = null;
   let discoveredConfirmed = false;
@@ -854,6 +856,7 @@ async function runPipeline(
           extract = merged.extract;
           pitchPersonCount = merged.pitch_person_count;
           pitchCustomerCount = merged.pitch_customer_count;
+          pitchAddressCount = merged.pitch_address_count;
           siteClaimQuotes = merged.site_claim_quotes;
           await emit({
             stage: "parse",
@@ -1006,55 +1009,25 @@ async function runPipeline(
   }
   await Promise.allSettled(tasks);
 
-  /* Debarment follows the resolved entity: when a registry resolved a legal
-     name not already covered by the exclusion queries (the single-token
-     "Govra" case), re-run the exclusions lane under that name. Replace only
-     when the follow-up finds a record. */
-  const resolvedLegalNames = checks
-    .filter(
-      (c) => c.status === "hit" && (c.check_id.startsWith("sos_") || c.check_id === "sam_entity"),
-    )
-    .flatMap((c) => {
-      const d = (c.data ?? {}) as {
-        matches?: { name?: string }[];
-        legal_business_name?: string;
-      };
-      return [
-        ...(d.matches ?? []).map((m) => m.name).filter((n): n is string => Boolean(n)),
-        ...(d.legal_business_name ? [d.legal_business_name] : []),
-      ];
-    });
-  const coveredExclusion = new Set(
-    exclusionNames.map((n) => registry.normalizeCompanyName(n)),
-  );
-  const freshLegalNames = registry
-    .dedupeNames(resolvedLegalNames)
-    .filter((n) => !coveredExclusion.has(registry.normalizeCompanyName(n)));
-  if (freshLegalNames.length > 0) {
-    try {
-      const follow = await registry.checkSamExclusions(
-        { companyNames: freshLegalNames.slice(0, 4), people: [] },
-        ctx(),
-      );
-      const existing = checks.findIndex((c) => c.check_id === "sam_exclusions");
-      if (follow.status === "hit" && (existing === -1 || checks[existing].status !== "hit")) {
-        if (existing >= 0) checks[existing] = follow;
-        else checks.push(follow);
-        await emit({
-          stage: "registry",
-          kind: "check_result",
-          label: follow.summary,
-          check_id: follow.check_id,
-          status: follow.status,
-          evidence_url: follow.evidence_url,
-        });
-      }
-    } catch (err) {
-      console.error(`exclusions follow-up failed: ${String(err)}`);
-    }
-  }
-
   markStage("s2_registry");
+  /* S2c, provisional pass: adjudicate record attribution from the pitch and
+     site corpus (identity-ties.ts). Research citations have not run yet;
+     the tail re-adjudicates with them, and ties are monotone-add, so this
+     provisional identity can only improve there. The exclusions follow-up
+     (debarment under the resolved legal name) also moved to the tail so it
+     keys on ATTRIBUTED records only — re-searching the exclusion list under
+     a namesake's legal name was a latent false-CRITICAL. */
+  adjudicateChecks(
+    checks,
+    buildTieCorpus({
+      extract,
+      pitchPersonCount,
+      pitchAddressCount,
+      primaryDomain,
+      productNames: split.productNames,
+      citations: [],
+    }),
+  );
   const identity = registry.resolveIdentity(checks);
 
   /* Research and citation classification should know the vendor's site
@@ -1089,6 +1062,8 @@ async function runPipeline(
           senderDomain,
           pitchPersonCount,
           pitchCustomerCount,
+          pitchAddressCount,
+          productNames: split.productNames,
           siteClaimQuotes,
           researchDomains,
           usage: usageBox.value,
@@ -1222,6 +1197,8 @@ async function runPipeline(
       senderDomain,
       pitchPersonCount,
       pitchCustomerCount,
+      pitchAddressCount,
+      productNames: split.productNames,
       siteClaimQuotes,
       ...(deepHandoffFailed ? { deepHandoffFailed: true } : {}),
     },

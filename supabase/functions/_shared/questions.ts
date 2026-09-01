@@ -128,6 +128,18 @@ function gapTemplate(f: Finding, ctx: GapContext): ReportQuestion | null {
       why: "The company's web presence is much newer than the history described.",
     };
   }
+  if (f.id.startsWith("dissolved-candidate-")) {
+    /* Candidate-record variant: the record matched only by name and no
+       detail ties it to this vendor, so the question asks whether it is
+       theirs at all. Cheap for the buyer, no verdict impact (the finding
+       is MEDIUM and the row carries no severity). */
+    return {
+      id: "gap-dissolved-candidate",
+      source: "gap",
+      text: "A state registry lists a company under a name matching yours whose registration has ended. We found no detail connecting that record to your company. Is it yours? If not, a one-line confirmation of your legal entity name and registration state settles it.",
+      why: "A same-name record with an ended registration exists; one answer separates a namesake from a problem.",
+    };
+  }
   if (f.id.startsWith("dissolved-")) {
     return {
       id: "gap-dissolved",

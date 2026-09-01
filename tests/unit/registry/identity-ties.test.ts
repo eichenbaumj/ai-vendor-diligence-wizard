@@ -23,7 +23,6 @@ import {
   buildTieCorpus,
   computeTies,
   discoverBridgeNames,
-  hasStrongTieFacts,
   isDegenerateBrandName,
   stateCodeOf,
   streetFragment,
@@ -386,37 +385,27 @@ describe("attributionFor: the verdict table", () => {
     expect(attributionFor(rec, untied)).toBe("candidate");
   });
 
-  it("distinctive exact + any tie attributes", () => {
-    const rec: RecordTieFacts = {
+  it("distinctive exact LIVE records attribute, tied or untied", () => {
+    /* Real early-stage registrations carry facts nothing public relates
+       to them anymore (Polco's true Texas record lists the founder's old
+       apartment); an exact distinctive name on a live record stands. The
+       dissolved variant below keeps its strong-tie requirement — that is
+       where the namesake harm lived. */
+    const tiedRec: RecordTieFacts = {
       legal_name: "POLIMORPHIC, INC.",
       addr_state: "NY",
       city: "New York",
       match_confidence: "exact",
     };
-    expect(attributionFor(rec, tied(false))).toBe("attributed");
-  });
-
-  it("distinctive exact, untied, with checkable facts stays candidate (the Polco class)", () => {
-    const rec: RecordTieFacts = {
-      legal_name: "POLCO INC.",
-      street: "1 MAIN ST",
-      city: "ALBANY",
-      addr_state: "NY",
-      officers: ["SOMEONE ELSE"],
+    expect(attributionFor(tiedRec, tied(false))).toBe("attributed");
+    const untiedRec: RecordTieFacts = {
+      legal_name: "POLCO, INC.",
+      street: "11815 VANCE JACKSON RD APT 701",
+      city: "SAN ANTONIO",
+      addr_state: "TX",
       match_confidence: "exact",
     };
-    expect(hasStrongTieFacts(rec)).toBe(true);
-    expect(attributionFor(rec, untied)).toBe("candidate");
-  });
-
-  it("distinctive exact, untied, with NO checkable facts attributes (the EDGAR class)", () => {
-    const rec: RecordTieFacts = {
-      legal_name: "POLIMORPHIC, INC.",
-      jurisdiction: "DE",
-      match_confidence: "exact",
-    };
-    expect(hasStrongTieFacts(rec)).toBe(false);
-    expect(attributionFor(rec, untied)).toBe("attributed");
+    expect(attributionFor(untiedRec, untied)).toBe("attributed");
   });
 
   it("containment promotes only record-contains-query, and only with a tie", () => {

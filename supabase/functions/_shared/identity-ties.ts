@@ -615,35 +615,19 @@ export function isDegenerateBrandName(name: string): boolean {
   return stripped.length === 1 && stripped[0].length < 4;
 }
 
-/* True when the record carried facts a strong tie could have matched
-   against (an address, an officer, a domain). When such facts existed and
-   none tied, the record earned its candidacy; when the lane offers no such
-   facts (an EDGAR filing carries only an incorporation state), an untied
-   exact match on a distinctive name is not evidence against the record. */
-export function hasStrongTieFacts(facts: RecordTieFacts): boolean {
-  return Boolean(
-    facts.street ||
-      (facts.city && facts.addr_state) ||
-      (facts.officers && facts.officers.length > 0) ||
-      facts.agent ||
-      facts.domain,
-  );
-}
+/* The attribution verdict for one adjudicated record.
 
-/* The attribution verdict for one adjudicated record:
-   - a DEGENERATE name (single token under four characters) requires a
-     STRONG tie no matter what — short names collide even inside the
-     vendor's own state (the "17A" class);
-   - an exact match on a distinctive name is attributed when any tie
-     exists, or when the record offered no strong-tie facts to check
-     (the EDGAR class: only an incorporation state to compare). A record
-     that DID carry checkable facts — an address, an officer — and tied on
-     none of them stays a candidate (the Polco class);
-   - a containment match in the promotable direction (record ⊇ query)
-     needs any tie; the namesake direction (record ⊂ query) is never
-     promoted;
-   - a record carrying an end-of-registration designation requires a
-     STRONG tie regardless (see RecordTieFacts.dissolved). */
+   The proven false-attribution classes are DEGENERATE names (single token
+   under four characters: the 17A and Zip class), CONTAINMENT matches in
+   either direction (BASIS ASJ, KAIZEN 3), and END-OF-REGISTRATION records
+   (the dissolved Polco namesake) — each keeps a tie requirement below. An
+   exact match on a DISTINCTIVE name against a LIVE record attributes even
+   untied: real early-stage companies' registrations legitimately carry
+   facts nothing public relates to them anymore (Polco's true 2018 Texas
+   registration lists the founder's old apartment, which no coverage of
+   the Madison-based company will ever mention; 2026-09-01 run 2), and no
+   audited false attribution came from that class. Ties still matter for
+   such records: adverse findings on them require a STRONG tie always. */
 export function attributionFor(
   facts: RecordTieFacts,
   tie: TieEvidence,
@@ -653,8 +637,7 @@ export function attributionFor(
     return tie.strong ? "attributed" : "candidate";
   }
   if (facts.match_confidence === "exact") {
-    if (tie.tied) return "attributed";
-    return hasStrongTieFacts(facts) ? "candidate" : "attributed";
+    return "attributed";
   }
   if (facts.match_confidence === "name_similarity") {
     /* Promotable direction (record ⊇ query): any tie promotes. Namesake

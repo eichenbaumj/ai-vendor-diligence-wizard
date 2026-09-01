@@ -752,3 +752,29 @@ describe("claim plausibility (D6.1 rider): tier-neutral by construction", () => 
     ).toBeUndefined();
   });
 });
+
+describe("honesty-panel reasons respect the schema cap", () => {
+  it("the crtsh unavailable copy fits, and every reason stays under 300 chars", () => {
+    const base = input([], []);
+    base.checks = [
+      {
+        check_id: "crtsh_subdomains",
+        source: "Certificate transparency logs (crt.sh)",
+        status: "error",
+        summary:
+          "We could not reach Certificate transparency logs (crt.sh), so this check did not run. That is a connection problem on our side, not information about the vendor.",
+        evidence_url: "https://crt.sh/?q=%25.acmeai.example.com",
+        confidence: null,
+        retrieved_at: AT,
+        data: null,
+      },
+    ];
+    const out = assemble(base);
+    const crtsh = out.honesty.find((h) => h.check_id === "crtsh_subdomains");
+    expect(crtsh?.status).toBe("could_not_check");
+    expect(crtsh?.reason).toContain("never relies on it alone");
+    for (const h of out.honesty) {
+      expect((h.reason ?? "").length, h.check_id).toBeLessThanOrEqual(300);
+    }
+  });
+});

@@ -1485,11 +1485,14 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
       "This search is national. A venture-funded company's Form D filing shows it exists and names its state of incorporation, whatever state it operates in.";
   }
   /* crt.sh outages are common and expected; the panel must say the tool
-     never leans on it, or an unavailable row reads like a coverage hole. */
+     never leans on it, or an unavailable row reads like a coverage hole.
+     REPLACE the generic could-not-reach copy (appending overflowed the
+     schema's 300-char reason cap and failed report assembly whenever
+     crt.sh was down, 2026-09-01). */
   const crtshItem = honesty.find((h) => h.check_id === "crtsh_subdomains");
   if (crtshItem && crtshItem.status === "could_not_check") {
     crtshItem.reason =
-      `${crtshItem.reason ?? ""} This public log is often unavailable; the tool never relies on it alone, and a working mail lookup stands in where identity needs a second identifier.`.trim();
+      "This public certificate log is often unavailable and the tool never relies on it alone; a working mail lookup stands in where identity needs a second identifier.";
   }
   /* Inferred-domain caveat: when the site checks ran against a domain we
      inferred from research citations (name-only submissions), say so, and

@@ -35,7 +35,7 @@ export default function About() {
           <div>
             <h2 className={BLOCK_HEADING}>Why we built it</h2>
             <p className={BLOCK_BODY}>
-              New AI tools could help governments deliver excellent services,
+              New AI tools can help governments deliver excellent services,
               and we want that future to arrive. But buying AI for a city or a
               state today feels like buying auto parts in 1910. The invention
               is real, the market is young, quality varies wildly, and trusted
@@ -64,8 +64,7 @@ export default function About() {
               17A is a consulting firm that works with state and local
               governments on technology and data. The Center for Civic Futures
               convenes public-sector technology leaders around the healthy use
-              of new tools. Neither of us sells AI products, and no vendor
-              pays to be checked or to look better in a check.
+              of new tools.
             </p>
             <div className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-4">
               <a href="https://group17a.com" aria-label="17A">

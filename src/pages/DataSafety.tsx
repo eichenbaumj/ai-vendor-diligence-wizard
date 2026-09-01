@@ -81,7 +81,11 @@ export default function DataSafety() {
               </li>
               <li className="flex gap-3">
                 <Check className="text-brand-cobalt" />
-                <span>No tracking and no ads.</span>
+                <span>
+                  No cross-site tracking, no cookies for tracking, and no
+                  ads. We count page visits in aggregate to see what gets
+                  used, with no personal data attached.
+                </span>
               </li>
               <li className="flex gap-3">
                 <Check className="text-brand-cobalt" />

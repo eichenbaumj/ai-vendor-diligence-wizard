@@ -98,8 +98,16 @@ Deno.serve(async (req) => {
     return json({ error: FAILURE }, 400);
   }
 
-  /* Success: the code is single-use. Delete the row, mint the credential. */
+  /* Success: the code is single-use. Delete the row, mint the credential.
+     The only durable trace is a monthly COUNTER (how many verifications
+     succeeded — never who): identity stays write-free, keeping the
+     published promise that the fingerprint cannot be turned back into an
+     address. A counter failure never blocks the verification. */
   await supabase.from("gov_email_codes").delete().eq("email_hash", emailHash);
+  const { error: counterErr } = await supabase.rpc("bump_gov_enrollment", {
+    p_month: new Date().toISOString().slice(0, 7),
+  });
+  if (counterErr) console.error(`gov enrollment counter: ${counterErr.message}`);
   const expEpochSeconds = Math.floor(Date.now() / 1000) + TOKEN_TTL_DAYS * 86_400;
   const govToken = await mintGovToken(emailHash, expEpochSeconds, tokenSecret);
 

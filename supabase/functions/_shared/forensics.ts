@@ -163,6 +163,78 @@ export function stripHiddenHtml(html: string): {
   return { html: out, spanCount: spans.length, spans };
 }
 
+/* -------------------------------------------------- URL hidden-text gate */
+
+/* Date/time vocabulary that must never read as a hidden claim: static-site
+   generators hide build timestamps ("Last Published: Thu Jul 30 2026") in
+   ordinary pages, and that fired the cap live on a real site. */
+const DATE_SHAPE_RE =
+  /\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+\d{1,2}(?:,?\s+(?:19|20)\d{2})?\b|\b\d{1,2}\s+(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?(?:\s+(?:19|20)\d{2})?\b|\b(?:mon|tue|wed|thu|fri|sat|sun)[a-z]*\b|\b(?:19|20)\d{2}\b|\b\d{1,2}:\d{2}(?::\d{2})?\b|\b(?:gmt|utc)[+-]?\d*\b|\b\d{4}-\d{2}-\d{2}\b/gi;
+
+/* Numbers that carry a vendor claim: currency, percentages, magnitude
+   words, or thousands-grouped figures. */
+const CLAIM_NUMBER_RE =
+  /\$\s?[\d,.]+(?:\s*(?:million|billion|thousand|[mbk]))?|\b\d+(?:\.\d+)?\s*(?:%|percent)\b|\b\d+(?:\.\d+)?\s*(?:million|billion)\b|\b\d{1,3}(?:,\d{3})+\b/i;
+
+const looseAlnum = (s: string) =>
+  s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+
+/* Classify a USER-SUBMITTED web page's hidden spans (the URL gating rule):
+   - instruction-like hidden text caps as ADV-02 (the ADV-02 pattern set,
+     run over the HIDDEN spans);
+   - hidden text carrying a claim NUMBER that the visible page does not
+     carry caps as ADV-01 (a figure shown to machines and not to people);
+   - anything else is ordinary web engineering (hidden menus, build
+     timestamps, screen-reader labels) and is reported as an INFORMATIONAL
+     ADV-01 with honest copy — visible to the reader, never a cap.
+   Paste and PDF submissions never reach this function: a prepared
+   document with hidden content keeps the strict cap. */
+export function classifyHiddenSpans(
+  spans: string[],
+  visibleText: string,
+): { finding: AdvFinding | null } {
+  if (spans.length === 0) return { finding: null };
+
+  for (const span of spans) {
+    for (const re of AI_ADDRESSED_PATTERNS) {
+      const m = span.match(re);
+      if (m && m[0]) {
+        return {
+          finding: {
+            code: "ADV-02",
+            detail:
+              `The submitted page contains text that is hidden from human readers and addressed to automated evaluation systems (for example: "${m[0].slice(0, 120)}"). The analysis treats all submitted text as data, and surfaces this as a finding.`.slice(0, 500),
+          },
+        };
+      }
+    }
+  }
+
+  const visibleLoose = looseAlnum(visibleText);
+  for (const span of spans) {
+    const undated = span.replace(DATE_SHAPE_RE, " ");
+    const num = undated.match(CLAIM_NUMBER_RE);
+    if (num && num[0] && !visibleLoose.includes(looseAlnum(num[0]))) {
+      return {
+        finding: {
+          code: "ADV-01",
+          detail:
+            `The submitted page contains text hidden from human readers that carries a figure the visible page does not ("${span.slice(0, 160)}"). A number shown to automated systems and not to people is surfaced as a finding.`.slice(0, 500),
+        },
+      };
+    }
+  }
+
+  return {
+    finding: {
+      code: "ADV-01",
+      informational: true,
+      detail:
+        `This web page contains text that human readers do not see, such as hidden menus, build timestamps, or labels for screen readers. That is common web engineering. The first hidden passage reads: "${spans[0].slice(0, 160)}". We checked it for instructions aimed at automated systems and for figures missing from the visible page, and found neither.`.slice(0, 500),
+    },
+  };
+}
+
 export function detectHiddenHtml(html: string): HiddenHtmlResult {
   const spans: string[] = [];
   for (const re of HIDDEN_HTML_PATTERNS) {

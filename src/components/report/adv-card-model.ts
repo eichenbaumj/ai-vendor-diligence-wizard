@@ -7,7 +7,7 @@
   rationale log is the source of truth: tier.ts always writes a line with
   VERDICT_CAPPED_PREFIX when (and only when) it caps.
 */
-import { CEILING_ADV_CODES, VERDICT_CAPPED_PREFIX } from "@shared/tier.ts";
+import { isCeilingAdvFinding, VERDICT_CAPPED_PREFIX } from "@shared/tier.ts";
 import type { AdvFinding } from "@/lib/types";
 
 export const ADV_EXPLAIN: Record<string, string> = {
@@ -23,7 +23,9 @@ export function advCardVariant(
   findings: AdvFinding[],
   rationale: string[],
 ): AdvCardVariant {
-  if (!findings.some((f) => CEILING_ADV_CODES.has(f.code))) {
+  /* Informational-flagged findings never count toward the cap variants:
+     benign hidden text on a URL submission renders like ADV-04 does. */
+  if (!findings.some(isCeilingAdvFinding)) {
     return "informational";
   }
   return rationale.some((r) => r.startsWith(VERDICT_CAPPED_PREFIX))

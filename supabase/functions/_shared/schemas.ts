@@ -189,6 +189,11 @@ export type AdvCode = z.infer<typeof AdvCode>;
 export const AdvFinding = z.object({
   code: AdvCode,
   detail: z.string().max(500),
+  /* True for findings reported for transparency that never cap the
+     verdict (hidden text on a URL submission that is neither
+     instruction-like nor claim-bearing — ordinary web engineering).
+     Absent means capping, so every stored report keeps its meaning. */
+  informational: z.boolean().optional(),
 });
 export type AdvFinding = z.infer<typeof AdvFinding>;
 

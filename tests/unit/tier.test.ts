@@ -448,3 +448,37 @@ describe("computeTier: ADV-04 is observational and never caps (Joe, 2026-08-31)"
     }
   });
 });
+
+describe("computeTier: informational ADV findings never cap", () => {
+  const base = {
+    resolvable: true,
+    identity_resolved: true,
+    t1_triggers: [],
+    findings: [],
+    green_dimensions: ["D1", "D2", "D3"],
+    startup_bar_met: true,
+  };
+
+  it("an informational ADV-01 leaves Tier 4 standing", () => {
+    const d = computeTier({
+      ...base,
+      adv_findings: [
+        { code: "ADV-01", detail: "Benign hidden web text.", informational: true },
+      ],
+    } as Parameters<typeof computeTier>[0]);
+    expect(d.tier).toBe(4);
+    expect(d.ceiling_applied).toBe(false);
+  });
+
+  it("a capping finding alongside an informational one still caps", () => {
+    const d = computeTier({
+      ...base,
+      adv_findings: [
+        { code: "ADV-01", detail: "Benign hidden web text.", informational: true },
+        { code: "ADV-02", detail: "Machine-directed text." },
+      ],
+    } as Parameters<typeof computeTier>[0]);
+    expect(d.tier).toBe(2);
+    expect(d.ceiling_applied).toBe(true);
+  });
+});

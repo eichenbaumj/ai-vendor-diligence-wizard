@@ -31,6 +31,23 @@ their full legal names; vendors whose materials offer nothing to compare
 against may see identity move to an honest "could not verify" rather than
 credit from an unverifiable match.
 
+**Hidden text on submitted web pages punishes injection, not web
+engineering.** A submitted public web page is not a prepared document:
+real pages hide menus, build timestamps, and screen-reader labels, and
+two such artifacts capped a real page's verdict live. On URL submissions,
+hidden text now caps only when it is instruction-like (the
+machine-directed pattern set, run over the hidden spans) or when it
+carries a claim figure the visible page does not; anything else is
+reported as an informational finding with the passage quoted, and the
+hidden text no longer feeds the extraction stage (matching the
+auto-fetched site pass). Pasted documents and PDFs keep the strict cap —
+a prepared document with hidden content is the attack this tool exists
+for — and machine-directed text in visible content caps on every input
+kind. The existing hidden-instruction red-team twin still caps by
+construction. Expected effect: ordinary websites submitted by URL stop
+landing at Tier 2 for their own engineering; every injection fixture
+still caps.
+
 **Invisible-character findings require a meaningful signal.** ADV-03
 previously fired on a single invisible Unicode character, and one stray
 zero-width character in ordinary web text capped a real page's verdict at

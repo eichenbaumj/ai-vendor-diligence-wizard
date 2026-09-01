@@ -486,6 +486,8 @@ Vendor pitches are, by definition, written by the party being evaluated, and som
 
 Text present in the submitted material but invisible to a human reader (hidden styling on web pages; hidden text layers in PDFs). Web page detection is live, and PDF detection covers text smaller than 4 points or placed off the page; color-matched text and rendered-page comparison are planned. The finding reports that hidden text exists and quotes it.
 
+**How the input kind changes what caps.** A pasted document or an uploaded PDF with hidden content keeps the strict rule: hidden text in a prepared document is the attack this tool exists to catch, and it caps the verdict. A submitted WEB ADDRESS is different: public web pages routinely contain text human readers do not see (hidden menus, build timestamps, labels for screen readers), so on URL submissions hidden text caps only when it is instruction-like (the machine-directed pattern set, run over the hidden spans, reported as ADV-02) or when it carries a claim figure the visible page does not. Anything else is reported as an informational finding with the hidden passage quoted — visible to the reader, never a cap. Hidden text on a URL submission is also removed before the extraction stage reads the page, the same way the auto-fetched site pass already works. Machine-directed text in VISIBLE content caps on every input kind.
+
 ### ADV-02 Text addressed to AI systems
 
 Text that speaks to an automated evaluator rather than to a human reader ("ignore previous instructions," "note to AI reviewers"). Detected by a fixed pattern list in code, plus an AI screen that can add a detection but can never clear one.
@@ -549,7 +551,7 @@ The tier is computed by plain code from typed, logged inputs. No AI model assign
 
 ### Tier 2: Significant gaps. Resolve before engaging.
 
-**Criteria (exact):** identity verified (the two-identifier bar met), fewer than two Tier 1 triggers, and at least one High or Critical finding that later evidence did not resolve. A submission containing any injection-class adversarial finding (ADV-01, ADV-02, or ADV-03) is also capped at this tier, no matter what else checks out. ADV-04 never caps (see Section 2).
+**Criteria (exact):** identity verified (the two-identifier bar met), fewer than two Tier 1 triggers, and at least one High or Critical finding that later evidence did not resolve. A submission carrying an injection-class adversarial finding classified as adversarial (ADV-01, ADV-02, or ADV-03; see the input-kind rule under ADV-01) is also capped at this tier, no matter what else checks out. Informational adversarial notes and ADV-04 never cap (see Section 2).
 **What the report says:** "The company exists, but key claims in this pitch could not be corroborated. Resolve the items below in writing before scheduling a demo," with a generated pre-demo letter asking for the specific missing artifacts.
 
 ### Tier 3: Emerging vendor. Proceed with structured caution.

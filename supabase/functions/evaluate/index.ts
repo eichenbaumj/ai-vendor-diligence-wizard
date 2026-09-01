@@ -25,7 +25,12 @@ import {
 } from "../_shared/ratelimit.ts";
 import { verifyGovToken } from "../_shared/gov-token.ts";
 import { makeEmitter, type Emitter } from "../_shared/broadcast.ts";
-import { detectHiddenHtml, runForensics } from "../_shared/forensics.ts";
+import {
+  classifyHiddenSpans,
+  detectHiddenHtml,
+  runForensics,
+  stripHiddenHtml,
+} from "../_shared/forensics.ts";
 import {
   buildClassifyRequest,
   buildDiscoveryRequest,
@@ -385,14 +390,22 @@ Deno.serve(async (req) => {
         400,
       );
     }
-    /* Hidden-text detection runs on the RAW html, before stripping. */
+    /* Hidden-text capture runs on the RAW html; the extractor then reads
+       the STRIPPED page, mirroring the auto-fetched site pass — hidden
+       text on a public web page must not feed S1 either. The URL gating
+       rule (classifyHiddenSpans) decides what the spans become:
+       instruction-like caps as ADV-02, a hidden claim number caps as
+       ADV-01, ordinary web engineering reports informationally. An
+       informational finding also skips the result cache and triggers the
+       language review pass — both harmless. */
     const hidden = detectHiddenHtml(page.html);
-    if (hidden.finding) ingestAdv.push(hidden.finding);
     hiddenSpans = hidden.spans;
-    const text = htmlToText(page.html);
+    const text = htmlToText(stripHiddenHtml(page.html).html);
     if (text.length < 40) {
       return json({ error: "that address did not return a readable web page" }, 400);
     }
+    const classified = classifyHiddenSpans(hidden.spans, text);
+    if (classified.finding) ingestAdv.push(classified.finding);
     pitchSource = text;
     rawHash = await sha256Hex(normalizedUrl);
     sourceMeta = {

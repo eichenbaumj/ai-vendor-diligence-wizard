@@ -98,3 +98,24 @@ describe("card copy language", () => {
     expect(ADV_CARD_LEAD.informational).toContain("did not change");
   });
 });
+
+describe("advCardVariant: informational-flagged ceiling codes", () => {
+  it("an informational ADV-01 renders the informational lead", () => {
+    const variant = advCardVariant(
+      [{ code: "ADV-01", detail: "Benign hidden text.", informational: true }],
+      [],
+    );
+    expect(variant).toBe("informational");
+  });
+
+  it("a capping ADV-01 with the capped rationale line still renders capped", () => {
+    const variant = advCardVariant(
+      [
+        { code: "ADV-01", detail: "Hidden claim figure.", informational: true },
+        { code: "ADV-02", detail: "Machine-directed text." },
+      ],
+      ["Verdict capped: the submitted material contained content..."],
+    );
+    expect(variant).toBe("capped");
+  });
+});

@@ -87,6 +87,14 @@ export const CEILING_ADV_CODES = new Set(["ADV-01", "ADV-02", "ADV-03"]);
    a rationale line; keep the two in lockstep. */
 export const VERDICT_CAPPED_PREFIX = "Verdict capped:";
 
+/* One predicate for "this finding can cap", shared with the frontend card
+   model: a ceiling-class code whose finding is not informational (hidden
+   text on a URL submission that is ordinary web engineering is reported
+   but never caps). */
+export function isCeilingAdvFinding(f: AdvFinding): boolean {
+  return CEILING_ADV_CODES.has(f.code) && f.informational !== true;
+}
+
 export function computeTier(inputs: TierInputs): TierDecision {
   const rationale: string[] = [];
   const unresolvedHigh = inputs.findings.filter(
@@ -143,11 +151,13 @@ export function computeTier(inputs: TierInputs): TierDecision {
     );
   }
 
-  /* ADV ceiling: applied last, can only lower, injection-class codes only. */
+  /* ADV ceiling: applied last, can only lower, injection-class codes only.
+     Informational findings (transparency reports of benign hidden text)
+     never cap. */
   let ceiling_applied = false;
   const ceilingCodes = inputs.adv_findings
-    .map((a) => a.code)
-    .filter((code) => CEILING_ADV_CODES.has(code));
+    .filter(isCeilingAdvFinding)
+    .map((a) => a.code);
   if (ceilingCodes.length > 0 && tier > ADV_CEILING) {
     tier = ADV_CEILING;
     ceiling_applied = true;

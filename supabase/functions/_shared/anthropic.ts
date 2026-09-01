@@ -229,7 +229,13 @@ export function buildExtractRequest(
 ): AnthropicRequestBody {
   return {
     model: MODELS.extract,
-    max_tokens: 4096,
+    /* 8192, not 4096: a content-rich vendor site at the 40k-char corpus
+       cap produces structured output measured at 93% of the old ceiling
+       (zencity.io, 2026-09-01: 3,817 output tokens on a green run), so
+       runs coin-flipped into truncated JSON that failed BOTH extract
+       attempts. Output length is bounded by the schema's array caps;
+       this only buys headroom past the cliff. */
+    max_tokens: 8192,
     system: S1_SYSTEM,
     messages: [
       { role: "user", content: buildS1UserMessage(source, pitchText) },

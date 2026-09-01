@@ -930,7 +930,9 @@ async function runPipeline(
             console.warn(`s1b degenerate site extract on attempt ${attempt + 1}`);
           } else {
             siteExtractTags.push(
-              !res.ok ? `call_failed_${res.status}` : "invalid_extract",
+              !res.ok
+                ? `call_failed_${res.status}_${res.stop_reason ?? "none"}`
+                : `invalid_extract_${res.stop_reason ?? "none"}`,
             );
             console.warn(`s1b site extract parse failure on attempt ${attempt + 1}`);
           }

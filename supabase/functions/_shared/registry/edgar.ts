@@ -12,13 +12,19 @@
   Both lanes REQUIRE a User-Agent from ctx.apiKeys.edgar_user_agent per SEC
   fair-access policy; when it is missing they return coverage_limited.
 
-  Matches are name-normalized (suffixes stripped) and reject
-  investment-vehicle names (SERIES/SPV/FUND/HOLDINGS) that the query name
-  does not contain.
+  ENTITY ANCHORING: a full-text hit counts only when the FILING ENTITY's
+  name matches the query under the shared matcher in sam.ts — the same
+  normalization, both-direction token containment, sub-4-character guard,
+  and investment-vehicle rejection every other registry lane uses. Passage
+  text matching a bare token ("17A" hitting Exchange Act Section 17A
+  boilerplate, "Zip" hitting unrelated prose) is never identity evidence:
+  those searches return a definitive miss carrying passage_only_hits so
+  the noise is visible in the data without crediting anyone.
 
   Pure module: no Deno APIs, no module-level state. Never throws.
 */
 import type { RegistryCheck } from "../schemas.ts";
+import { matchCompanyName } from "./sam.ts";
 
 /* schemas.ts exports MatchConfidence only as a zod const; mirror the type. */
 type MatchConfidence = "exact" | "name_similarity";
@@ -37,12 +43,15 @@ const COMPANY_SOURCE = "SEC EDGAR company database";
 
 const MAX_NAMES = 3;
 
-const NAME_SUFFIXES = new Set([
-  "inc", "incorporated", "llc", "corp", "corporation", "co", "company",
-  "ltd", "limited", "pbc",
-]);
-
-const VEHICLE_PATTERN = /\b(series|spv|fund|holdings)\b/i;
+/* One filing entity a search matched: the tie adjudication and the report
+   both key on the ENTITY, never the passage. */
+export interface FilingEntity {
+  name: string;
+  cik: string | null;
+  inc_state: string | null;
+  confidence: MatchConfidence;
+  containment?: "query_in_record" | "record_in_query";
+}
 
 const STATE_NAMES: Record<string, string> = {
   AL: "Alabama", AK: "Alaska", AZ: "Arizona", AR: "Arkansas",
@@ -68,33 +77,23 @@ function nowIso(ctx: RegistryCtx): string {
   return (ctx.now?.() ?? new Date()).toISOString();
 }
 
-function normalizeCompanyName(raw: string): string {
-  const cleaned = raw
-    .toLowerCase()
-    .replace(/\([^)]*\)/g, " ")
-    .replace(/[^a-z0-9\s]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-  const parts = cleaned.split(" ").filter((p) => p.length > 0);
-  while (parts.length > 1 && NAME_SUFFIXES.has(parts[parts.length - 1])) parts.pop();
-  return parts.join(" ");
+/* EDGAR display names carry a "(CIK 0001234567)" suffix that the shared
+   matcher's digit-keeping tokenizer would never match; strip it before
+   matching. */
+function stripCikSuffix(display: string): string {
+  return display.replace(/\s*\(CIK\s*\d+\)\s*$/i, "").trim();
 }
 
-function isVehicleMismatch(candidateName: string, queryName: string): boolean {
-  return VEHICLE_PATTERN.test(candidateName) && !VEHICLE_PATTERN.test(queryName);
-}
-
-/* Match a record name against a query name; returns confidence or null. */
-function matchName(recordName: string, queryName: string): MatchConfidence | null {
-  if (isVehicleMismatch(recordName, queryName)) return null;
-  const record = normalizeCompanyName(recordName);
-  const query = normalizeCompanyName(queryName);
-  if (record.length === 0 || query.length === 0) return null;
-  if (record === query) return "exact";
-  if (record.startsWith(`${query} `) || record.includes(` ${query} `) || record.endsWith(` ${query}`)) {
-    return "name_similarity";
-  }
-  return null;
+/* Match a record name against a query via the shared registry matcher
+   (sam.ts): normalization, both-direction token containment with the
+   sub-4-character guard, and investment-vehicle rejection. */
+function matchName(
+  recordName: string,
+  queryName: string,
+): { confidence: MatchConfidence; containment?: "query_in_record" | "record_in_query" } | null {
+  const match = matchCompanyName(stripCikSuffix(recordName), [queryName]);
+  if (match.kind !== "match") return null;
+  return { confidence: match.confidence, containment: match.containment };
 }
 
 function stateLabel(code: string): string {
@@ -148,6 +147,10 @@ export async function checkEdgarFts(
 
   try {
     let anySearched = false;
+    /* Largest passage-noise result seen: text hits whose FILING ENTITIES
+       all failed the match. Recorded on the miss so the noise is visible
+       without crediting anyone. */
+    let passageOnlyHits = 0;
 
     for (const name of names) {
       const apiUrl =
@@ -176,6 +179,7 @@ export async function checkEdgarFts(
       const forms = new Set<string>();
       const incStates = new Set<string>();
       const matchedNames = new Set<string>();
+      const filingEntities: FilingEntity[] = [];
       let bestConfidence: MatchConfidence | null = null;
 
       for (const hit of hits) {
@@ -186,16 +190,47 @@ export async function checkEdgarFts(
         const displayNames = Array.isArray(src["display_names"])
           ? (src["display_names"] as unknown[]).filter((d): d is string => typeof d === "string")
           : [];
-        const matched = displayNames
-          .map((d) => ({ display: d, confidence: matchName(d, name) }))
-          .filter((m): m is { display: string; confidence: MatchConfidence } => m.confidence !== null);
-        if (matched.length === 0) continue;
+        const ciks = Array.isArray(src["ciks"])
+          ? (src["ciks"] as unknown[]).filter((c): c is string => typeof c === "string")
+          : [];
+        const incRaw = src["inc_states"];
+        const incList = Array.isArray(incRaw)
+          ? (incRaw as unknown[]).filter((s): s is string => typeof s === "string" && s.trim().length > 0)
+          : typeof incRaw === "string" && incRaw.trim()
+            ? [incRaw.trim()]
+            : [];
 
-        for (const m of matched) {
-          matchedNames.add(m.display);
+        let hitMatched = false;
+        for (let i = 0; i < displayNames.length; i++) {
+          const display = displayNames[i];
+          const m = matchName(display, name);
+          if (!m) continue;
+          hitMatched = true;
+          matchedNames.add(display);
           if (m.confidence === "exact") bestConfidence = "exact";
           else if (bestConfidence === null) bestConfidence = "name_similarity";
+          /* ciks and inc_states align with display_names by index; fall
+             back to the hit's first value when the arrays disagree. */
+          const entityName = stripCikSuffix(display);
+          const cik = ciks[i] ?? ciks[0] ?? null;
+          const incState = (incList[i] ?? incList[0] ?? "").trim() || null;
+          if (incState) incStates.add(incState);
+          if (
+            !filingEntities.some(
+              (e) => e.name === entityName && e.cik === cik,
+            )
+          ) {
+            filingEntities.push({
+              name: entityName,
+              cik,
+              inc_state: incState,
+              confidence: m.confidence,
+              ...(m.containment ? { containment: m.containment } : {}),
+            });
+          }
         }
+        if (!hitMatched) continue;
+
         for (const key of ["file_type", "root_forms", "forms"]) {
           const value = src[key];
           if (typeof value === "string") forms.add(value);
@@ -203,16 +238,12 @@ export async function checkEdgarFts(
             for (const v of value) if (typeof v === "string") forms.add(v);
           }
         }
-        const incRaw = src["inc_states"];
-        if (Array.isArray(incRaw)) {
-          for (const s of incRaw) if (typeof s === "string" && s.trim()) incStates.add(s.trim());
-        } else if (typeof incRaw === "string" && incRaw.trim()) {
-          incStates.add(incRaw.trim());
-        }
       }
 
       if (matchedNames.size > 0) {
-        const incState = [...incStates][0];
+        const bestEntity =
+          filingEntities.find((e) => e.confidence === "exact") ?? filingEntities[0];
+        const incState = bestEntity?.inc_state ?? [...incStates][0];
         const incPhrase = incState ? `, incorporated in ${stateLabel(incState)}` : "";
         return {
           check_id: FTS_CHECK_ID,
@@ -228,9 +259,11 @@ export async function checkEdgarFts(
             forms: [...forms],
             inc_states: [...incStates],
             matched_names: [...matchedNames],
+            filing_entities: filingEntities,
           },
         };
       }
+      if (totalHits > passageOnlyHits) passageOnlyHits = totalHits;
     }
 
     if (!anySearched) {
@@ -254,7 +287,10 @@ export async function checkEdgarFts(
       evidence_url: humanUrl(names[0]),
       confidence: null,
       retrieved_at,
-      data: { queries: names },
+      data: {
+        queries: names,
+        ...(passageOnlyHits > 0 ? { passage_only_hits: passageOnlyHits } : {}),
+      },
     };
   } catch {
     return {
@@ -346,12 +382,20 @@ export async function checkEdgarCompany(
 
       let bestConfidence: MatchConfidence | null = null;
       const matchedNames: string[] = [];
+      const filingEntities: FilingEntity[] = [];
       for (const found of foundNames) {
-        const confidence = matchName(found, name);
-        if (confidence === null) continue;
+        const m = matchName(found, name);
+        if (m === null) continue;
         matchedNames.push(found);
-        if (confidence === "exact") bestConfidence = "exact";
+        if (m.confidence === "exact") bestConfidence = "exact";
         else if (bestConfidence === null) bestConfidence = "name_similarity";
+        filingEntities.push({
+          name: found,
+          cik: cikMatch ? cikMatch[1] : null,
+          inc_state: stateMatch?.[1].trim() || null,
+          confidence: m.confidence,
+          ...(m.containment ? { containment: m.containment } : {}),
+        });
       }
 
       if (matchedNames.length > 0) {
@@ -373,6 +417,7 @@ export async function checkEdgarCompany(
             all_names_returned: foundNames,
             cik: cikMatch ? cikMatch[1] : null,
             state_of_incorporation: stateMatch ? stateMatch[1].trim() : null,
+            filing_entities: filingEntities,
           },
         };
       }

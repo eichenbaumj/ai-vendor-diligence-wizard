@@ -1,0 +1,33 @@
+{
+  "took": 12,
+  "timed_out": false,
+  "hits": {
+    "total": { "value": 4127, "relation": "eq" },
+    "hits": [
+      {
+        "_index": "edgar_file",
+        "_id": "0001777777-25-000002:primary_doc.xml",
+        "_source": {
+          "ciks": ["0001777777"],
+          "display_names": ["Unrelated Capital Partners LP  (CIK 0001777777)"],
+          "file_type": "D",
+          "root_forms": ["D"],
+          "file_date": "2025-01-15",
+          "inc_states": ["DE"]
+        }
+      },
+      {
+        "_index": "edgar_file",
+        "_id": "0001666666-24-000009:primary_doc.xml",
+        "_source": {
+          "ciks": ["0001666666"],
+          "display_names": ["17a-4, LLC  (CIK 0001666666)"],
+          "file_type": "D",
+          "root_forms": ["D"],
+          "file_date": "2024-11-02",
+          "inc_states": ["NY"]
+        }
+      }
+    ]
+  }
+}

@@ -52,6 +52,59 @@ describe("checkEdgarFts (SEC EDGAR full-text search)", () => {
     expectClean(result);
   });
 
+  it("captures the matched filing entities with cik and incorporation state", async () => {
+    const result = await checkEdgarFts(
+      { companyNames: ["CivicSignal"] },
+      {
+        ...ctxBase,
+        fetchFn: fetchStub(() => new Response(fixture("edgar-fts-hit.json"), { status: 200 })),
+      },
+    );
+    expect(result.data?.filing_entities).toEqual([
+      {
+        name: "CivicSignal Inc",
+        cik: "0001999999",
+        inc_state: "DE",
+        confidence: "exact",
+      },
+    ]);
+  });
+
+  it("passage-token noise never counts: unmatched filers report a miss with the noise visible (the 17A/Zip class)", async () => {
+    /* 4,127 full-text hits for "17A" — Exchange Act Section 17A boilerplate
+       plus a genuinely different registrant, "17a-4, LLC". Neither filer
+       matches under the shared matcher (sub-4-character names are
+       exact-or-nothing), so the search is a definitive miss and the noise
+       count lands in data, not in anyone's identity. */
+    const result = await checkEdgarFts(
+      { companyNames: ["17A"] },
+      {
+        ...ctxBase,
+        fetchFn: fetchStub(
+          () => new Response(fixture("edgar-fts-passage-noise.json"), { status: 200 }),
+        ),
+      },
+    );
+    expect(result.status).toBe("definitive_miss");
+    expect(result.confidence).toBeNull();
+    expect(result.data?.passage_only_hits).toBe(4127);
+    expect(result.data?.filing_entities).toBeUndefined();
+    expectClean(result);
+  });
+
+  it("a short brand never containment-matches a longer filer name", async () => {
+    const result = await checkEdgarFts(
+      { companyNames: ["Zip"] },
+      {
+        ...ctxBase,
+        fetchFn: fetchStub(
+          () => new Response(fixture("edgar-fts-passage-noise.json"), { status: 200 }),
+        ),
+      },
+    );
+    expect(result.status).toBe("definitive_miss");
+  });
+
   it("treats an empty result as a definitive miss framed as informational", async () => {
     const result = await checkEdgarFts(
       { companyNames: ["CivicSignal"] },

@@ -4,6 +4,21 @@ Every change to checks, weights, tier criteria, or language rules lands here
 with its date and its expected effect on verdicts. The methodology document
 states the current rules; this file records how they got there.
 
+## Version 1.5 (September 2026)
+
+**SEC full-text hits are anchored to the filing company.** A full-text
+result now counts only when the FILING COMPANY's name matches the vendor
+under the same matcher every registry lane uses: same normalization,
+containment in both directions, the under-four-character exact-only rule,
+and investment-vehicle rejection. Previously the EDGAR lane kept its own
+looser matcher, so a short name like "17A" could earn similarity credit
+from an unrelated registrant, and passages of other companies' filings
+containing the name could read as corroboration. Searches whose text hits
+all belong to unmatched filers now report a definitive miss that records
+the noise count. Expected effect: short-named and common-word vendors stop
+earning federal corroboration from other companies' filings; correctly
+matched vendors are unaffected.
+
 ## Version 1.4 (August 31, 2026)
 
 **Match confidence now gates favorable credit.** A registry record that

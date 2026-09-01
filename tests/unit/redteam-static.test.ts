@@ -367,6 +367,7 @@ describe("site twin: the auto-fetched vendor site channel", () => {
     const retried = await fetchVendorSite("acmeai.com", {
       fetchFn: flakyInjected,
       attempts: 2,
+      sleepFn: () => Promise.resolve(),
     });
     expect(retried).not.toBeNull();
     expect(retried!.combinedText).not.toContain("Deloitte");

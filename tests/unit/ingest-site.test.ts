@@ -179,6 +179,7 @@ describe("fetchVendorSite attempts (v1.6 full-pass retry)", () => {
     const site = await fetchVendorSite("acmeai.com", {
       fetchFn: flaky.fn,
       attempts: 2,
+      sleepFn: () => Promise.resolve(),
     });
     expect(site).not.toBeNull();
     expect(site!.pages[0].url).toBe("https://acmeai.com/");
@@ -215,6 +216,7 @@ describe("fetchVendorSite attempts (v1.6 full-pass retry)", () => {
     const site = await fetchVendorSite("acmeai.com", {
       fetchFn: flaky.fn,
       attempts: 2,
+      sleepFn: () => Promise.resolve(),
     });
     expect(site).toBeNull();
     expect(flaky.count()).toBe(4);

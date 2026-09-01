@@ -826,9 +826,11 @@ async function runPipeline(
        name-match verdict — an unconfirmed match is an answer, not a
        failure. */
     let siteReadCompleted = false;
-    /* Per-attempt failure tags from the site extract loop, persisted in
-       the disclosure check's data for post-hoc diagnosis. */
+    /* Per-attempt failure tags from the site extract loop and per-pass
+       fetch failure notes, persisted in the disclosure check's data for
+       post-hoc diagnosis. */
     const siteExtractTags: string[] = [];
+    const siteFetchNotes: string[] = [];
     if (inputKind === "url" && sourceUrl) {
       try {
         siteHost = new URL(sourceUrl).hostname;
@@ -884,6 +886,7 @@ async function runPipeline(
     if (siteHost && canStartSitePass(s1bElapsed)) {
       const site = await fetchVendorSite(siteHost, {
         attempts: siteFetchAttempts(s1bElapsed),
+        noteFailure: (msg) => siteFetchNotes.push(msg),
       });
       markStage("s1b_site_fetch");
       /* 60 chars admits a title-plus-description JS shell — enough for
@@ -1016,6 +1019,7 @@ async function runPipeline(
         ...(siteExtractTags.length > 0
           ? { extract_attempts: siteExtractTags }
           : {}),
+        ...(siteFetchNotes.length > 0 ? { fetch_failures: siteFetchNotes } : {}),
       };
       await emit({
         stage: "parse",

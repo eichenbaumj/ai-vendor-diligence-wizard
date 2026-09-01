@@ -5,6 +5,7 @@ import {
   S3_START_BOUND_MS,
   SITE_EXTRACT_RETRY_CUTOFF_MS,
   SITE_EXTRACT_TIMEOUT_MS,
+  SITE_FETCH_PAUSE_ALLOWANCE_MS,
   SITE_FETCH_SECOND_ATTEMPT_CUTOFF_MS,
   SITE_PASS_CUTOFF_MS,
   canRetryDiscovery,
@@ -12,7 +13,7 @@ import {
   canStartSitePass,
   siteFetchAttempts,
 } from "@shared/s1b-budget.ts";
-import { SITE_DEADLINE_MS } from "@shared/ingest-site.ts";
+import { SITE_DEADLINE_MS, SITE_RETRY_PAUSE_MS } from "@shared/ingest-site.ts";
 import { DISCOVERY_ATTEMPT_2_DEADLINE_MS } from "@shared/discovery.ts";
 
 describe("s1b budget composition against the S3 start bound", () => {
@@ -33,10 +34,13 @@ describe("s1b budget composition against the S3 start bound", () => {
         ? branchA_extract1End + SITE_EXTRACT_TIMEOUT_MS
         : branchA_extract1End;
 
-    /* Branch B: two fetch passes (granted only under the 55s cutoff),
-       then the latest retry the extract gate can grant. */
+    /* Branch B: two fetch passes plus the inter-pass pause (granted only
+       under the second-attempt cutoff), then the latest retry the
+       extract gate can grant. */
     const branchB_fetchEnd =
-      SITE_FETCH_SECOND_ATTEMPT_CUTOFF_MS + 2 * SITE_DEADLINE_MS;
+      SITE_FETCH_SECOND_ATTEMPT_CUTOFF_MS +
+      2 * SITE_DEADLINE_MS +
+      SITE_FETCH_PAUSE_ALLOWANCE_MS;
     const branchB_extract1End = branchB_fetchEnd + SITE_EXTRACT_TIMEOUT_MS;
     const branchB_end = Math.max(
       branchB_extract1End,
@@ -53,6 +57,10 @@ describe("s1b budget composition against the S3 start bound", () => {
     expect(worstS1bEnd + S2_OVERHEAD_ALLOWANCE_MS).toBeLessThanOrEqual(
       S3_START_BOUND_MS,
     );
+  });
+
+  it("the pause allowance mirrors the real inter-pass pause", () => {
+    expect(SITE_FETCH_PAUSE_ALLOWANCE_MS).toBe(SITE_RETRY_PAUSE_MS);
   });
 
   it("a discovery retry always finishes before the site-pass gate", () => {

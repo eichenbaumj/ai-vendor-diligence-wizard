@@ -59,8 +59,12 @@ export const SITE_PASS_CUTOFF_MS = 80_000;
 export const DISCOVERY_RETRY_CUTOFF_MS = 60_000;
 
 /* Below this, a failed site fetch may re-run once (two full 22s passes
-   still compose inside the bound). */
-export const SITE_FETCH_SECOND_ATTEMPT_CUTOFF_MS = 55_000;
+   plus the 3s inter-pass pause still compose inside the bound). */
+export const SITE_FETCH_SECOND_ATTEMPT_CUTOFF_MS = 52_000;
+
+/* Mirrors SITE_RETRY_PAUSE_MS in ingest-site.ts for the composition
+   test; if that pause changes, change this with it. */
+export const SITE_FETCH_PAUSE_ALLOWANCE_MS = 3_000;
 
 /* Latest elapsed time at which a failed site extract earns its second
    attempt (mirrors the pitch extractor's 2-attempt loop). Sized so a

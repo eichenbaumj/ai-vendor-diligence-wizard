@@ -106,9 +106,24 @@ export function discoverSitePaths(
   return out;
 }
 
+/* Pause between full passes: a fast total failure is usually the site's
+   edge scoring the client (rate or anomaly), and an immediate identical
+   retry shares its fate; a short pause gives momentary scoring a chance
+   to clear. Bounded by the s1b budget math in s1b-budget.ts. */
+export const SITE_RETRY_PAUSE_MS = 3_000;
+
 export async function fetchVendorSite(
   domain: string,
-  opts: { fetchFn?: typeof fetch; deadlineMs?: number; attempts?: 1 | 2 } = {},
+  opts: {
+    fetchFn?: typeof fetch;
+    deadlineMs?: number;
+    attempts?: 1 | 2;
+    /* Diagnostic sink: called with a short reason when a pass fails.
+       Callers persist these (function console logs are unreachable
+       post-hoc). */
+    noteFailure?: (msg: string) => void;
+    sleepFn?: (ms: number) => Promise<void>;
+  } = {},
 ): Promise<VendorSite | null> {
   /* One full-pass retry (attempts: 2): the observed failure class is a
      transient network fault or a slow seed page eating the shared
@@ -116,16 +131,23 @@ export async function fetchVendorSite(
      under one shared deadline would starve each other instead. A pass
      that returned pages never re-runs — partial coverage is a result. */
   const attempts = opts.attempts ?? 1;
+  const sleepFn =
+    opts.sleepFn ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms)));
   for (let attempt = 1; ; attempt++) {
     const site = await fetchVendorSitePass(domain, opts);
     if (site !== null || attempt >= attempts) return site;
     console.log(`site fetch pass ${attempt} empty for ${domain}; retrying once`);
+    await sleepFn(SITE_RETRY_PAUSE_MS);
   }
 }
 
 async function fetchVendorSitePass(
   domain: string,
-  opts: { fetchFn?: typeof fetch; deadlineMs?: number } = {},
+  opts: {
+    fetchFn?: typeof fetch;
+    deadlineMs?: number;
+    noteFailure?: (msg: string) => void;
+  } = {},
 ): Promise<VendorSite | null> {
   const fetchFn = opts.fetchFn ?? globalThis.fetch;
   const deadline = AbortSignal.timeout(opts.deadlineMs ?? SITE_DEADLINE_MS);
@@ -145,9 +167,9 @@ async function fetchVendorSitePass(
       seedUrl = normalizeSubmittedUrl(`https://www.${domain}/`);
       seed = await fetchSubmittedUrl(seedUrl, fetchFn, deadline);
     } catch (wwwErr) {
-      console.log(
-        `site fetch failed for ${domain}: apex=${String((apexErr as Error).message)} www=${String((wwwErr as Error).message)}`,
-      );
+      const detail = `apex=${String((apexErr as Error).message)} www=${String((wwwErr as Error).message)}`;
+      console.log(`site fetch failed for ${domain}: ${detail}`);
+      opts.noteFailure?.(detail.slice(0, 200));
       return null;
     }
   }
@@ -211,7 +233,10 @@ async function fetchVendorSitePass(
     addPage(r.value.url, r.value.page.final_url, r.value.page.html);
   }
 
-  if (pages.length === 0) return null;
+  if (pages.length === 0) {
+    opts.noteFailure?.("all fetched pages under the 40-char text floor");
+    return null;
+  }
 
   const combined = pages
     .map((p) => `=== PAGE: ${p.final_url} ===\n${p.text}`)

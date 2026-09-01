@@ -17,6 +17,7 @@ import type {
   HonestyItem,
   LeadRef,
   LedgerRow,
+  SourceRef,
   ManualCheck,
   PitchExtract,
   RegistryCheck,
@@ -77,6 +78,12 @@ export interface AssembledSkeleton {
   honesty: HonestyItem[];
   manualChecks: ManualCheck[];
   leads: LeadRef[];
+  /* Class 1-2 citations that produced no row, attached to no row or card,
+     and won no lead slot. The structuring invariant: every class 1-2
+     citation is attached, a lead, or listed here — never silently
+     dropped (research retrieved the adverse record and structuring
+     discarded it, gauntlet theme C). */
+  unassessedSources: SourceRef[];
 }
 
 function find(checks: RegistryCheck[], id: string): RegistryCheck | undefined {
@@ -1382,6 +1389,28 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
 
   /* ---------------------------------------------------------- tier inputs */
 
+  /* Severity reconciliation (structuring invariant): the tier reads
+     FINDINGS, and the verdict rationale asserts "no unresolved
+     high-severity findings" — so a HIGH or CRITICAL ledger row that no
+     unresolved finding covers would make that sentence true of the
+     findings and false of the page above it (one unverified customer
+     among verified ones was the live case). Such rows downgrade to
+     MEDIUM: the tier stays finding-driven and the ledger never outranks
+     it. Locked by test: a tier-4 decision never coexists with an open
+     HIGH/CRITICAL row. */
+  for (const row of ledger) {
+    if (row.severity !== "HIGH" && row.severity !== "CRITICAL") continue;
+    const covered = findings.some(
+      (f) =>
+        !f.resolved &&
+        (f.severity === "HIGH" || f.severity === "CRITICAL") &&
+        (f.id === row.id ||
+          row.id.startsWith(`${f.id}-`) ||
+          (f.id === "customers" && row.id.startsWith("cust-"))),
+    );
+    if (!covered) row.severity = "MEDIUM";
+  }
+
   /* Favorable credit follows the attribution rule: identity-class
      connectors count only when the record is credited to THIS vendor (a
      namesake's records must not clear the startup bar). */
@@ -1589,6 +1618,28 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
     });
   }
 
+  /* Source accounting (structuring invariant): every class 1-2 citation
+     lands in exactly one bucket — attached to a row or card, surfaced as
+     a lead, or listed here as retrieved-but-not-assessed. Research spend
+     must be visible even when structuring found no place for a page. */
+  const leadUrls = new Set(leads.map((l) => l.url));
+  const unassessedSeen = new Set<string>();
+  const unassessedSources: SourceRef[] = [];
+  for (const c of citations) {
+    if (unassessedSources.length >= 12) break;
+    if (!canVerify(c.domain_class)) continue;
+    if (usedUrls.has(c.url) || leadUrls.has(c.url) || unassessedSeen.has(c.url)) continue;
+    unassessedSeen.add(c.url);
+    unassessedSources.push({
+      url: c.url,
+      title:
+        c.title && lintText(c.title).some((v) => v.kind === "banned")
+          ? null
+          : c.title,
+      retrieved_at: c.retrieved_at,
+    });
+  }
+
   return {
     tierInputs,
     ledger,
@@ -1597,5 +1648,6 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
     honesty,
     manualChecks: manualChecks.slice(0, 8),
     leads,
+    unassessedSources,
   };
 }

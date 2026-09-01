@@ -616,3 +616,90 @@ describe("partial-identity D1 row", () => {
     expect(row?.sources[0].title).toContain("Texas");
   });
 });
+
+describe("structuring invariants (gauntlet theme C)", () => {
+  it("severity reconciliation: a HIGH row without a covering finding downgrades to MEDIUM", () => {
+    /* One verified customer suppresses the zero-verified aggregate, so the
+       second, unverified customer's HIGH row would have no covering
+       finding — the verdict rationale would say "no unresolved
+       high-severity findings" over an open HIGH row. */
+    const out = assemble(
+      input(
+        ["Franklin County", "Shelby County"],
+        [
+          cite(
+            "https://www.franklincountyohio.gov/agenda.pdf",
+            1,
+            "Franklin County pilots Acme AI",
+            "Franklin County approved the Acme AI pilot.",
+          ),
+        ],
+      ),
+    );
+    const rows = customerRows(out);
+    const verified = rows.find((r) => r.result === "VERIFIED");
+    const unverified = rows.find((r) => r.result === "COULD_NOT_VERIFY");
+    expect(verified).toBeDefined();
+    expect(unverified).toBeDefined();
+    expect(unverified!.severity).toBe("MEDIUM");
+    expect(
+      out.tierInputs.findings.some(
+        (f) => !f.resolved && (f.severity === "HIGH" || f.severity === "CRITICAL"),
+      ),
+    ).toBe(false);
+  });
+
+  it("property: no HIGH or CRITICAL row survives without a covering unresolved finding", () => {
+    const outs = [
+      assemble(input(["Franklin County", "Shelby County"], [])),
+      assemble(
+        input(
+          ["Franklin County"],
+          [cite("https://www.franklincountyohio.gov/a.pdf", 1, "Franklin County Acme AI", "Acme AI works with Franklin County")],
+        ),
+      ),
+    ];
+    for (const out of outs) {
+      for (const row of out.ledger) {
+        if (row.severity !== "HIGH" && row.severity !== "CRITICAL") continue;
+        const covered = out.tierInputs.findings.some(
+          (f) =>
+            !f.resolved &&
+            (f.severity === "HIGH" || f.severity === "CRITICAL") &&
+            (f.id === row.id ||
+              row.id.startsWith(`${f.id}-`) ||
+              (f.id === "customers" && row.id.startsWith("cust-"))),
+        );
+        expect(covered, `row ${row.id} has no covering finding`).toBe(true);
+      }
+    }
+  });
+
+  it("source accounting: every class 1-2 citation is attached, a lead, or listed unassessed", () => {
+    const citations = [
+      /* attaches to the verified customer row */
+      cite(
+        "https://www.franklincountyohio.gov/agenda.pdf",
+        1,
+        "Franklin County pilots Acme AI",
+        "Franklin County approved the Acme AI pilot.",
+      ),
+      /* becomes a lead (mentions the vendor, attached nowhere) */
+      cite("https://www.ohio.gov/acme-ai-review", 1, "Acme AI review", "Acme AI mentioned."),
+      /* mentions no subject: previously silently dropped, now unassessed */
+      cite("https://www.ohio.gov/unrelated-budget", 1, "County budget 2026", "The budget passed."),
+      /* class 3 never joins the accounting */
+      cite("https://vendor-blog.example.com/post", 3, "Blog", "Post."),
+    ];
+    const out = assemble(input(["Franklin County"], citations));
+    const attached = new Set(out.ledger.flatMap((r) => r.sources.map((s) => s.url)));
+    const leadUrls = new Set(out.leads.map((l) => l.url));
+    const unassessedUrls = new Set(out.unassessedSources.map((s) => s.url));
+    for (const c of citations) {
+      if (c.domain_class > 2) continue;
+      const buckets = [attached.has(c.url), leadUrls.has(c.url), unassessedUrls.has(c.url)];
+      expect(buckets.filter(Boolean).length, c.url).toBe(1);
+    }
+    expect(unassessedUrls.has("https://www.ohio.gov/unrelated-budget")).toBe(true);
+  });
+});

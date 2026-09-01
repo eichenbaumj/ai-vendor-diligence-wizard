@@ -31,6 +31,20 @@ their full legal names; vendors whose materials offer nothing to compare
 against may see identity move to an honest "could not verify" rather than
 credit from an unverifiable match.
 
+**Every retrieved official page is accounted for.** Research regularly
+retrieved official and independent pages that the structuring stage then
+discarded without a trace — on one audited company, the run's own
+citations held the central adverse story while the verdict read "no
+unresolved high-severity findings." Two invariants now hold: every class
+1-2 citation appears in the report as a row's source, a follow-up lead,
+or a new "retrieved but not assessed" list at the end; and any ledger row
+marked High or Critical reconciles against the finding list the verdict
+rules read (a row no finding covers steps down to Medium), so the
+verdict's rationale can never describe a cleaner page than the one above
+it. Expected effect: presentation honesty — research spend is visible and
+the rationale sentence is mechanically true; tiers move only where a row
+was overstating a finding-less severity.
+
 **Identity survives third-party outages.** When the domain-registration
 lookup (RDAP) is unavailable and identity needs a second identifier, the
 pipeline now runs a direct mail-record lookup itself — one DNS query —

@@ -128,7 +128,10 @@ function ReportView({
         steps={report.next_steps}
         stateItems={report.sector.state_items}
       />
-      <SourcesList sources={report.sources} />
+      <SourcesList
+        sources={report.sources}
+        unassessed={report.unassessed_sources ?? []}
+      />
 
       <div className="mx-auto max-w-5xl px-5 pb-14 sm:px-8">
         <div className="flex flex-wrap items-center justify-between gap-4 border-t border-brand-silver-soft pt-6">

@@ -642,6 +642,7 @@ export async function runPipelineTail(
     questions: skeleton.questions,
     manual_checks: skeleton.manualChecks,
     leads: skeleton.leads,
+    unassessed_sources: firewallSources(skeleton.unassessedSources),
     next_steps: (narrative.value?.next_steps ?? defaultNextSteps(decision.tier))
       .slice(0, 8)
       .map((s) => tidyProse(s, 500)),

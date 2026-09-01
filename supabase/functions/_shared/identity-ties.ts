@@ -170,7 +170,9 @@ type VendorSource = "pitch" | "site";
 export interface VendorTieCorpus {
   peopleNames: { name: string; source: VendorSource }[];
   addresses: { value: string; source: VendorSource }[];
-  states: { code: string; source: VendorSource }[];
+  /* Coverage-sourced states come from full state names in class 1-2
+     citations; the resulting tie is always weak (favorable-only). */
+  states: { code: string; source: VendorSource | "coverage" }[];
   /* Pitch-stated registrable domains, lowercase. Discovered/inferred
      domains are excluded: their provenance is not vendor-asserted. */
   domains: string[];
@@ -200,13 +202,32 @@ export function buildTieCorpus(args: {
     value: a,
     source: (i < args.pitchAddressCount ? "pitch" : "site") as VendorSource,
   }));
-  const states: { code: string; source: VendorSource }[] = [];
-  const addState = (code: string | null, source: VendorSource) => {
+  const states: { code: string; source: VendorSource | "coverage" }[] = [];
+  const addState = (
+    code: string | null,
+    source: VendorSource | "coverage",
+  ) => {
     if (code && !states.some((s) => s.code === code)) states.push({ code, source });
   };
   addState(stateCodeOf(extract.state_mentioned), "pitch");
   for (const a of addresses) {
     for (const code of statesInAddress(a.value)) addState(code, a.source);
+  }
+  /* States from class 1-2 coverage, FULL NAMES ONLY (bare two-letter codes
+     are English words and would tie everywhere): independent press writing
+     "the Madison, Wisconsin company" corroborates a Wisconsin record. The
+     resulting tie is weak — favorable identity only, never adverse — the
+     same risk class Joe accepted for pitch-claimed states, and coverage is
+     not attacker-authored. Without this, a name-only run of a real company
+     whose site yields no extractable address lands at "could not verify"
+     while the run's own citations name its home state (Polco and Zencity,
+     2026-09-01 run 1). */
+  for (const c of args.citations) {
+    if (c.domain_class > 2) continue;
+    const text = `${c.title ?? ""} ${c.cited_text ?? ""}`.toUpperCase();
+    for (const [name, code] of Object.entries(STATE_NAME_TO_CODE)) {
+      if (text.includes(name)) addState(code, "coverage");
+    }
   }
   const domains = new Set<string>();
   for (const d of extract.domains) {

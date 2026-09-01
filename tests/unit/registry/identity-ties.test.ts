@@ -693,3 +693,39 @@ describe("discoverBridgeNames: the research-to-registry name bridge", () => {
     expect(names[0].name).toBe("Steady Platform, Inc.");
   });
 });
+
+describe("coverage-sourced state ties (weak, favorable-only)", () => {
+  it("a full state name in class 1-2 coverage supplies a weak tie", () => {
+    const corpus = corpusWith({
+      extract: { vendor_name_candidates: ["Polco"] },
+      citations: [
+        cite({
+          title: "Madison, Wisconsin civic-engagement firm Polco raises round",
+          domain_class: 2,
+        }),
+      ],
+    });
+    const tie = computeTies(
+      { legal_name: "POLCO INC", registration_state: "TX", addr_state: "WI" },
+      corpus,
+    );
+    expect(tie.tied).toBe(true);
+    expect(tie.strong).toBe(false);
+    expect(tie.signals[0]).toMatchObject({
+      kind: "state",
+      strength: "weak",
+      vendor_source: "coverage",
+    });
+  });
+
+  it("bare two-letter codes in coverage never count, and class 3 never counts", () => {
+    const bareCode = corpusWith({
+      citations: [cite({ cited_text: "Ship OR store your data", domain_class: 2 })],
+    });
+    expect(bareCode.states).toEqual([]);
+    const class3 = corpusWith({
+      citations: [cite({ cited_text: "our Wisconsin office", domain_class: 3 })],
+    });
+    expect(class3.states).toEqual([]);
+  });
+});

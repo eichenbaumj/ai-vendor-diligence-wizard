@@ -186,6 +186,34 @@ export function canVerify(cls: DomainClass): boolean {
   return cls === 1 || cls === 2;
 }
 
+/* Registry-grade hosts: the deliberately NARROW subset of Class 1 whose
+   pages state legal entity names as a matter of record. Only these may
+   feed the research-to-registry name bridge (identity-ties.ts
+   discoverBridgeNames): courtlistener or uspto are Class 1 but their
+   pages are not registry name records. Vendor sites are Class 3 by
+   construction, so attacker-authored text can never reach the bridge. */
+export const REGISTRY_GRADE_HOSTS = new Set([
+  "sec.gov",
+  "efts.sec.gov",
+  "sam.gov",
+  "usaspending.gov",
+  "opencorporates.com",
+  "gleif.org",
+  "apps.dos.ny.gov",
+  "data.ny.gov",
+  "data.colorado.gov",
+  "data.ct.gov",
+  "data.texas.gov",
+  "data.oregon.gov",
+  "search.sunbiz.org",
+  "marketplace.fedramp.gov",
+]);
+
+export function isRegistryGradeHost(url: string): boolean {
+  const host = hostnameOf(url);
+  return host !== null && matchesHost(host, REGISTRY_GRADE_HOSTS);
+}
+
 /* Content farms / SEO domains blocked from the S3 web-search tool entirely. */
 export const BLOCKED_SEARCH_DOMAINS: string[] = [
   "prnewswire.com",

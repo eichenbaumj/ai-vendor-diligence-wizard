@@ -31,6 +31,22 @@ their full legal names; vendors whose materials offer nothing to compare
 against may see identity move to an honest "could not verify" rather than
 credit from an unverifiable match.
 
+**Research-discovered legal names re-feed the registry stage.** When no
+registry record could be credited to the vendor but research retrieved a
+fuller legal name from a registry-grade official source (SEC, SAM.gov, a
+state registry's data service, OpenCorporates, GLEIF), the registry lanes
+now run again under that name — previously the registry stage ran once,
+before research, with no feedback loop, so a company whose brand differs
+from its legal name could sit at "not enough to evaluate" while the
+answer sat in the run's own citations. The bridge accepts names only from
+an allowlist of official record hosts, requires the name to share a root
+with the vendor's own, never displaces results the first sweep found, and
+adjudicates re-found records under the same attribution rules. The report
+states the discovered name, its source, and asks the buyer to confirm.
+Expected effect: vendors operating under a brand name gain identity
+resolution from their true records; nothing changes for vendors whose
+records were already found.
+
 **A terminated foreign registration is information, not a dissolution.**
 End-of-registration words now carry a class: "Dissolved," "Revoked," and
 "Forfeited" mean the company ended; "Terminated," "Surrendered," and

@@ -45,9 +45,13 @@ import type {
 } from "./schemas.ts";
 import {
   hasCorporateSuffix,
+  isProductOnlyName,
+  normalizeCompanyName,
   normalizePersonName,
   normalizeUnstripped,
+  productOnlyTokens,
 } from "./registry/sam.ts";
+import { isRegistryGradeHost } from "./domain-classes.ts";
 import { contentMentions, tokensOf } from "./text-match.ts";
 
 /* ------------------------------------------------------------- state names */
@@ -660,4 +664,92 @@ export function adjudicateChecks(
     check.tie = computeTies(facts, corpus);
     check.attribution = attributionFor(facts, check.tie);
   }
+}
+
+/* ------------------------------------------------- S3 -> S2 name bridge */
+
+export interface BridgeName {
+  name: string;
+  source_url: string;
+  source_host: string;
+}
+
+/* Corporate-suffix-terminated spans in registry-grade text: the SteadyIQ/
+   Prepared fix. Research retrieved "Steady Platform, Inc." from official
+   sources while every registry query ran on "SteadyIQ"; this finds such
+   legal names so the registry stage can re-run under them.
+
+   Security containment: only citations on the REGISTRY_GRADE_HOSTS
+   allowlist qualify — vendor sites are Class 3 by construction and the
+   pitch never reaches this function, so attacker-authored text cannot
+   plant a name here. A candidate must share at least one anchor token
+   with the vendor's own name (a registry page merely mentioning
+   "Deloitte LLP" fails), must not be built from product-brand tokens,
+   and must not already be a known query name. Discovered names feed ONLY
+   the local registry re-run: never extract.vendor_name_candidates, never
+   research queries. The report always states the discovered name and its
+   source (assemble's identity green flag). */
+const LEGAL_NAME_SPAN =
+  /([A-Z][A-Za-z0-9&.,'’ -]{1,80}?[,.]?\s+(?:Inc|Incorporated|LLC|Corp|Corporation|Co|Company|Ltd|Limited|PBC|LP|LLP)\.?)(?=[^A-Za-z0-9]|$)/g;
+
+export function discoverBridgeNames(
+  citations: Citation[],
+  args: {
+    anchorNames: string[];
+    productNames: string[];
+    knownNames: string[];
+  },
+): BridgeName[] {
+  const anchorTokens = [
+    ...new Set(args.anchorNames.flatMap((n) => normalizeCompanyName(n).split(" "))),
+  ].filter(Boolean);
+  /* Anchor coverage includes shared prefixes of four or more characters:
+     "Steady Platform, Inc." must anchor on the brand "SteadyIQ" (STEADY is
+     a prefix of STEADYIQ), while a registry page merely mentioning an
+     unrelated company still fails. */
+  const anchors = (token: string): boolean =>
+    anchorTokens.some(
+      (a) =>
+        a === token ||
+        (token.length >= 4 && a.startsWith(token)) ||
+        (a.length >= 4 && token.startsWith(a)),
+    );
+  const productTokens = productOnlyTokens(args.productNames, args.anchorNames);
+  const known = new Set(
+    args.knownNames.map((n) => normalizeCompanyName(n)).filter(Boolean),
+  );
+  const out: BridgeName[] = [];
+  const seen = new Set<string>();
+  const wordNorm = (w: string) => w.toUpperCase().replace(/[^A-Z0-9]/g, "");
+  for (const c of citations) {
+    if (out.length >= 2) break;
+    if (c.domain_class !== 1) continue;
+    if (!isRegistryGradeHost(c.url)) continue;
+    for (const field of [c.title, c.cited_text]) {
+      if (!field || out.length >= 2) continue;
+      for (const m of field.matchAll(LEGAL_NAME_SPAN)) {
+        if (out.length >= 2) break;
+        /* A capitalized run can swallow leading page-title words ("Active
+           Franchise Taxpayers Steady Platform, Inc."): trim the span to
+           start at the first word the vendor's own name anchors. */
+        const words = m[1].trim().split(/\s+/);
+        const startIdx = words.findIndex((w) => anchors(wordNorm(w)));
+        if (startIdx === -1) continue;
+        const candidate = words.slice(startIdx).join(" ").replace(/^[,.\s]+/, "");
+        const norm = normalizeCompanyName(candidate);
+        if (!norm || known.has(norm) || seen.has(norm)) continue;
+        if (isProductOnlyName(candidate, productTokens)) continue;
+        if (!hasCorporateSuffix(candidate)) continue;
+        seen.add(norm);
+        let host = c.url;
+        try {
+          host = new URL(c.url).hostname.replace(/^www\./, "");
+        } catch {
+          /* keep the raw URL as the label */
+        }
+        out.push({ name: candidate, source_url: c.url, source_host: host });
+      }
+    }
+  }
+  return out;
 }

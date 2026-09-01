@@ -234,19 +234,26 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
     if (anchor) {
       /* When the record's legal name differs from the pitch's display name
          (compound names like "TrueTax by Govra" resolving to GOVRA, INC.),
-         say so — the D1 row must not conflate product and company. */
+         say so — the D1 row must not conflate product and company. When the
+         record was found through the research-to-registry name bridge, the
+         report must disclose the discovered name's source and flag it for
+         the buyer to confirm. */
       const bestData = (anchor.data ?? {}) as {
         matches?: { name?: string }[];
         legal_business_name?: string;
+        name_bridge?: { discovered_name?: string; source_host?: string };
       };
       const legalName =
         bestData.matches?.[0]?.name ?? bestData.legal_business_name ?? null;
       const differs =
         legalName && norm(legalName) !== norm(vendorName) ? legalName : null;
+      const bridgePart = bestData.name_bridge?.source_host
+        ? `; that name surfaced on ${bestData.name_bridge.source_host} during research, so confirm it is the same company`
+        : "";
       greenFlagFacts.push({
         fact: differs
-          ? `A registered legal entity was found for ${vendorName} under the legal name ${differs} (${basis})`
-          : `A registered legal entity was found for ${vendorName} (${basis})`,
+          ? `A registered legal entity was found for ${vendorName} under the legal name ${differs} (${basis})${bridgePart}`
+          : `A registered legal entity was found for ${vendorName} (${basis})${bridgePart}`,
         source_name: anchor.source,
         date: dateOf(anchor),
       });

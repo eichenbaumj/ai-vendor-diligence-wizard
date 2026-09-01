@@ -22,6 +22,7 @@ import {
   attributionFor,
   buildTieCorpus,
   computeTies,
+  discoverBridgeNames,
   hasStrongTieFacts,
   isDegenerateBrandName,
   stateCodeOf,
@@ -597,5 +598,98 @@ describe("tieFactsForCheck and adjudicateChecks", () => {
     );
     expect(tailCheck.attribution).toBe("attributed");
     expect(tailCheck.tie!.strong).toBe(true);
+  });
+});
+
+describe("discoverBridgeNames: the research-to-registry name bridge", () => {
+  const bridgeArgs = {
+    anchorNames: ["SteadyIQ"],
+    productNames: [],
+    knownNames: ["SteadyIQ"],
+  };
+
+  it("finds a legal name on a registry-grade host (the SteadyIQ shape)", () => {
+    const names = discoverBridgeNames(
+      [
+        cite({
+          url: "https://data.texas.gov/resource/9cir-efmm.json?taxpayer=0804105092",
+          title: "Active Franchise Taxpayers",
+          cited_text: "Steady Platform, Inc. holds Texas file 0804105092.",
+          domain_class: 1,
+        }),
+      ],
+      bridgeArgs,
+    );
+    expect(names).toHaveLength(1);
+    expect(names[0].name).toBe("Steady Platform, Inc.");
+    expect(names[0].source_host).toBe("data.texas.gov");
+  });
+
+  it("a class-1 host OFF the registry-grade allowlist never feeds the bridge", () => {
+    const names = discoverBridgeNames(
+      [
+        cite({
+          url: "https://www.courtlistener.com/docket/12345/",
+          cited_text: "Steady Platform, Inc. v. Somebody",
+          domain_class: 1,
+        }),
+      ],
+      bridgeArgs,
+    );
+    expect(names).toHaveLength(0);
+  });
+
+  it("class 2 and class 3 pages never feed the bridge, whatever they assert", () => {
+    for (const [url, cls] of [
+      ["https://www.govtech.com/steady-profile", 2],
+      ["https://steadyiq.com/about", 3],
+    ] as const) {
+      const names = discoverBridgeNames(
+        [
+          cite({
+            url,
+            cited_text: "Our legal name is Steady Platform, Inc.",
+            domain_class: cls,
+          }),
+        ],
+        bridgeArgs,
+      );
+      expect(names).toHaveLength(0);
+    }
+  });
+
+  it("a registry page mentioning an unrelated company fails the anchor gate", () => {
+    const names = discoverBridgeNames(
+      [
+        cite({
+          url: "https://data.texas.gov/resource/9cir-efmm.json",
+          cited_text: "Deloitte Consulting LLP appears in the same dataset.",
+          domain_class: 1,
+        }),
+      ],
+      bridgeArgs,
+    );
+    expect(names).toHaveLength(0);
+  });
+
+  it("already-known names and product-only names are skipped, and output caps at two", () => {
+    const names = discoverBridgeNames(
+      [
+        cite({
+          url: "https://opencorporates.com/companies/us_de/12345",
+          cited_text:
+            "SteadyIQ Inc. and Steady Platform, Inc. and Steady Payments LLC and Steady Labs Corp are registered.",
+          domain_class: 1,
+        }),
+      ],
+      {
+        anchorNames: ["SteadyIQ"],
+        productNames: [],
+        knownNames: ["SteadyIQ Inc."],
+      },
+    );
+    expect(names.length).toBeLessThanOrEqual(2);
+    expect(names.map((n) => n.name)).not.toContain("SteadyIQ Inc.");
+    expect(names[0].name).toBe("Steady Platform, Inc.");
   });
 });

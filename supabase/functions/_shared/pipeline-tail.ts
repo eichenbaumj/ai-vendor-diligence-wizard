@@ -44,6 +44,7 @@ import { inferPrimaryDomain } from "./domain-inference.ts";
 import {
   adjudicateChecks,
   buildTieCorpus,
+  discoverBridgeNames,
   tieFactsForCheck,
 } from "./identity-ties.ts";
 import { splitNameCandidates } from "./text-match.ts";
@@ -210,17 +211,92 @@ export async function runPipelineTail(
      citations can only attribute more records, never fewer. Identity is
      recomputed from the adjudicated checks; this is the authoritative
      value for assembly on both the standard and deep paths. */
-  adjudicateChecks(
-    checks,
-    buildTieCorpus({
-      extract,
-      pitchPersonCount: state.pitchPersonCount,
-      pitchAddressCount: state.pitchAddressCount ?? 0,
-      primaryDomain: state.primaryDomain,
-      productNames: state.productNames ?? [],
-      citations,
-    }),
+  const tieCorpus = buildTieCorpus({
+    extract,
+    pitchPersonCount: state.pitchPersonCount,
+    pitchAddressCount: state.pitchAddressCount ?? 0,
+    primaryDomain: state.primaryDomain,
+    productNames: state.productNames ?? [],
+    citations,
+  });
+  adjudicateChecks(checks, tieCorpus);
+
+  /* S3 -> S2 name bridge (the SteadyIQ/Prepared fix): when NO registry
+     record is attributed to the vendor but research retrieved a fuller
+     legal name from a registry-grade official source, re-run the registry
+     lanes under that name. A bridge hit replaces the same lane's non-hit;
+     a bridge miss is discarded, so the sweep that already ran never gets
+     worse. Bridged checks then go through the same adjudication — the
+     discovered record still needs a tie to attribute. */
+  const nameSplit = splitNameCandidates(extract.vendor_name_candidates);
+  const hasAttributedRegistry = checks.some(
+    (c) =>
+      c.attribution === "attributed" &&
+      (c.check_id.startsWith("sos_") ||
+        /^sam(_entity)?$/.test(c.check_id) ||
+        /edgar/.test(c.check_id)),
   );
+  if (!hasAttributedRegistry) {
+    const bridgeNames = discoverBridgeNames(citations, {
+      anchorNames: nameSplit.anchorNames,
+      productNames: nameSplit.productNames,
+      knownNames: nameSplit.identityNames,
+    });
+    if (bridgeNames.length > 0) {
+      await emit({
+        stage: "registry",
+        kind: "micro_finding",
+        label: `Official records name ${bridgeNames.map((b) => b.name).join(" and ")}; re-running the registry search under that name`,
+      });
+      const bridgeQueryNames = bridgeNames.map((b) => b.name);
+      const productTokens = registry.productOnlyTokens(
+        nameSplit.productNames,
+        nameSplit.anchorNames,
+      );
+      const bridgeResults = await Promise.allSettled([
+        registry.checkSosSweep(
+          { companyNames: bridgeQueryNames, productTokens },
+          ctx(12_000),
+        ),
+        registry.checkSamEntity(
+          { companyNames: bridgeQueryNames, productTokens },
+          ctx(),
+        ),
+        registry.checkEdgarFts({ companyNames: bridgeQueryNames }, ctx()),
+      ]);
+      const bridged: RegistryCheck[] = [];
+      for (const r of bridgeResults) {
+        if (r.status !== "fulfilled") continue;
+        bridged.push(...(Array.isArray(r.value) ? r.value : [r.value]));
+      }
+      for (const fresh of bridged) {
+        if (fresh.status !== "hit") continue;
+        fresh.data = {
+          ...((fresh.data ?? {}) as Record<string, unknown>),
+          name_bridge: {
+            discovered_name: bridgeNames[0].name,
+            source_url: bridgeNames[0].source_url,
+            source_host: bridgeNames[0].source_host,
+          },
+        };
+        const existing = checks.findIndex((c) => c.check_id === fresh.check_id);
+        if (existing === -1) checks.push(fresh);
+        else if (checks[existing].status !== "hit") checks[existing] = fresh;
+        else continue; /* never displace a hit the original sweep found */
+        await emit({
+          stage: "registry",
+          kind: "check_result",
+          label: fresh.summary,
+          check_id: fresh.check_id,
+          status: fresh.status,
+          evidence_url: fresh.evidence_url,
+        });
+      }
+      /* Re-adjudicate: the bridged records need their own verdicts. */
+      adjudicateChecks(checks, tieCorpus);
+    }
+  }
+
   const adjudicatedIdentity = registry.resolveIdentity(checks);
   if (adjudicatedIdentity.identity_resolved !== identity.identity_resolved) {
     await emit({
@@ -241,7 +317,6 @@ export async function runPipelineTail(
      false CRITICALs. */
   {
     const rawNames = extract.vendor_name_candidates;
-    const nameSplit = splitNameCandidates(rawNames);
     const alreadyQueried = new Set(
       [
         ...rawNames,

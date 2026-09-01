@@ -108,3 +108,36 @@ describe("checkDomainAge (RDAP)", () => {
     expectClean(result);
   });
 });
+
+describe("404 discrimination: no-service vs unregistered (the polco.us class)", () => {
+  const FIXED_NOW = new Date("2026-09-01T12:00:00.000Z");
+  const stub = (status: number, body: string): typeof fetch =>
+    (async () => new Response(body, { status })) as typeof fetch;
+
+  it("a TLD with no RDAP service is coverage_limited, never a definitive miss", async () => {
+    const check = await checkDomainAge(
+      { domain: "polco.us", claimedFoundingYear: null },
+      {
+        fetchFn: stub(
+          404,
+          '{"rdapConformance":["rdap_level_0"],"lang":"en","errorCode":404,"title":"No RDAP service is available for this resource"}',
+        ),
+        now: () => FIXED_NOW,
+      },
+    );
+    expect(check.status).toBe("coverage_limited");
+    expect(check.summary).toContain("do not offer a public registration lookup");
+    expect(check.data).toMatchObject({ reason: "tld_without_rdap" });
+  });
+
+  it("a registry 404 stays a definitive miss", async () => {
+    const check = await checkDomainAge(
+      { domain: "unregistered-example.com", claimedFoundingYear: null },
+      {
+        fetchFn: stub(404, '{"errorCode":404,"title":"Domain not found"}'),
+        now: () => FIXED_NOW,
+      },
+    );
+    expect(check.status).toBe("definitive_miss");
+  });
+});

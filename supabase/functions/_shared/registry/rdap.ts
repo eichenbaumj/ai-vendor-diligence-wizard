@@ -70,6 +70,26 @@ export async function checkDomainAge(
     }
 
     if (res.status === 404) {
+      /* A 404 means two very different things: the registry answered "not
+         registered", or NO RDAP SERVICE EXISTS for the domain's ending —
+         rdap.org says which in its own error body ("No RDAP service is
+         available"; the .us registry offers none, verified live
+         2026-09-01, and the false definitive miss it caused blocked both
+         the identity identifier and the MX fallback for a real vendor).
+         Only a registry answer is a definitive miss. */
+      const errBody = await res.text().catch(() => "");
+      if (/no rdap service/i.test(errBody)) {
+        return {
+          check_id: CHECK_ID,
+          source: SOURCE,
+          status: "coverage_limited",
+          summary: `Domains ending like ${domain} do not offer a public registration lookup, so this check did not run. This does not count against the vendor.`,
+          evidence_url: humanUrl,
+          confidence: null,
+          retrieved_at,
+          data: { reason: "tld_without_rdap" },
+        };
+      }
       return {
         check_id: CHECK_ID,
         source: SOURCE,

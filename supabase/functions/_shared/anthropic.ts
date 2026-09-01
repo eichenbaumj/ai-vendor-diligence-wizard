@@ -85,13 +85,23 @@ export const EXTRACT_SCHEMA = {
           quote: { type: "string" },
           subject: { type: ["string", "null"] },
           amount: { type: ["number", "null"] },
+          /* Nullable enums must use anyOf: the structured-output validator
+             rejects enum values under a union type (verified live,
+             2026-09-01: 'Enum value does not match declared type'). */
           unit: {
-            type: ["string", "null"],
-            enum: ["dollars", "percent", "hours", "count", null],
+            anyOf: [
+              { type: "string", enum: ["dollars", "percent", "hours", "count"] },
+              { type: "null" },
+            ],
           },
           period: {
-            type: ["string", "null"],
-            enum: ["annual", "monthly", "per_case", "total", "unspecified", null],
+            anyOf: [
+              {
+                type: "string",
+                enum: ["annual", "monthly", "per_case", "total", "unspecified"],
+              },
+              { type: "null" },
+            ],
           },
           basis_quote: { type: ["string", "null"] },
         },

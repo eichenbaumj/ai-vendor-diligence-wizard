@@ -31,6 +31,17 @@ their full legal names; vendors whose materials offer nothing to compare
 against may see identity move to an honest "could not verify" rather than
 credit from an unverifiable match.
 
+**Invisible-character findings require a meaningful signal.** ADV-03
+previously fired on a single invisible Unicode character, and one stray
+zero-width character in ordinary web text capped a real page's verdict at
+Tier 2. Tag characters and bidirectional embedding controls still fire on
+one character — those classes exist to smuggle or rewrite content. The
+ubiquitous classes (zero-width spaces and joiners, directional marks,
+byte-order marks) now fire only at volume: a run of 8 or more, or 20 or
+more in total; below that they are stripped silently and counted in the
+run's records. Expected effect: ordinary pages stop being capped for copy
+artifacts; every existing red-team fixture still caps.
+
 **Every retrieved official page is accounted for.** Research regularly
 retrieved official and independent pages that the structuring stage then
 discarded without a trace — on one audited company, the run's own

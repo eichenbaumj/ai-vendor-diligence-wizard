@@ -33,6 +33,21 @@ export interface ForensicsResult {
 const INVISIBLE_RE =
   /[\u{E0000}-\u{E007F}\u{200B}-\u{200F}\u{202A}-\u{202E}\u{2060}-\u{2064}\u{FEFF}]/gu;
 
+/* PAYLOAD classes cap on a single character: tag characters exist only to
+   smuggle data, and bidi embedding controls rewrite what a human reads.
+   Everything else in INVISIBLE_RE is ubiquitous in ordinary web text and
+   copy-paste (zero-width spaces and joiners, LRM/RLM in right-to-left
+   copy, BOMs), so those cap only at volume: a contiguous run of
+   ADV03_RUN_THRESHOLD or a total of ADV03_TOTAL_THRESHOLD — one stray
+   zero-width character capped a real page's verdict live (2026-08-31).
+   Below threshold they are stripped silently; invisible_stripped records
+   the count either way. */
+const INVISIBLE_PAYLOAD_RE = /[\u{E0000}-\u{E007F}\u{202A}-\u{202E}]/u;
+const INVISIBLE_RUN_RE =
+  /[\u{E0000}-\u{E007F}\u{200B}-\u{200F}\u{202A}-\u{202E}\u{2060}-\u{2064}\u{FEFF}]+/gu;
+export const ADV03_RUN_THRESHOLD = 8;
+export const ADV03_TOTAL_THRESHOLD = 20;
+
 /* Deterministic "addressed to AI" phrases. Case-insensitive, whitespace-
    tolerant. Deliberately narrow: these phrases have no legitimate reason to
    appear in a vendor pitch. */
@@ -56,14 +71,28 @@ const SSN_RE = /\b\d{3}[-\s]\d{2}[-\s]\d{4}\b|\bSSN[:\s#]*\d{9}\b/gi;
 export function runForensics(raw: string): ForensicsResult {
   const adv: AdvFinding[] = [];
 
-  /* 1. Invisible Unicode. */
+  /* 1. Invisible Unicode: strip always; find only on a meaningful signal
+     (a payload-class character, a long contiguous run, or sheer volume). */
   const invisibleMatches = raw.match(INVISIBLE_RE) ?? [];
   let normalized = raw.replace(INVISIBLE_RE, "");
   if (invisibleMatches.length > 0) {
-    adv.push({
-      code: "ADV-03",
-      detail: `The submitted text contained ${invisibleMatches.length} invisible Unicode character(s) (zero-width, directional, or tag characters). These characters carry no visible content and were removed before analysis. Hidden characters are a known channel for concealed instructions to automated systems.`,
-    });
+    const payload = invisibleMatches.some((ch) => INVISIBLE_PAYLOAD_RE.test(ch));
+    const longestRun = (raw.match(INVISIBLE_RUN_RE) ?? []).reduce(
+      (n, run) => Math.max(n, [...run].length),
+      0,
+    );
+    if (
+      payload ||
+      longestRun >= ADV03_RUN_THRESHOLD ||
+      invisibleMatches.length >= ADV03_TOTAL_THRESHOLD
+    ) {
+      adv.push({
+        code: "ADV-03",
+        detail: payload
+          ? `The submitted text contained invisible Unicode characters of a kind that exists to carry hidden data (tag or direction-control characters). They carry no visible content and were removed before analysis. Hidden characters are a known channel for concealed instructions to automated systems.`
+          : `The submitted text contained ${invisibleMatches.length} invisible Unicode characters (zero-width or joiner characters), far more than ordinary copying and pasting produces. They were removed before analysis. Hidden characters are a known channel for concealed instructions to automated systems.`,
+      });
+    }
   }
 
   /* 2. Instruction-like language addressed to AI systems. */

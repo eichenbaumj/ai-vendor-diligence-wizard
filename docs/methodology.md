@@ -492,7 +492,7 @@ Text that speaks to an automated evaluator rather than to a human reader ("ignor
 
 ### ADV-03 Invisible characters
 
-Invisible Unicode characters (zero-width, directional, or tag characters) that can carry concealed content. They are stripped before analysis, counted, and reported.
+Invisible Unicode characters that can carry concealed content. They are always stripped before analysis and counted, but a finding requires a meaningful signal, because a stray zero-width character is ordinary in copied web text. Tag characters (a Unicode block that exists only to smuggle data) and bidirectional embedding controls (which rewrite what a human reads) fire on a single character. The ubiquitous classes (zero-width spaces and joiners, left-to-right and right-to-left marks, byte-order marks) fire only at volume: a contiguous run of 8 or more, or 20 or more in total. Below those thresholds they are removed silently and the count is retained in the run's records.
 
 ### ADV-04 Possible planted corroboration
 

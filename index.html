@@ -16,5 +16,13 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    <!-- Cloudflare Web Analytics: cookieless, aggregate page counts only
+         (see /your-data). The token is a public site identifier, not a
+         secret. -->
+    <script
+      type="module"
+      src="https://static.cloudflareinsights.com/beacon.min.js"
+      data-cf-beacon='{"token": "eacc414f88cb4ff68761a0bd5d924562"}'
+    ></script>
   </body>
 </html>

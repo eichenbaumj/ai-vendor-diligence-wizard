@@ -297,6 +297,42 @@ export async function runPipelineTail(
     }
   }
 
+  /* MX direct retry (identity availability robustness): when the RDAP
+     lookup was unavailable and no working mail check exists for the
+     vendor's domain, one DNS query — near-free and deterministic — can
+     stand in as the second identity identifier. Previously the fallback
+     only fired when a dns_email_hygiene check happened to have run and
+     hit; a vendor's verdict must not drop tiers because a third-party
+     lookup had a bad minute. Provenance flags copy from the domain's
+     inference check so a discovered domain keeps its confirmed-name-match
+     gate. */
+  if (needsMxRetry(checks)) {
+    const domainForMx = state.primaryDomain ?? state.discoveredDomain;
+    if (domainForMx) {
+      try {
+        const retry = await registry.checkEmailHygiene(
+          { domain: domainForMx, senderDomain: state.senderDomain },
+          ctx(),
+        );
+        if (!state.primaryDomain) {
+          const inference = checks.find((c) => c.check_id === "domain_inference");
+          retry.data = {
+            ...((retry.data ?? {}) as Record<string, unknown>),
+            discovered_domain: true,
+            confirmed_name_match:
+              ((inference?.data ?? {}) as { confirmed_name_match?: boolean })
+                .confirmed_name_match === true,
+          };
+        }
+        const existing = checks.findIndex((c) => c.check_id === "dns_email_hygiene");
+        if (existing === -1) checks.push(retry);
+        else if (checks[existing].status === "error") checks[existing] = retry;
+      } catch (err) {
+        console.error(`mx retry failed: ${String(err)}`);
+      }
+    }
+  }
+
   const adjudicatedIdentity = registry.resolveIdentity(checks);
   if (adjudicatedIdentity.identity_resolved !== identity.identity_resolved) {
     await emit({
@@ -775,6 +811,20 @@ export async function runPipelineTail(
    only when EDGAR actually ran (its check is then in the row's sources);
    claiming an EDGAR search that did not happen is the same class of
    coverage lie the template exists to prevent. */
+/* The MX retry fires when RDAP was unavailable (never on a definitive
+   unregistered-domain miss) and no working dns_email_hygiene hit exists —
+   either the check never ran, or it errored. Pure predicate, exported for
+   tests. */
+export function needsMxRetry(checks: RegistryCheck[]): boolean {
+  const rdap = checks.find((c) => c.check_id === "rdap_domain_age");
+  const rdapUnavailable =
+    rdap !== undefined &&
+    (rdap.status === "error" || rdap.status === "coverage_limited");
+  if (!rdapUnavailable) return false;
+  const dns = checks.find((c) => c.check_id === "dns_email_hygiene");
+  return dns === undefined || dns.status === "error";
+}
+
 export function identityMissNote(retrievedAt: string, searchedEdgar: boolean): string {
   const date = retrievedAt.slice(0, 10);
   if (searchedEdgar) {

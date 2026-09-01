@@ -31,6 +31,17 @@ their full legal names; vendors whose materials offer nothing to compare
 against may see identity move to an honest "could not verify" rather than
 credit from an unverifiable match.
 
+**Identity survives third-party outages.** When the domain-registration
+lookup (RDAP) is unavailable and identity needs a second identifier, the
+pipeline now runs a direct mail-record lookup itself — one DNS query —
+instead of relying on whether that check happened to have already run and
+hit; working mail records take precedence over certificate-transparency
+history, which is often unavailable and is never load-bearing. The
+transparency-log row in the honesty panel now says the tool never relies
+on it alone. Expected effect: fewer verdicts dropping to "not enough to
+evaluate" because a lookup service had a bad minute; no change when
+services are up.
+
 **Research-discovered legal names re-feed the registry stage.** When no
 registry record could be credited to the vendor but research retrieved a
 fuller legal name from a registry-grade official source (SEC, SAM.gov, a

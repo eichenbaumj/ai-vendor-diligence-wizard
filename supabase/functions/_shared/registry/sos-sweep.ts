@@ -843,12 +843,16 @@ export function resolveIdentity(checks: RegistryCheck[]): {
           ((c.data ?? {}) as { has_mx?: boolean }).has_mx === true &&
           confirmedProvenance(c),
       );
-      const infra = crtsh ?? dns;
+      /* DNS first: a working mail lookup is a direct, near-free query,
+         while crt.sh is often unavailable (down across four runs on
+         2026-08-31) and must never be load-bearing when mail records
+         answered. */
+      const infra = dns ?? crtsh;
       if (infra) {
         identifiers.push(
-          crtsh
-            ? "Certificate transparency records for the vendor's domain, used because the domain registration lookup was unavailable this run"
-            : "Working mail records (DNS) for the vendor's domain, used because the domain registration lookup was unavailable this run",
+          dns
+            ? "Working mail records (DNS) for the vendor's domain, used because the domain registration lookup was unavailable this run"
+            : "Certificate transparency records for the vendor's domain, used because the domain registration lookup was unavailable this run",
         );
       }
     }

@@ -908,3 +908,67 @@ describe("resolveIdentity: RDAP availability fallback (the Govra tier cliff)", (
     expect(out.identity_resolved).toBe(false);
   });
 });
+
+describe("resolveIdentity: fallback preference and the MX-retry predicate", () => {
+  it("prefers working mail records over certificate history when both exist", async () => {
+    const { needsMxRetry } = await import(
+      "../../../supabase/functions/_shared/pipeline-tail.ts"
+    );
+    const exactSos: RegistryCheck = {
+      check_id: "sos_tx",
+      source: "Texas Comptroller Active Franchise Taxpayers (data.texas.gov)",
+      status: "hit",
+      summary: "Texas business records include an entry under a matching name.",
+      evidence_url: "https://comptroller.texas.gov/",
+      confidence: "exact",
+      retrieved_at: "2026-08-28T12:00:00.000Z",
+      data: null,
+      attribution: "attributed",
+    };
+    const rdapDown: RegistryCheck = {
+      check_id: "rdap_domain_age",
+      source: "Domain registration records (RDAP)",
+      status: "error",
+      summary: "We could not reach the domain registration records service.",
+      evidence_url: null,
+      confidence: null,
+      retrieved_at: "2026-08-28T12:00:00.000Z",
+      data: null,
+    };
+    const crtshHit: RegistryCheck = {
+      check_id: "crtsh_subdomains",
+      source: "Certificate transparency logs (crt.sh)",
+      status: "hit",
+      summary: "Certificates exist.",
+      evidence_url: "https://crt.sh/?q=%.govra.com",
+      confidence: "exact",
+      retrieved_at: "2026-08-28T12:00:00.000Z",
+      data: { distinct_subdomains: 4 },
+    };
+    const dnsMx: RegistryCheck = {
+      check_id: "dns_email_hygiene",
+      source: "Email security records (DNS)",
+      status: "hit",
+      summary: "The domain is set up to receive email.",
+      evidence_url: null,
+      confidence: "exact",
+      retrieved_at: "2026-08-28T12:00:00.000Z",
+      data: { has_mx: true },
+    };
+    const out = resolveIdentity([exactSos, rdapDown, crtshHit, dnsMx]);
+    expect(out.identity_resolved).toBe(true);
+    expect(out.identifiers_found.join(" ")).toContain("mail records");
+
+    /* The retry predicate: RDAP down + no dns check -> retry; RDAP down +
+       errored dns -> retry; dns already hit -> no retry; RDAP definitive
+       miss -> never. */
+    expect(needsMxRetry([exactSos, rdapDown])).toBe(true);
+    expect(
+      needsMxRetry([exactSos, rdapDown, { ...dnsMx, status: "error" }]),
+    ).toBe(true);
+    expect(needsMxRetry([exactSos, rdapDown, dnsMx])).toBe(false);
+    expect(
+      needsMxRetry([exactSos, { ...rdapDown, status: "definitive_miss" }]),
+    ).toBe(false);
+  });
+});

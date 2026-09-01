@@ -3,16 +3,21 @@
 
   On a name run the vendor's website is the gateway to the SECOND identity
   identifier (discovered domain -> site fetch -> name confirmation -> RDAP
-  record), so a transient search failure here silently costs identity
-  resolution and drops an honest vendor to "not enough to evaluate" (the
-  polco name-run variance, defect basket 6b's spirit). This module wraps
-  the two-search discovery request so that:
+  record), so a failed search here silently costs identity resolution and
+  drops an honest vendor to "not enough to evaluate" (the polco name-run
+  variance, defect basket 6b's spirit). This module wraps the two-search
+  discovery request so that:
 
   - An INFRASTRUCTURE failure (empty content from an aborted or non-ok
-    call: no citations, no narrative) earns exactly one retry while the
-    S1b budget allows.
-  - An HONEST MISS (the model answered but code picked no domain) is an
-    answer, never retried.
+    call: no citations, no narrative) earns exactly one retry of the SAME
+    request while the S1b budget allows.
+  - A MISS (the model answered but code picked no domain) earns exactly
+    one retry with the REFINED request: a bare short-name query often
+    ranks noise above the company's own site (live polco observation,
+    2026-09-01: the two-search pass missed polco.us while the research
+    pass retrieved three of its pages), so the second attempt searches
+    with more specific code-authored queries. A miss on the refined
+    attempt is the answer.
   - The domain itself is still picked by CODE (harvestCitations ->
     inferPrimaryDomain, minUrls=1) — narrative text can never nominate a
     site, and nothing downstream of this module changes: the discovered
@@ -87,10 +92,10 @@ export async function discoverVendorSite(
   let usage: Usage = ZERO_USAGE;
   let attempts = 0;
 
-  const attempt = async (deadlineMs: number) => {
+  const attempt = async (deadlineMs: number, refined: boolean) => {
     attempts += 1;
     const res: ResearchRunResult = await runLoop(
-      buildDiscoveryRequest(companyNames),
+      buildDiscoveryRequest(companyNames, { refined }),
       { apiKey: opts.apiKey, deadlineMs, maxContinuations: 1 },
     );
     usage = addUsage(usage, res.usage);
@@ -111,9 +116,14 @@ export async function discoverVendorSite(
     };
   };
 
-  let out = await attempt(DISCOVERY_ATTEMPT_1_DEADLINE_MS);
-  if (out.outcome === "infra_failure" && canRetryDiscovery(opts.elapsedMs())) {
-    out = await attempt(DISCOVERY_ATTEMPT_2_DEADLINE_MS);
+  let out = await attempt(DISCOVERY_ATTEMPT_1_DEADLINE_MS, false);
+  if (out.outcome !== "domain_found" && canRetryDiscovery(opts.elapsedMs())) {
+    /* An infrastructure failure re-sends the identical request; a miss
+       gets the refined query variant. */
+    out = await attempt(
+      DISCOVERY_ATTEMPT_2_DEADLINE_MS,
+      out.outcome === "no_match",
+    );
   }
   return {
     domain: out.domain,

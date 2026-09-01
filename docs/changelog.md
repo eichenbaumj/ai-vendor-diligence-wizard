@@ -15,10 +15,13 @@ silently skipped the site step on slow runs. A real vendor's verdict
 could land at "not enough to evaluate" because one lookup had a bad
 minute. Each link now retries once on
 infrastructure-class failures, under budgeted time cutoffs sized against
-the run's own clock. The website search retries, but a search that ran
-and found nothing is an answer and is never retried. The site fetch
+the run's own clock. The website search retries: an infrastructure
+failure re-sends the same search, and a search that ran but did not
+surface the site gets one retry with more specific queries before the
+miss stands as the answer. The site fetch
 retries, but a fetch that returned pages never re-runs. The site reading
-step retries. The domain registration lookup's retry now stops the
+step retries on a shortened copy of the fetched text, since a timeout
+on the full text is a failure an identical retry would repeat. The domain registration lookup's retry now stops the
 moment its time allowance ends, and never re-asks a registry that
 answered. The direct
 mail-record stand-in for an unavailable registration lookup now also

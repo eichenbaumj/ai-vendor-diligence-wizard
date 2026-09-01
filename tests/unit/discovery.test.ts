@@ -136,7 +136,7 @@ describe("discoverVendorSite", () => {
     expect(out.usage.web_search_requests).toBe(2);
   });
 
-  it("never retries an honest miss: the model answered", async () => {
+  it("a miss earns exactly one REFINED retry; a second miss is the answer", async () => {
     const runLoop = vi.fn().mockResolvedValue(noMatchRun());
     const out = await discoverVendorSite(NAMES, NAMES, {
       apiKey: "k",
@@ -146,8 +146,45 @@ describe("discoverVendorSite", () => {
     });
     expect(out.domain).toBeNull();
     expect(out.outcome).toBe("no_match");
+    expect(out.attempts).toBe(2);
+    expect(runLoop).toHaveBeenCalledTimes(2);
+    /* The retry uses the refined query variant, never the identical
+       request: re-sending a bare short-name search re-fetches the same
+       noise. Tools and message stay byte-identical; only the
+       code-authored system prompt changes. */
+    const [first, second] = [runLoop.mock.calls[0][0], runLoop.mock.calls[1][0]];
+    expect(second.system).not.toBe(first.system);
+    expect(second.system).toContain("more specific queries");
+    expect(second.tools).toEqual(first.tools);
+    expect(second.messages).toEqual(first.messages);
+  });
+
+  it("a miss found on the refined retry reports the domain", async () => {
+    const runLoop = vi
+      .fn()
+      .mockResolvedValueOnce(noMatchRun())
+      .mockResolvedValueOnce(foundRun());
+    const out = await discoverVendorSite(NAMES, NAMES, {
+      apiKey: "k",
+      elapsedMs: () => 5_000,
+      runLoop,
+      now: NOW,
+    });
+    expect(out.domain).toBe("acmeai.com");
+    expect(out.outcome).toBe("domain_found");
+    expect(out.attempts).toBe(2);
+  });
+
+  it("a miss past the budget cutoff is not retried", async () => {
+    const runLoop = vi.fn().mockResolvedValue(noMatchRun());
+    const out = await discoverVendorSite(NAMES, NAMES, {
+      apiKey: "k",
+      elapsedMs: () => DISCOVERY_RETRY_CUTOFF_MS,
+      runLoop,
+      now: NOW,
+    });
+    expect(out.outcome).toBe("no_match");
     expect(out.attempts).toBe(1);
-    expect(runLoop).toHaveBeenCalledTimes(1);
   });
 
   it("skips the retry once the budget cutoff has passed", async () => {
@@ -163,7 +200,7 @@ describe("discoverVendorSite", () => {
     expect(runLoop).toHaveBeenCalledTimes(1);
   });
 
-  it("a retry that ends in an honest miss reports no_match, and both attempts send the identical request", async () => {
+  it("an infrastructure retry re-sends the IDENTICAL request", async () => {
     const runLoop = vi
       .fn()
       .mockResolvedValueOnce(emptyRun())
@@ -177,8 +214,8 @@ describe("discoverVendorSite", () => {
     expect(out.domain).toBeNull();
     expect(out.outcome).toBe("no_match");
     expect(out.attempts).toBe(2);
-    /* The retry re-runs the SAME code path: byte-identical request body,
-       so a retry can never widen what the model is asked to do. */
+    /* An infra failure says nothing about the query, so the retry
+       re-runs the SAME request byte for byte. */
     expect(runLoop.mock.calls[1][0]).toEqual(runLoop.mock.calls[0][0]);
   });
 

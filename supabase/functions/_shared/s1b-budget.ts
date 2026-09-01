@@ -68,6 +68,13 @@ export const SITE_FETCH_SECOND_ATTEMPT_CUTOFF_MS = 55_000;
    composed bound. */
 export const SITE_EXTRACT_RETRY_CUTOFF_MS = 100_000;
 
+/* The retry attempt extracts from a SHORTENED copy of the fetched site
+   text: a 25s timeout on the full 40k-character corpus is a correlated
+   failure an identical retry re-hits (live zencity observation,
+   2026-09-01: both attempts failed on the full corpus). Half the total
+   cap keeps the homepage plus the highest-value pages. */
+export const SITE_EXTRACT_RETRY_TEXT_CAP = 20_000;
+
 export function canStartSitePass(elapsedMs: number): boolean {
   return elapsedMs < SITE_PASS_CUTOFF_MS;
 }

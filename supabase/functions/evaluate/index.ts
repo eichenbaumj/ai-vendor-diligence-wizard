@@ -70,6 +70,7 @@ import {
 } from "../_shared/identity-ties.ts";
 import { discoverVendorSite } from "../_shared/discovery.ts";
 import {
+  SITE_EXTRACT_RETRY_TEXT_CAP,
   canRetrySiteExtract,
   canStartSitePass,
   siteFetchAttempts,
@@ -825,6 +826,9 @@ async function runPipeline(
        name-match verdict — an unconfirmed match is an answer, not a
        failure. */
     let siteReadCompleted = false;
+    /* Per-attempt failure tags from the site extract loop, persisted in
+       the disclosure check's data for post-hoc diagnosis. */
+    const siteExtractTags: string[] = [];
     if (inputKind === "url" && sourceUrl) {
       try {
         siteHost = new URL(sourceUrl).hostname;
@@ -895,11 +899,19 @@ async function runPipeline(
            a parse failure or degenerate thin extract here silently costs
            the name-match confirmation (and with it identity resolution)
            on name runs. Same quarantined extractor and verbatim guards on
-           every attempt; a second thin result is accepted as genuine. */
+           every attempt; a second thin result is accepted as genuine.
+           Attempt 2 extracts from a SHORTENED corpus: a timeout on the
+           full 40k-char text is a correlated failure an identical retry
+           re-hits. Per-attempt failure tags land in the disclosure
+           check's data (function console logs are unreachable post-hoc). */
         let siteValidated: PitchExtract | null = null;
         for (let attempt = 0; attempt < 2; attempt++) {
+          const corpus =
+            attempt === 0
+              ? siteForensics.normalized
+              : siteForensics.normalized.slice(0, SITE_EXTRACT_RETRY_TEXT_CAP);
           const res = await callAnthropic(
-            buildExtractRequest(siteSourceLabel, siteForensics.normalized),
+            buildExtractRequest(siteSourceLabel, corpus),
             { apiKey: env.anthropicKey, timeoutMs: STAGE_TIMEOUTS.extract },
           );
           usageBox.value = addUsage(usageBox.value, res.usage);
@@ -909,18 +921,17 @@ async function runPipeline(
           const parsed = res.ok ? parseStructured<unknown>(res) : null;
           const validated = parsed ? PitchExtract.safeParse(parsed) : null;
           if (validated?.success) {
-            if (
-              !isDegenerateExtract(
-                validated.data,
-                siteForensics.normalized.length,
-              )
-            ) {
+            if (!isDegenerateExtract(validated.data, corpus.length)) {
               siteValidated = validated.data;
               break;
             }
             siteValidated ??= validated.data;
+            siteExtractTags.push("degenerate");
             console.warn(`s1b degenerate site extract on attempt ${attempt + 1}`);
           } else {
+            siteExtractTags.push(
+              !res.ok ? `call_failed_${res.status}` : "invalid_extract",
+            );
             console.warn(`s1b site extract parse failure on attempt ${attempt + 1}`);
           }
           if (!canRetrySiteExtract(Date.now() - pipelineStart)) break;
@@ -997,7 +1008,12 @@ async function runPipeline(
       siteDiscoveryData = {
         step: !canStartSitePass(s1bElapsed)
           ? "budget_gate"
-          : "fetch_or_extract",
+          : siteExtractTags.length > 0
+            ? "extract"
+            : "fetch",
+        ...(siteExtractTags.length > 0
+          ? { extract_attempts: siteExtractTags }
+          : {}),
       };
       await emit({
         stage: "parse",

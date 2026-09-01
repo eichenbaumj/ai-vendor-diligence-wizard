@@ -355,13 +355,28 @@ export function buildResearchRequest(
 /* Name-only website discovery: two basic searches on the cheap model, run
    through the same non-streaming pause_turn loop as research. The model
    only SEARCHES — the domain itself is picked by code (harvestCitations →
-   inferPrimaryDomain), so narrative text can never nominate a site. */
-export function buildDiscoveryRequest(names: string[]): AnthropicRequestBody {
+   inferPrimaryDomain), so narrative text can never nominate a site.
+
+   The refined variant drives the one retry a no-match earns: a bare
+   short-name query ("Polco") often ranks noise above the company's own
+   site, and re-sending the identical request re-fetches the same noise.
+   The refinement is code-authored and only changes HOW the model
+   searches; the pick still happens in code and the site must still name
+   the vendor before anything counts toward identity. */
+const DISCOVERY_SYSTEM =
+  "Find the official website of the company named in the input. Use at most two web searches. Then state in one or two sentences which domain appears to be the company's own website, based only on what the searches returned. If the searches do not make it clear, say so plainly. Never guess a domain the searches did not surface.";
+
+const DISCOVERY_SYSTEM_REFINED =
+  "Find the official website of the company named in the input. An earlier search did not surface it, so use more specific queries: combine the company's name with words like \"official website\", \"software\", \"company\", or \"government\". Use at most two web searches. Then state in one or two sentences which domain appears to be the company's own website, based only on what the searches returned. If the searches do not make it clear, say so plainly. Never guess a domain the searches did not surface.";
+
+export function buildDiscoveryRequest(
+  names: string[],
+  opts: { refined?: boolean } = {},
+): AnthropicRequestBody {
   return {
     model: MODELS.extract,
     max_tokens: 1024,
-    system:
-      "Find the official website of the company named in the input. Use at most two web searches. Then state in one or two sentences which domain appears to be the company's own website, based only on what the searches returned. If the searches do not make it clear, say so plainly. Never guess a domain the searches did not surface.",
+    system: opts.refined ? DISCOVERY_SYSTEM_REFINED : DISCOVERY_SYSTEM,
     tools: [
       {
         type: "web_search_20250305",

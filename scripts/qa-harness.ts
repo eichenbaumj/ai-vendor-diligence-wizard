@@ -472,6 +472,7 @@ function buildLedgerMap(report: Report | null): Record<string, LedgerMapEntry> {
       evidence_tier: row.evidence_tier,
       severity: row.severity,
       methodology_ref: row.methodology_ref,
+      ...(row.attribution ? { attribution: row.attribution } : {}),
     };
   }
   return map;

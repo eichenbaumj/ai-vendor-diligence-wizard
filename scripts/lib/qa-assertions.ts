@@ -318,6 +318,23 @@ function evaluateLedger(
       ),
     );
   }
+  /* attribution_in: EVERY matched row's attribution must be allowed (a
+     missing field counts as candidate — unadjudicated never mints).
+     Vacuously true when the row is absent, like forbidden_result_in. */
+  if (le.attribution_in) {
+    const allowed = le.attribution_in as string[];
+    out.push(
+      result(
+        `ledger.${key}.attribution`,
+        le.hardness,
+        matches.every((m) => allowed.includes(m.row.attribution ?? "candidate")),
+        `attribution in [${allowed.join(", ")}]`,
+        present
+          ? fmtList(matches.map((m) => m.row.attribution ?? "candidate"))
+          : "absent",
+      ),
+    );
+  }
   return out;
 }
 

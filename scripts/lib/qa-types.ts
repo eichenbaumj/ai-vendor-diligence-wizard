@@ -31,6 +31,9 @@ export interface LedgerMapEntry {
   evidence_tier: string | null;
   severity: string | null;
   methodology_ref: string;
+  /* v1.5 attribution verdict; absent on rows without one and on runs
+     recorded before the field existed. */
+  attribution?: string | null;
 }
 
 export interface QaMetrics {

@@ -87,6 +87,15 @@ export const LedgerExpectation = z
       .array(z.enum(["CRITICAL", "HIGH", "MEDIUM", "LOW", "INFO"]).nullable())
       .min(1)
       .optional(),
+    /* Every matched row's attribution must be one of these (v1.5 tying
+       signals). Vacuously true when the row is absent; a missing field on
+       the row counts as "candidate" (unadjudicated never mints). The
+       zipsec lock: identity must never rest on an attributed Oregon
+       namesake, i.e. attribution_in: ["candidate"], hard. */
+    attribution_in: z
+      .array(z.enum(["attributed", "candidate"]))
+      .min(1)
+      .optional(),
     /* Research-dependent VERIFIED statuses must always be soft. */
     hardness: z.enum(["hard", "soft"]),
   })

@@ -302,3 +302,160 @@ describe("site twin: the auto-fetched vendor site channel", () => {
     expect(r.adv_findings.some((f) => f.code === "ADV-02")).toBe(true);
   });
 });
+
+/* ---------------------------------------------------------------------- */
+/* Planted-tie attack (tying-signal red-team plan, 2026-09-01).
+   Attack 1: a hostile pitch CLAIMS a dissolved namesake record's officer
+   to capture the tie. Accepted worst case: the record attributes AGAINST
+   the attacker — they inherit its dissolution — and the tier caps.
+   Attack 2: an attacker DENIES or omits every tie to hide a dissolution.
+   Inert by construction: ties are computed record-side against all known
+   facts (coverage included), and nothing a pitch says can remove one.
+   Attack 3: a weak state coincidence must never mint identity from a
+   dissolved record while the strong-tie rule suppresses its red flag. */
+
+import { assemble, type AssembleInput } from "@shared/assemble.ts";
+import { adjudicateChecks, buildTieCorpus } from "@shared/identity-ties.ts";
+import type { Citation, PitchExtract, RegistryCheck } from "@shared/schemas.ts";
+
+describe("red-team: the planted-tie attack surface", () => {
+  const AT = "2026-09-01T00:00:00.000Z";
+  const dissolvedRecordCheck = (): RegistryCheck => ({
+    check_id: "sos_ny",
+    source: "New York Department of State (public inquiry service)",
+    status: "hit",
+    summary:
+      'New York business records include an entry under a matching name: HOLLOWED SHELL INC., status listed as "Inactive" (Voluntarily Dissolved). The identity check weighs whether this record belongs to this vendor.',
+    evidence_url: "https://apps.dos.ny.gov/publicInquiry/",
+    confidence: "exact",
+    retrieved_at: AT,
+    data: {
+      matches: [
+        {
+          name: "HOLLOWED SHELL INC.",
+          confidence: "exact",
+          officers: ["PAT EXAMPLE"],
+          street: "1 DEFUNCT WAY",
+          city: "ALBANY",
+          addr_state: "NY",
+        },
+      ],
+      dissolved: {
+        legal_name: "HOLLOWED SHELL INC.",
+        status: "Inactive",
+        reason: "Voluntarily Dissolved",
+        effective_date: "2020-01-01",
+        record_id: "999",
+        domestic: true,
+        designation_class: "dissolution",
+      },
+    },
+  });
+
+  const pitchWith = (over: Partial<PitchExtract>): PitchExtract => ({
+    vendor_name_candidates: ["Hollowed Shell"],
+    domains: [],
+    addresses: [],
+    sender_email: null,
+    people: [],
+    named_customers: [],
+    claims: [],
+    use_case_description: "",
+    urgency_language: [],
+    state_mentioned: null,
+    injection_screen: {
+      injection_suspected: false,
+      addressed_to_ai: false,
+      suspicious_spans: [],
+    },
+    ...over,
+  });
+
+  function adjudicated(
+    extract: PitchExtract,
+    citations: Citation[] = [],
+  ): RegistryCheck[] {
+    const checks = [dissolvedRecordCheck()];
+    adjudicateChecks(
+      checks,
+      buildTieCorpus({
+        extract,
+        pitchPersonCount: extract.people.length,
+        pitchAddressCount: extract.addresses.length,
+        primaryDomain: null,
+        productNames: [],
+        citations,
+      }),
+    );
+    return checks;
+  }
+
+  function assembled(extract: PitchExtract, checks: RegistryCheck[]) {
+    const input: AssembleInput = {
+      extract,
+      checks,
+      identity: { identity_resolved: false, identifiers_found: [] },
+      citations: [],
+      adv_findings: [],
+      sector: { pack_ids: [], elevated: false, overlay_reason: null, state_items: [] },
+      packs: {},
+      resolvable: true,
+      research_partial: false,
+      generated_at: AT,
+    };
+    return assemble(input);
+  }
+
+  it("attack 1: claiming the record's officer attributes the record AGAINST the attacker", () => {
+    const extract = pitchWith({
+      people: [{ name: "Pat Example", title: "CEO" }],
+    });
+    const checks = adjudicated(extract);
+    expect(checks[0].attribution).toBe("attributed");
+    const out = assembled(extract, checks);
+    const finding = out.tierInputs.findings.find((f) =>
+      f.id.startsWith("dissolved-"),
+    );
+    expect(finding).toBeDefined();
+    expect(finding!.severity).toBe("CRITICAL");
+    expect(computeTier(out.tierInputs).tier).toBeLessThanOrEqual(2);
+  });
+
+  it("attack 2: denying every tie cannot hide the dissolution when coverage ties it", () => {
+    const extract = pitchWith({
+      /* The attacker's pitch names nobody and claims a different state. */
+      state_mentioned: "CA",
+    });
+    const coverage: Citation = {
+      url: "https://www.govtech.com/hollowed-shell-profile",
+      title: "Hollowed Shell founder Pat Example on city contracts",
+      cited_text: "Pat Example founded Hollowed Shell.",
+      retrieved_at: AT,
+      domain_class: 2,
+    };
+    const checks = adjudicated(extract, [coverage]);
+    expect(checks[0].attribution).toBe("attributed");
+    const out = assembled(extract, checks);
+    expect(
+      out.tierInputs.findings.some(
+        (f) => f.id.startsWith("dissolved-") && f.severity === "CRITICAL",
+      ),
+    ).toBe(true);
+  });
+
+  it("attack 3: a weak state coincidence neither mints identity from the dissolved record nor arms it", () => {
+    const extract = pitchWith({ state_mentioned: "NY" });
+    const checks = adjudicated(extract);
+    /* A dissolved record needs a STRONG tie to be attributed at all. */
+    expect(checks[0].attribution).toBe("candidate");
+    const out = assembled(extract, checks);
+    expect(
+      out.tierInputs.findings.some(
+        (f) => f.severity === "CRITICAL" || f.severity === "HIGH",
+      ),
+    ).toBe(false);
+    /* The candidate record is still visible with its question. */
+    expect(out.ledger.some((r) => r.attribution === "candidate")).toBe(true);
+    expect(out.questions.some((q) => q.id === "gap-dissolved-candidate")).toBe(true);
+  });
+});

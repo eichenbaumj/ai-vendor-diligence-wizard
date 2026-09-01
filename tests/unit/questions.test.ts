@@ -763,3 +763,40 @@ describe("dedup by id across groups", () => {
     expect(new Set(got).size).toBe(got.length);
   });
 });
+
+describe("perf question why-field carries the computed implication (D6.1 rider)", () => {
+  it("leads with the arithmetic when a basis exists, and stays under the cap", () => {
+    const extract = makeExtract({
+      claims: [
+        {
+          id: "clm-x",
+          type: "performance",
+          quote: "$17M in annual savings guaranteed",
+          subject: null,
+          basis_quote: "about 500 agents",
+        },
+      ],
+    });
+    const qs = selectQuestions({
+      findings: [
+        {
+          id: "perf-clm-x",
+          dimension: "D6",
+          severity: "HIGH",
+          resolved: false,
+          detail: "An absolute performance claim has no methodology.",
+        },
+      ],
+      extract,
+      sector: { pack_ids: [], elevated: false, overlay_reason: null, state_items: [] },
+      packs: {},
+      tier: 3,
+      t4_dimensions: [],
+      namedCustomers: [],
+    });
+    const q = qs.find((x) => x.id === "perf-clm-x");
+    expect(q).toBeDefined();
+    expect(q!.why).toContain("about $34,000 per agent per year");
+    expect(q!.why.length).toBeLessThanOrEqual(400);
+  });
+});

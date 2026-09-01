@@ -106,6 +106,12 @@ function RowBody({ row }: { row: LedgerRow }) {
         {row.what_checked}
       </p>
       <p className="text-[15px] leading-relaxed">{row.note}</p>
+      {row.implication && (
+        <p className="rounded-xl bg-brand-vellum px-4 py-3 text-sm leading-relaxed text-brand-charcoal">
+          <span className="font-bold">What this number implies:</span>{" "}
+          {row.implication}
+        </p>
+      )}
       <SourceLinks sources={row.sources} />
       <p className="text-[13px]">
         <a

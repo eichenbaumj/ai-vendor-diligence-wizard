@@ -39,6 +39,7 @@ import type { Finding } from "./tier.ts";
 import type { PackQuestion, SectorPack } from "./packs-types.ts";
 import { findingSelectorMatches } from "./finding-ids.ts";
 import { tidyProse } from "./lint.ts";
+import { computeImplication, NO_BASIS_IMPLICATION } from "./plausibility.ts";
 
 export interface QuestionSelectionInput {
   findings: Finding[];
@@ -97,11 +98,20 @@ function gapTemplate(f: Finding, ctx: GapContext): ReportQuestion | null {
   if (f.id.startsWith("perf-")) {
     const claim = ctx.extract.claims.find((c) => `perf-${c.id}` === f.id);
     if (!claim) return null;
+    /* The computed implication (D6.1 rider) leads the why when real
+       arithmetic exists: the buyer sees what the number means before
+       asking for its basis. The no-basis variant adds nothing here — the
+       base why already asks for the methodology. */
+    const implication = computeImplication(claim);
+    const arithmeticWhy =
+      implication && implication !== NO_BASIS_IMPLICATION
+        ? `${implication.split(". The question pack")[0]}. `
+        : "";
     return {
       id: f.id,
       source: "claim",
       text: `Your materials state: "${claim.quote}". Which deployment produced this figure, measured how, over what period, and may we contact that organization?`,
-      why: "Performance numbers need a methodology and a named reference before they can inform a decision.",
+      why: `${arithmeticWhy}Performance numbers need a methodology and a named reference before they can inform a decision.`,
     };
   }
   if (f.id === "fedramp_marketplace" || f.id === "govramp") {

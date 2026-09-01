@@ -26,6 +26,7 @@ import type {
 } from "./schemas.ts";
 import { lintText } from "./lint.ts";
 import { isDegenerateBrandName } from "./identity-ties.ts";
+import { computeImplication } from "./plausibility.ts";
 import { PROGRAMS } from "./claim-status.ts";
 import { computeTier } from "./tier.ts";
 import type { Finding, T1Trigger, TierInputs } from "./tier.ts";
@@ -1292,6 +1293,11 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
     const extreme = /\b(9[89]|100)\s*%|\bguarantee|zero\s+(errors|bias|hallucinations)|\bnever\s+(wrong|fails|hallucinates)/i.test(
       claim.quote,
     );
+    /* "What this number implies" (D6.1 rider): code-templated arithmetic
+       against the pitch's own stated basis, or the honest no-basis line.
+       Narrative only — nothing here touches severity, findings, or tier
+       inputs. */
+    const implication = computeImplication(claim);
     ledger.push({
       id: uniqueRowId(`perf-${claim.id}`),
       dimension: "D6",
@@ -1303,6 +1309,7 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
       sources: [],
       note: "",
       methodology_ref: "d6-1",
+      ...(implication ? { implication } : {}),
     });
     if (extreme) {
       findings.push({

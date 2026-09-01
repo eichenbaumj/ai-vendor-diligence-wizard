@@ -26,7 +26,8 @@ import {
 } from "./sector-lexicon.ts";
 import { computeTier } from "./tier.ts";
 import { assemble, IDENTITY_WHAT_CHECKED } from "./assemble.ts";
-import { lintObject, lintText, tidyProse } from "./lint.ts";
+import { lintImplication, lintObject, lintText, tidyProse } from "./lint.ts";
+import { NO_BASIS_IMPLICATION } from "./plausibility.ts";
 import {
   MODELS,
   buildClassifyRequest,
@@ -756,6 +757,18 @@ export async function runPipelineTail(
       }
       return [cleaned];
     });
+  }
+
+  /* Implication surface guard (belt and suspenders on top of the module's
+     own self-lint): quoted basis spans are attacker-authored, and the
+     surface bans evaluative adjectives outright. */
+  for (const row of report.ledger) {
+    if (
+      row.implication &&
+      lintImplication(row.implication).some((v) => v.kind === "banned")
+    ) {
+      row.implication = NO_BASIS_IMPLICATION;
+    }
   }
 
   const validated = Report.safeParse(report);

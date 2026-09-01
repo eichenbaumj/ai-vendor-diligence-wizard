@@ -31,6 +31,21 @@ export const Claim = z.object({
   type: ClaimType,
   quote: z.string().max(400), // verbatim from the pitch
   subject: z.string().max(160).nullable(), // e.g. the named customer or cert
+  /* Structured fields for quantitative claims, filled by the extractor only
+     when verbatim numbers exist. HINTS ONLY: the plausibility arithmetic
+     (plausibility.ts) re-parses every number from the verbatim quote and
+     basis_quote in code, so a misremembered model number can never reach a
+     rendered sentence. basis_quote is the shortest verbatim span carrying a
+     denominator the pitch itself offers ("about 500 agents") and is
+     verbatim-guarded by the caller like quotes. All optional-nullable:
+     extracts stored before the fields existed omit them. */
+  amount: z.number().nullable().optional(),
+  unit: z.enum(["dollars", "percent", "hours", "count"]).nullable().optional(),
+  period: z
+    .enum(["annual", "monthly", "per_case", "total", "unspecified"])
+    .nullable()
+    .optional(),
+  basis_quote: z.string().max(400).nullable().optional(),
 });
 export type Claim = z.infer<typeof Claim>;
 
@@ -288,6 +303,12 @@ export const LedgerRow = z.object({
      After the tying-signal build, exact-but-untied is also a candidate, so
      match_confidence alone no longer encodes candidacy. */
   attribution: z.enum(["attributed", "candidate"]).optional(),
+  /* "What this number implies": code-templated arithmetic unpacking a
+     performance claim against the pitch's own stated basis (methodology
+     D6.1 rider). Never model-phrased, never feeds the tier, never above
+     the existing D6 severities. Optional: non-claim rows and older stored
+     reports omit it. */
+  implication: z.string().max(400).optional(),
 });
 export type LedgerRow = z.infer<typeof LedgerRow>;
 

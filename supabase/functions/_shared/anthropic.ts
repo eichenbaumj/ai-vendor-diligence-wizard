@@ -78,12 +78,22 @@ export const EXTRACT_SCHEMA = {
       items: {
         type: "object",
         additionalProperties: false,
-        required: ["id", "type", "quote", "subject"],
+        required: ["id", "type", "quote", "subject", "amount", "unit", "period", "basis_quote"],
         properties: {
           id: { type: "string" },
           type: { type: "string", enum: CLAIM_TYPES },
           quote: { type: "string" },
           subject: { type: ["string", "null"] },
+          amount: { type: ["number", "null"] },
+          unit: {
+            type: ["string", "null"],
+            enum: ["dollars", "percent", "hours", "count", null],
+          },
+          period: {
+            type: ["string", "null"],
+            enum: ["annual", "monthly", "per_case", "total", "unspecified", null],
+          },
+          basis_quote: { type: ["string", "null"] },
         },
       },
     },

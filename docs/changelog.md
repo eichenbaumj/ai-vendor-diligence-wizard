@@ -31,6 +31,19 @@ their full legal names; vendors whose materials offer nothing to compare
 against may see identity move to an honest "could not verify" rather than
 credit from an unverifiable match.
 
+**Performance numbers get their arithmetic unpacked.** A performance
+claim carrying a dollar or percentage figure now shows "what this number
+implies" on its ledger row: the figure divided against a denominator the
+pitch itself states, or the honest line that the pitch gives no basis to
+check it against. The arithmetic is computed in code from the verbatim
+quotes (the extractor's structured fields are hints only and never reach
+a sentence), the pitch's own basis span is always displayed with the
+division, evaluative adjectives are banned on the surface and enforced by
+the language lint with a fallback template, and the note never moves any
+weight, finding, or tier — it exists to arm the question, which now leads
+with the computed implication. Expected effect on verdicts: none, by
+construction; the change is what the buyer can see.
+
 **Hidden text on submitted web pages punishes injection, not web
 engineering.** A submitted public web page is not a prepared document:
 real pages hide menus, build timestamps, and screen-reader labels, and

@@ -81,6 +81,27 @@ export function lintText(text: string): LintViolation[] {
   return violations;
 }
 
+/* Evaluative adjectives banned on the claim-implication surface ONLY
+   (methodology D6.1 rider): the arithmetic states the division, never a
+   judgment. Surface-scoped because the global list must not change —
+   "reasonable" appears legitimately in shipped copy ("A demo is
+   reasonable."). */
+const IMPLICATION_BANNED =
+  /\b(reasonable|unreasonable|plausible|implausible|inflated|exaggerated|absurd|suspicious|modest|impressive)\b/i;
+
+export function lintImplication(text: string): LintViolation[] {
+  const violations = lintText(text);
+  const m = text.match(IMPLICATION_BANNED);
+  if (m) {
+    violations.push({
+      label: "evaluative adjective on the implication surface",
+      excerpt: excerptAround(text, m.index ?? 0),
+      kind: "banned",
+    });
+  }
+  return violations;
+}
+
 /* Lint every user-facing string field of an object tree. Returns violations
    with a JSON-path-ish location for debugging. */
 export function lintObject(

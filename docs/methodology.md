@@ -346,6 +346,8 @@ Certain classes of marketing claims have repeatedly drawn federal enforcement ag
 **How it runs.** Automatic pattern analysis plus AI-assisted review.
 **If adverse.** Weight: High. The report's language is careful: "an accuracy figure without a published methodology, dataset, and error breakdown is unsubstantiated," and the pack gains the question: "Which deployment produced this figure, measured how, over what period, and may we contact that agency?"
 
+**What this number implies.** Every performance claim carrying a dollar or percentage figure also gets an arithmetic note on its ledger row: the figure unpacked against a denominator THE PITCH ITSELF states ("$17M in annual savings" against the pitch's own "about 500 agents" works out to about $34,000 per agent per year), or, when the pitch offers no denominator, the honest line that there is no basis to check the number against. The note is written by code from the verbatim quotes, never by the AI; it always displays the pitch's own basis span so you can see what the division rests on; it states only the arithmetic, never a judgment (evaluative adjectives are banned on this surface and enforced by the language lint); and it never changes any weight, finding, or verdict tier. It exists to arm the question above, not to score the claim: honest vendors round their marketing too. The same implication leads the claim's question in the question pack when real arithmetic exists.
+
 ### D6.2 Guaranteed savings claims
 
 **What we look at.** Promised or guaranteed cost savings and return on investment: "cut call-center costs 60%, guaranteed."

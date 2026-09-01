@@ -703,3 +703,52 @@ describe("structuring invariants (gauntlet theme C)", () => {
     expect(unassessedUrls.has("https://www.ohio.gov/unrelated-budget")).toBe(true);
   });
 });
+
+describe("claim plausibility (D6.1 rider): tier-neutral by construction", () => {
+  it("perf rows carry the implication; severities and tier inputs are byte-identical with and without the structured fields", () => {
+    const base = input([], []);
+    base.extract.claims = [
+      {
+        id: "clm-p1",
+        type: "performance",
+        quote: "$17M in annual savings",
+        subject: null,
+        amount: 17_000_000,
+        unit: "dollars",
+        period: "annual",
+        basis_quote: "about 500 agents",
+      },
+      {
+        id: "clm-p2",
+        type: "performance",
+        quote: "faster reviews for staff",
+        subject: null,
+      },
+    ];
+    const withFields = assemble(base);
+    const perfRow = withFields.ledger.find((r) => r.id === "perf-clm-p1");
+    expect(perfRow?.implication).toContain("about $34,000 per agent per year");
+    const bare = input([], []);
+    bare.extract.claims = base.extract.claims.map((c) => ({
+      id: c.id,
+      type: c.type,
+      quote: c.quote,
+      subject: c.subject,
+    }));
+    const withoutFields = assemble(bare);
+    /* Tier neutrality: identical findings, triggers, green dimensions, and
+       row severities either way. */
+    expect(withFields.tierInputs.findings).toEqual(withoutFields.tierInputs.findings);
+    expect(withFields.tierInputs.t1_triggers).toEqual(withoutFields.tierInputs.t1_triggers);
+    expect(withFields.tierInputs.green_dimensions).toEqual(
+      withoutFields.tierInputs.green_dimensions,
+    );
+    expect(withFields.ledger.map((r) => [r.id, r.severity, r.result])).toEqual(
+      withoutFields.ledger.map((r) => [r.id, r.severity, r.result]),
+    );
+    /* A numberless claim carries no implication. */
+    expect(
+      withFields.ledger.find((r) => r.id === "perf-clm-p2")?.implication,
+    ).toBeUndefined();
+  });
+});

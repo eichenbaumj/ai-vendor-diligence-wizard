@@ -661,6 +661,14 @@ async function runPipeline(
     extract.claims = extract.claims.filter((c) =>
       looseQuoteInSource(pitchLoose, c.quote),
     );
+    /* basis_quote feeds rendered arithmetic (plausibility.ts): a
+       hallucinated denominator would put a wrong division in front of the
+       buyer. Keep only spans that actually appear in the pitch text. */
+    for (const c of extract.claims) {
+      if (c.basis_quote && !looseQuoteInSource(pitchLoose, c.basis_quote)) {
+        c.basis_quote = null;
+      }
+    }
     /* Addresses feed tying signals, so a hallucinated address could tie a
        namesake record to this vendor. Keep only addresses that actually
        appear in the pitch text. */
@@ -854,6 +862,11 @@ async function runPipeline(
           siteExtract.claims = siteExtract.claims.filter((c) =>
             looseQuoteInSource(siteLoose, c.quote),
           );
+          for (const c of siteExtract.claims) {
+            if (c.basis_quote && !looseQuoteInSource(siteLoose, c.basis_quote)) {
+              c.basis_quote = null;
+            }
+          }
           siteExtract.addresses = siteExtract.addresses.filter((a) =>
             siteLoose.includes(looseText(a)),
           );

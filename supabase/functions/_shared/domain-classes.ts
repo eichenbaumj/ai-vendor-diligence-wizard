@@ -10,7 +10,37 @@
   matched and not a vendor domain defaults to Class 3 (unknown).
 */
 
-const CLASS1_SUFFIXES = [".gov", ".mil", ".us"];
+/* .gov and .mil are government-only by registration policy. .us is NOT:
+   it is an open country TLD anyone can register (polco.us is a company's
+   site, and treating it as official both blocked every .us vendor site
+   from ever being discovered as the vendor's own AND let self-published
+   .us pages count as verification-grade sources — live polco read,
+   2026-09-01). Government use of .us follows the locality namespace:
+   state-code hierarchies (naperville.il.us, tx.us), fed.us (federal
+   agencies, e.g. fs.fed.us), and nsn.us (native sovereign nations).
+   Only those forms classify as official; every other .us host falls
+   through to the default class. The known cost: a locality that chose a
+   bare .us name outside the namespace (losalamosnm.us) drops to class 3
+   "unknown" and can no longer verify on its own — an honest miss, where
+   the old rule produced false verification-grade credit for anyone
+   holding a .us domain. */
+const CLASS1_SUFFIXES = [".gov", ".mil"];
+
+const US_STATE_CODES = new Set([
+  "al", "ak", "az", "ar", "ca", "co", "ct", "de", "fl", "ga",
+  "hi", "id", "il", "in", "ia", "ks", "ky", "la", "me", "md",
+  "ma", "mi", "mn", "ms", "mo", "mt", "ne", "nv", "nh", "nj",
+  "nm", "ny", "nc", "nd", "oh", "ok", "or", "pa", "ri", "sc",
+  "sd", "tn", "tx", "ut", "vt", "va", "wa", "wv", "wi", "wy",
+  "dc",
+]);
+
+export function isGovernmentUsHost(host: string): boolean {
+  const labels = host.toLowerCase().split(".").filter(Boolean);
+  if (labels[labels.length - 1] !== "us" || labels.length < 2) return false;
+  const second = labels[labels.length - 2];
+  return US_STATE_CODES.has(second) || second === "fed" || second === "nsn";
+}
 
 const CLASS1_HOSTS = new Set([
   "sam.gov",
@@ -175,6 +205,7 @@ export function classifyDomain(
   if (matchesHost(host, CLASS4_HOSTS)) return 4;
   if (matchesHost(host, CLASS1_HOSTS)) return 1;
   if (CLASS1_SUFFIXES.some((s) => host.endsWith(s))) return 1;
+  if (isGovernmentUsHost(host)) return 1;
   if (host.endsWith(".edu")) return 2;
   if (matchesHost(host, CLASS2_HOSTS)) return 2;
 

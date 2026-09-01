@@ -45,6 +45,25 @@ research later in the same run surfaces the site's address, the row says
 that instead. Expected effect on verdicts: none; the row is
 informational, and the change is that missing coverage is now visible.
 
+**A .us web address is not a government address.** The source classifier
+treated every .us address as an official government source. That was
+wrong in both directions. The .us ending is open to anyone, so a
+company's own site ending in .us earned verification-grade authority for
+its self-published pages. And because the vendor's own website must read
+as vendor-controlled, no .us company site could ever be recognized as
+the vendor's own during a name-only check: a real company at polco.us
+was structurally invisible to the website step, whatever the search
+returned. Government .us addresses are now recognized by the government
+naming system instead: state-code addresses (naperville.il.us,
+sos.state.tx.us), fed.us, and nsn.us stay official, and every other .us
+address reads as vendor-controlled or unknown, the fairness default. The
+known cost: a locality that chose a bare .us name outside that system
+reads as unknown and can no longer verify a claim on its own, an honest
+miss where the old rule handed false authority to anyone with a .us
+name. Expected effect: companies on .us domains gain the same website
+step as everyone else; claims that verified only through a
+misclassified .us page lose that credit.
+
 **A FedRAMP listing that begins with the vendor's full name is that
 company's entry.** The attribution rule for compliance feeds demanded a
 product-metadata tie for every similar-name listing, which no name-only

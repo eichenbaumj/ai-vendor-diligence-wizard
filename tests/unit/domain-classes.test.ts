@@ -29,6 +29,43 @@ describe("classifyDomain: Class 1 (official / registry)", () => {
   }
 });
 
+describe("classifyDomain: .us is an open TLD, not a government suffix (v1.6)", () => {
+  it("locality-namespace .us hosts stay class 1", () => {
+    for (const url of [
+      "https://sos.state.tx.us/corp/search",
+      "https://www.naperville.il.us/2026-news-articles/",
+      "https://ci.shakopee.mn.us/agenda",
+      "https://tx.us/",
+      "https://www.fs.fed.us/",
+      "https://ho-chunk.nsn.us/",
+    ]) {
+      expect(classifyDomain(url), url).toBe(1);
+    }
+  });
+
+  it("a bare commercial .us domain is class 3, never official", () => {
+    /* polco.us is a company's own website: treating it as class 1 both
+       blocked it from ever being discovered as the vendor's site and let
+       its self-published pages count as verification-grade sources. */
+    for (const url of [
+      "https://polco.us/",
+      "https://blog.polco.us/some-case-study",
+      "https://info.polco.us/about",
+      "https://anything.us/page",
+    ]) {
+      expect(classifyDomain(url), url).toBe(3);
+    }
+  });
+
+  it("the documented tradeoff: a locality outside the namespace reads unknown", () => {
+    /* Honest miss over false credit: losalamosnm.us is a real county but
+       shares its shape with any commercial .us registration. */
+    expect(
+      classifyDomain("https://www.losalamosnm.us/News-articles/survey"),
+    ).toBe(3);
+  });
+});
+
 describe("classifyDomain: Class 2 (independent press / academic / archive)", () => {
   it("statescoop.com -> 2", () => {
     expect(classifyDomain("https://statescoop.com/some-article")).toBe(2);

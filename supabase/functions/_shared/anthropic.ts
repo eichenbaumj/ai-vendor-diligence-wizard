@@ -456,10 +456,19 @@ export function buildStructureRequest(input: S5UserInput): AnthropicRequestBody 
 export function buildReviewRequest(reportJson: string): AnthropicRequestBody {
   return {
     model: MODELS.review,
-    max_tokens: 4096,
+    /* Fable 5 thinks before it answers and the thinking counts against
+       max_tokens: at 4096 it spent ~3,800 tokens thinking and the JSON was
+       cut off mid-string on every call (stop_reason max_tokens; measured
+       2026-09-01), which is why no review ever parsed. 12000 gives the
+       answer room; effort "low" keeps a routine wording review short
+       (measured: ~1,000 thinking tokens, 30s, end_turn). */
+    max_tokens: 12000,
     system: S5R_SYSTEM,
     messages: [{ role: "user", content: buildS5RUserMessage(reportJson) }],
-    output_config: { format: { type: "json_schema", schema: REVIEW_SCHEMA } },
+    output_config: {
+      format: { type: "json_schema", schema: REVIEW_SCHEMA },
+      effort: "low",
+    },
   };
 }
 

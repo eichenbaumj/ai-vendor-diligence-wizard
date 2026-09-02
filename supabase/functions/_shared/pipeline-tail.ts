@@ -596,6 +596,7 @@ export async function runPipelineTail(
     pitch_person_count: state.pitchPersonCount,
     pitch_customer_count: state.pitchCustomerCount,
     generated_at: generatedAt,
+    submitted_domain_root: tieCorpus.submittedDomainRoot,
   });
   const decision = computeTier(skeleton.tierInputs);
 

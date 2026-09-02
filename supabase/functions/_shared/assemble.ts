@@ -25,7 +25,7 @@ import type {
   SectorContext,
 } from "./schemas.ts";
 import { lintText } from "./lint.ts";
-import { isDegenerateBrandName, tieFactsForCheck } from "./identity-ties.ts";
+import { domainRootCoversName, isDegenerateBrandName, tieFactsForCheck } from "./identity-ties.ts";
 import { normalizeCompanyName } from "./registry/sam.ts";
 import { computeImplication } from "./plausibility.ts";
 import { PROGRAMS } from "./claim-status.ts";
@@ -71,6 +71,13 @@ export interface AssembleInput {
   pitch_person_count?: number;
   pitch_customer_count?: number;
   generated_at: string; // ISO
+  /* The submitted domain's root label (identity-ties.ts domainRootOf),
+     when the buyer put a web address in front of the tool. Federal-award
+     credit requires the root to cover the recipient's name, the same
+     consistency check D1.1 applies to registry records: a product name
+     that took over the vendor name credited "CONDUIT"'s 50 federal awards
+     to a company whose address is conductorai.com (probe, 2026-09-01). */
+  submitted_domain_root?: string | null;
 }
 
 export interface AssembledSkeleton {
@@ -678,7 +685,10 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
     usasp?.status === "hit" &&
     usasp.confidence === "exact" &&
     !isDegenerateBrandName(usaspRecipient ?? vendorName);
-  const usaspCredit = usaspExactDistinctive && usaspAwards > 0;
+  const usaspRootCovered =
+    !input.submitted_domain_root ||
+    domainRootCoversName(input.submitted_domain_root, usaspRecipient ?? vendorName);
+  const usaspCredit = usaspExactDistinctive && usaspAwards > 0 && usaspRootCovered;
   if (usaspCredit && usasp) {
     greenDims.add("D2");
     greenFlagFacts.push({

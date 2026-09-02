@@ -871,11 +871,29 @@ const SYMMETRIC_FAMILY = /^sos_|edgar|^sam(_entity)?$/;
 /* The live exact-name census: every live registry record whose name
    exactly matches a query, keyed by unstripped normalized name, with the
    set of independent registries (each state lane, EDGAR, SAM) that hold
-   it. Reads every lane match, not only the best one. */
-export function exactLiveKeys(checks: RegistryCheck[]): Map<string, Set<string>> {
+   it. Reads every lane match, not only the best one. A record the run
+   could never credit does not compete: one the submitted root does not
+   cover, or one the age veto rules out. Without that, the namesake
+   CONDUIT, LLC (uncovered by conductorai.com) tied 1:1 with the real
+   ConductorAI Corp SEC record and demoted it (probe, 2026-09-01). */
+export function exactLiveKeys(
+  checks: RegistryCheck[],
+  corpus?: Pick<VendorTieCorpus, "submittedDomainRoot" | "vendorYear">,
+): Map<string, Set<string>> {
   const keys = new Map<string, Set<string>>();
-  const add = (name: string | null, lane: string) => {
+  const root = corpus?.submittedDomainRoot ?? null;
+  const vendorYear = corpus?.vendorYear ?? null;
+  const eligible = (name: string, date: string | null): boolean => {
+    if (root && !domainRootCoversName(root, name)) return false;
+    const year = yearOf(date);
+    if (typeof vendorYear === "number" && year !== null && year < vendorYear - AGE_VETO_YEARS) {
+      return false;
+    }
+    return true;
+  };
+  const add = (name: string | null, lane: string, date: string | null = null) => {
     if (!name) return;
+    if (!eligible(name, date)) return;
     const k = normalizeUnstripped(name);
     if (!k) return;
     if (!keys.has(k)) keys.set(k, new Set());
@@ -890,7 +908,7 @@ export function exactLiveKeys(checks: RegistryCheck[]): Map<string, Set<string>>
         if (str(m.confidence) !== "exact") continue;
         const status = str(m.status);
         if (status && NOT_LIVE_STATUS.test(status)) continue;
-        add(str(m.name), check.check_id);
+        add(str(m.name), check.check_id, str(m.date));
       }
     } else if (/edgar/.test(check.check_id)) {
       const entities = Array.isArray(data["filing_entities"])
@@ -985,7 +1003,7 @@ export function adjudicateChecks(
   checks: RegistryCheck[],
   corpus: VendorTieCorpus,
 ): void {
-  const census = exactLiveKeys(checks);
+  const census = exactLiveKeys(checks, corpus);
   for (const check of checks) {
     const facts = tieFactsForCheck(check);
     if (!facts) continue;

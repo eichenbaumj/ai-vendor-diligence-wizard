@@ -33,7 +33,8 @@ tie is now credited only when it is the only live record under that name,
 when its age fits the vendor, and, on a check run from a web address, when
 that address's root name covers the record's name. When two different names
 compete, the name backed by more registries is credited and the rest are
-shown as candidate records. Candidate records are visible and linked, earn
+shown as candidate records; a record the web-address or age rule already
+rules out never competes. Candidate records are visible and linked, earn
 nothing, and drive no warning. Federal payment records earn credit only when
 at least one award exists, and the row keeps the lookup's own caution that
 the recipient must be the same company. State names in press coverage now
@@ -64,8 +65,8 @@ findings get a second model's wording review before publication. In our
 test panel that review stopped at its 40-second allowance on every run,
 so it was changing nothing. It now reads only the surfaces it may act on
 (the verdict, the ledger rows, the green flags, the honesty panel, and the
-next steps) and gets up to 60 seconds when the run's clock allows. Expected
-effect on verdicts: none. The review can only tighten wording, and a
+next steps), gets room to finish its answer, and gets up to 60 seconds
+when the run's clock allows. Expected effect on verdicts: none. The review can only tighten wording, and a
 review that does not finish still changes nothing.
 
 **Name-only checks can now carry the vendor's web address.** A name alone

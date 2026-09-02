@@ -65,10 +65,14 @@ describe("no other builder sets a sampling temperature", () => {
     expect("temperature" in req).toBe(false);
   });
 
-  it("review (Fable 5) carries no temperature key", () => {
+  it("review (Fable 5) carries no temperature key, has output room for its thinking, and runs at low effort", () => {
     const req = buildReviewRequest("{}");
     expect(req.model).toBe(MODELS.review);
     expect("temperature" in req).toBe(false);
+    expect(req.max_tokens).toBe(12000);
+    const cfg = req.output_config as { format: { type: string }; effort: string };
+    expect(cfg.format.type).toBe("json_schema");
+    expect(cfg.effort).toBe("low");
   });
 
   it("structure, classify, and discovery carry no temperature key (one variable per observation cycle)", () => {

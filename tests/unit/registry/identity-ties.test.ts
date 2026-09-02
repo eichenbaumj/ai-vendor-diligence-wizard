@@ -687,6 +687,45 @@ describe("the live exact-name census and the four round-2 shapes (adjudicateChec
     expect(again[0].attribution).toBe("attributed");
   });
 
+  it("ConductorAI shape: a record the root cannot cover never competes, so the real SEC record attributes", () => {
+    const checks = [
+      sos("sos_tx", "Texas Comptroller", [{ name: "CONDUIT, LLC", confidence: "exact", status: "ACTIVE", date: "2020-12-23" }]),
+      sos("sos_ny", "New York", [{ name: "CONDUIT CORP.", confidence: "exact", status: "Inactive", date: "1983-01-01" }], {
+        dissolved: { legal_name: "CONDUIT CORP.", status: "Inactive" },
+      }),
+      edgar([{ name: "ConductorAI Corp", cik: "9", inc_state: "DE", confidence: "exact" }]),
+    ];
+    const corpus = corpusWith({ extract: { vendor_name_candidates: ["Conduit"] }, submittedDomain: "www.conductorai.com", domainYear: 2023 });
+    expect([...exactLiveKeys(checks, corpus).keys()]).toEqual(["CONDUCTORAI CORP"]);
+    adjudicateChecks(checks, corpus);
+    const c = byId(checks);
+    expect(c.edgar_fts.attribution).toBe("attributed");
+    expect(c.sos_tx.attribution).toBe("candidate");
+    expect(c.sos_ny.attribution).toBe("candidate");
+  });
+
+  it("Polco shape with a live same-brand LLC in another state: neither record is credited on a bare name (the documented fairness cost)", () => {
+    const checks = [
+      sos("sos_ny", "New York", [
+        { name: "POLCO INC.", confidence: "exact", status: "Inactive", date: "2004-07-21" },
+        { name: "POLCO LLC", confidence: "exact", status: "Active", date: "2016-11-22" },
+      ], { dissolved: { legal_name: "POLCO INC.", status: "Inactive" } }),
+      sos("sos_tx", "Texas Comptroller", [{ name: "POLCO, INC.", confidence: "exact", status: null, date: "2018-08-02" }]),
+    ];
+    adjudicateChecks(checks, corpusWith({ extract: { vendor_name_candidates: ["Polco"] } }));
+    const c = byId(checks);
+    expect(c.sos_tx.attribution).toBe("candidate");
+    expect(c.sos_ny.attribution).toBe("candidate");
+    /* A site address in Texas would tie it; a strong tie always would. */
+    const tied = [
+      sos("sos_ny", "New York", [{ name: "POLCO LLC", confidence: "exact", status: "Active" }]),
+      sos("sos_tx", "Texas Comptroller", [{ name: "POLCO, INC.", confidence: "exact", status: null, addr_state: "TX" }]),
+    ];
+    adjudicateChecks(tied, corpusWith({ extract: { vendor_name_candidates: ["Polco"], state_mentioned: "TX" } }));
+    expect(byId(tied).sos_tx.attribution).toBe("attributed");
+    expect(byId(tied).sos_ny.attribution).toBe("candidate");
+  });
+
   it("Conduit shape: a URL run whose root does not cover the exact record leaves it a candidate; the same run from conduit.com attributes", () => {
     const make = () => [
       sos("sos_tx", "Texas Comptroller", [

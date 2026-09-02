@@ -688,6 +688,26 @@ describe("the live exact-name census and the four round-2 shapes (adjudicateChec
     expect(again[0].attribution).toBe("attributed");
   });
 
+  it("1.8 census: suffix spellings of one name are one key, so a state CORPORATION and SEC's Corp back each other", () => {
+    const checks = [
+      sos("sos_ny", "New York", [{ name: "CONDUCTORAI CORPORATION", confidence: "exact", status: "Active", date: "2024-03-08", dissolved: null }]),
+      edgar([{ name: "ConductorAI Corp", cik: "9", inc_state: "DE", confidence: "exact" }]),
+    ];
+    const corpus = corpusWith({ extract: { vendor_name_candidates: ["ConductorAI"] }, submittedDomain: "www.conductorai.com", domainYear: 2023 });
+    const keys = exactLiveKeys(checks, corpus);
+    expect([...keys.keys()]).toEqual(["CONDUCTORAI CORP"]);
+    expect(keys.get("CONDUCTORAI CORP")!.size).toBe(2);
+    adjudicateChecks(checks, corpus);
+    expect(byId(checks).sos_ny.attribution).toBe("attributed");
+    expect(byId(checks).edgar_fts.attribution).toBe("attributed");
+    /* INC and LLC are different companies and still compete. */
+    const split = [
+      sos("sos_ny", "New York", [{ name: "ACME AI INC.", confidence: "exact", status: "Active", date: "2019-01-01", dissolved: null }]),
+      sos("sos_tx", "Texas Comptroller", [{ name: "ACME AI LLC", confidence: "exact", status: "ACTIVE", date: "2019-01-01", dissolved: null }]),
+    ];
+    expect([...exactLiveKeys(split, corpusWith({ extract: { vendor_name_candidates: ["Acme AI"] } })).keys()].sort()).toEqual(["ACME AI INC", "ACME AI LLC"]);
+  });
+
   it("1.8 anchor: the record an officer ties is anchored even when listed behind an untied exact namesake", () => {
     const checks = [
       sos("sos_co", "Colorado", [

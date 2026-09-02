@@ -421,6 +421,45 @@ describe("dissolution designations (the Citymart class)", () => {
     expect(out.questions.some((q) => q.id === "gap-dissolved")).toBe(false);
   });
 
+  it("1.8: the identity anchor prefers a strong tie, then the vendor's own name plus a suffix, over lane order", () => {
+    const ny = check({
+      check_id: "sos_ny",
+      source: "New York Department of State (public inquiry service)",
+      confidence: "exact",
+      tie: { tied: true, strong: false, checkable: true, signals: [{ kind: "state" as const, value: "NY", strength: "weak" as const, vendor_source: "site" as const }] },
+      attribution: "attributed" as const,
+      data: { matches: [{ name: "ACCELA NEW YORK", confidence: "exact", status: "Active", date: "2009-04-14", dissolved: null }], anchor_index: 0 },
+    });
+    const co = check({
+      check_id: "sos_co",
+      source: "Colorado Secretary of State (data.colorado.gov)",
+      confidence: "exact",
+      tie: { tied: true, strong: false, checkable: true, signals: [{ kind: "state" as const, value: "CO", strength: "weak" as const, vendor_source: "site" as const }] },
+      attribution: "attributed" as const,
+      data: { matches: [{ name: "Accela, Inc.", confidence: "exact", status: "Good Standing", date: "2010-07-07", dissolved: null }], anchor_index: 0 },
+    });
+    const out = assemble(
+      input({
+        extract: baseExtract({ vendor_name_candidates: ["Accela"] }),
+        checks: [ny, co],
+        identity: { identity_resolved: true, identifiers_found: ["ny_dos", "co_sos"] },
+      }),
+    );
+    const identity = out.ledger.find((r) => r.id === "identity")!;
+    expect(identity.note).toContain("Accela, Inc.");
+    expect(identity.note).not.toContain("ACCELA NEW YORK");
+    /* A strong tie outranks the name match. */
+    const nyStrong = { ...ny, tie: { tied: true, strong: true, checkable: true, signals: [{ kind: "officer" as const, value: "JANE ROE", strength: "strong" as const, vendor_source: "pitch" as const }] } };
+    const out2 = assemble(
+      input({
+        extract: baseExtract({ vendor_name_candidates: ["Accela"] }),
+        checks: [nyStrong, co],
+        identity: { identity_resolved: true, identifiers_found: ["ny_dos", "co_sos"] },
+      }),
+    );
+    expect(out2.ledger.find((r) => r.id === "identity")!.note).toContain("ACCELA NEW YORK");
+  });
+
   it("1.8: the candidate row's note is written from the anchored record, not the lane's first match", () => {
     const candidate = check({
       check_id: "sos_tx",

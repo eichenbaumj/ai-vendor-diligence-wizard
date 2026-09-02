@@ -602,9 +602,18 @@ export async function runPipelineTail(
     pitch_customer_count: state.pitchCustomerCount,
     generated_at: generatedAt,
     submitted_domain_root: tieCorpus.submittedDomainRoot,
-    /* The tie corpus already unions pitch-stated, submitted, and discovered
-       domains; leads keep the vendor's own pages out of the follow-up slots. */
-    vendor_domains: tieCorpus.domains,
+    /* Every host the run treats as the vendor's own, so leads keep the
+       vendor's pages out of the follow-up slots: the corpus domains
+       (pitch-stated plus primary) and the discovered and submitted hosts,
+       which the corpus does not carry on name runs (probe 2026-09-02:
+       granicus.com and blog.polco.us pages took lead slots). */
+    vendor_domains: [
+      ...new Set(
+        [...tieCorpus.domains, state.primaryDomain, state.discoveredDomain, state.submittedDomain]
+          .filter((d): d is string => typeof d === "string" && d.trim().length > 0)
+          .map((d) => d.toLowerCase().replace(/^www\./, "").trim()),
+      ),
+    ],
   });
   const decision = computeTier(skeleton.tierInputs);
 

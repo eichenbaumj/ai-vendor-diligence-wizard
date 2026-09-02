@@ -41,7 +41,13 @@ and a namesake's ended registration still appears as a candidate record
 with its question. New York's detail record, which carries the tying
 details, is read for up to three exact-name records per check instead of
 one. Every candidate-record note is now written by code from the judged
-record. Expected effect on verdicts: a vendor whose tying record was hidden
+record. Two smaller rules ride along. Names that differ only in the
+spelling of the corporate suffix ("Corp." and "Corporation") count as one
+name when records compete; a live check had a company's own state record
+and SEC record competing on that spelling alone. And when several
+registries credit a record, the identity sentence names the one a
+stronger detail ties, then the one whose legal name is the vendor's name
+plus a suffix, instead of the first registry in a fixed order. Expected effect on verdicts: a vendor whose tying record was hidden
 behind a namesake can now resolve identity and move up from "not enough to
 evaluate". Vendors with one record per registry are unchanged, and a bare
 name shared by several live companies still resolves nothing.

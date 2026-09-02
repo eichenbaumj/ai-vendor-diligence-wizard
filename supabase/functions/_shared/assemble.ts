@@ -285,9 +285,27 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
        promotions, so "ZENCITY TECHNOLOGIES US, INC." may anchor the brand
        "Zencity" when a tie connects them. */
     const attributedSos = sosHits.filter((c) => c.attribution === "attributed");
+    /* Methodology 1.8: among attributed state records, prefer the one a
+       strong detail ties, then the one whose legal name is the vendor's
+       name plus a corporate suffix, then exact matches, then lane order.
+       Before, lane order decided: with per-match anchoring the New York
+       lane credited "ACCELA NEW YORK" (a state-qualified registration, tied
+       by state only) and the identity sentence named it ahead of Colorado's
+       "Accela, Inc." (probe 2026-09-02). */
+    const vendorStripped = normalizeCompanyName(vendorName);
+    const anchorRank = (c: RegistryCheck): number => {
+      if (c.tie?.strong) return 0;
+      const name = tieFactsForCheck(c)?.legal_name ?? null;
+      if (name && normalizeCompanyName(name) === vendorStripped) return 1;
+      if (c.confidence === "exact") return 2;
+      return 3;
+    };
+    const rankedSos = attributedSos
+      .map((c, i) => ({ c, i, rank: anchorRank(c) }))
+      .sort((a, b) => a.rank - b.rank || a.i - b.i)
+      .map((x) => x.c);
     const anchor =
-      attributedSos.find((c) => c.confidence === "exact") ??
-      attributedSos[0] ??
+      rankedSos[0] ??
       (edgar?.status === "hit" && edgar.attribution === "attributed"
         ? edgar
         : null) ??

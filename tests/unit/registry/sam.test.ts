@@ -1,4 +1,18 @@
 import { describe, expect, it } from "vitest";
+
+describe("normalizeUnstripped folds suffix spellings (methodology 1.8)", () => {
+  it("treats Corp and Corporation, Inc and Incorporated, Co and Company, Ltd and Limited as one token", () => {
+    expect(normalizeUnstripped("ConductorAI Corp")).toBe(normalizeUnstripped("CONDUCTORAI CORPORATION"));
+    expect(normalizeUnstripped("Acme, Inc.")).toBe(normalizeUnstripped("ACME INCORPORATED"));
+    expect(normalizeUnstripped("Acme Co")).toBe(normalizeUnstripped("Acme Company"));
+    expect(normalizeUnstripped("Acme Ltd.")).toBe(normalizeUnstripped("Acme Limited"));
+  });
+  it("never folds different suffixes or the brand alone", () => {
+    expect(normalizeUnstripped("Acme Inc")).not.toBe(normalizeUnstripped("Acme LLC"));
+    expect(normalizeUnstripped("Acme")).not.toBe(normalizeUnstripped("Acme Inc"));
+    expect(normalizeUnstripped("Citymart US Inc.")).toBe("CITYMART US INC");
+  });
+});
 import { RegistryCheck } from "../../../supabase/functions/_shared/schemas.ts";
 import { lintText } from "../../../supabase/functions/_shared/lint.ts";
 import {

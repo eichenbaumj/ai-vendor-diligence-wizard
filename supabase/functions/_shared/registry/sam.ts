@@ -81,11 +81,27 @@ export function hasCorporateSuffix(raw: string): boolean {
   return tokens.length >= 2 && CORPORATE_SUFFIXES.has(tokens[tokens.length - 1]);
 }
 
+/* Spellings of one corporate suffix, folded to one token so that a lane's
+   "CONDUCTORAI CORPORATION" and SEC's "ConductorAI Corp" are one name in
+   the live exact-name census, not two competitors (methodology 1.8; the
+   conductorai URL probe of 2026-09-02 landed at tier 0 on exactly that
+   split). Only spelling variants of the SAME suffix fold: INC and LLC stay
+   different companies. */
+const SUFFIX_ALIASES: Record<string, string> = {
+  INCORPORATED: "INC",
+  CORPORATION: "CORP",
+  COMPANY: "CO",
+  LIMITED: "LTD",
+};
+
 /* Unstripped normalized form: case-fold and strip punctuation but KEEP
    corporate suffixes, so "Citymart US Inc." equals "CITYMART US INC."
-   while brand-only "Citymart" does not. */
+   while brand-only "Citymart" does not. Suffix spellings fold to one
+   token (SUFFIX_ALIASES), so "ACME CORPORATION" equals "Acme Corp." */
 export function normalizeUnstripped(raw: string): string {
-  return tokensOf(raw).join(" ");
+  return tokensOf(raw)
+    .map((t) => SUFFIX_ALIASES[t] ?? t)
+    .join(" ");
 }
 
 /* People: punctuation-stripped, case-folded, whitespace-collapsed. */

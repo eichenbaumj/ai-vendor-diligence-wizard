@@ -1148,7 +1148,7 @@ export function composeReportDetailed(args: ComposeArgs): { report: Report; edit
     "https://www.hhs.gov/hipaa/for-professionals/faq/2003/are-we-required-to-certify-our-organizations-compliance-with-the-standards/index.html",
     "https://tineye.com",
   ]);
-  const firewallSources = (srcs: { url: string; title: string | null; retrieved_at: string }[]) =>
+  const firewallSources = <T extends { url: string }>(srcs: T[]): T[] =>
     srcs.filter((s) => allowedUrls.has(s.url));
 
   const summaryDraft = narrative ? tidyProse(narrative.verdict_summary, 600) : "";
@@ -1188,7 +1188,12 @@ export function composeReportDetailed(args: ComposeArgs): { report: Report; edit
     next_steps: nextSteps,
     sector,
     sources: firewallSources(
-      citations.map((c) => ({ url: c.url, title: c.title, retrieved_at: c.retrieved_at })),
+      citations.map((c) => ({
+        url: c.url,
+        title: c.title,
+        retrieved_at: c.retrieved_at,
+        published_at: c.published_at ?? null,
+      })),
     ),
     review: null,
     meta: {

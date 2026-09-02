@@ -15,11 +15,15 @@
 */
 import type { Citation } from "./schemas.ts";
 import { classifyDomain } from "./domain-classes.ts";
+import { publishedDateFor } from "./citation-date.ts";
 
 export interface ApiCitation {
   url: string;
   title: string | null;
   cited_text: string | null;
+  /* The search tool's page age for the result, when the API sent one
+     (methodology 1.8). Optional: older callers omit it. */
+  page_age?: string | null;
 }
 
 /* The cap bounds only narrative harvesting: Channel A citations always pass
@@ -46,6 +50,7 @@ export function harvestCitations(
       cited_text: c.cited_text ? c.cited_text.slice(0, 400) : null,
       retrieved_at: retrievedAt,
       domain_class: classifyDomain(c.url, vendorDomains),
+      published_at: publishedDateFor(c.url, c.page_age ?? null, retrievedAt),
     });
   }
   for (const m of research.narrative.matchAll(/https?:\/\/[^\s)\]"'<>]+/g)) {
@@ -58,6 +63,7 @@ export function harvestCitations(
       cited_text: null,
       retrieved_at: retrievedAt,
       domain_class: classifyDomain(url, vendorDomains),
+      published_at: publishedDateFor(url, null, retrievedAt),
     });
   }
   return citations;

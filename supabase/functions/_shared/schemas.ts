@@ -172,6 +172,12 @@ export type RegistryLedger = z.infer<typeof RegistryLedger>;
 
 /* -------------------------------------------------------------- S3 research */
 
+/* Methodology 1.8: a publication date parsed by code from the page address
+   or the search tool's page age ("YYYY-MM-DD" or "YYYY-MM"), null when
+   neither carried one. Optional: older stored reports lack it. */
+const PublishedAt = z.string().max(10).nullable().optional();
+
+
 export const Citation = z.object({
   url: z.string().max(600),
   title: z.string().max(300).nullable(),
@@ -187,6 +193,9 @@ export const Citation = z.object({
     z.literal(3),
     z.literal(4),
   ]),
+  /* Methodology 1.8 (citation-date.ts). Optional: checkpoints predating
+     1.8 omit it. */
+  published_at: PublishedAt,
 });
 export type Citation = z.infer<typeof Citation>;
 
@@ -276,6 +285,7 @@ export const SourceRef = z.object({
   url: z.string().max(600),
   title: z.string().max(300).nullable(),
   retrieved_at: z.string(),
+  published_at: PublishedAt,
 });
 export type SourceRef = z.infer<typeof SourceRef>;
 
@@ -385,6 +395,7 @@ export const LeadRef = z.object({
   retrieved_at: z.string(),
   source_class: z.union([z.literal(1), z.literal(2), z.literal(3)]),
   note: z.string().max(200),
+  published_at: PublishedAt,
   /* Set by code when the retrieved headline contains a word from the fixed
      dispute list (adverse-lexicon.ts). A keyword, never prose: the reader-
      facing label is a fixed sentence in the frontend, so no model text and

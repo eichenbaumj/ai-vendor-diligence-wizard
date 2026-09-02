@@ -4,6 +4,7 @@
 */
 import type { SourceRef } from "@/lib/types";
 import { REPORT_SECTION_IDS } from "@/components/report/report-overview-model";
+import { sourceDatePhrase } from "@/lib/source-date";
 
 export function SourcesList({
   sources,
@@ -26,6 +27,10 @@ export function SourcesList({
       <h2 id="sources-h" className="font-serif text-xl font-bold sm:text-2xl">
         Sources checked for this report
       </h2>
+      <p className="mt-2 max-w-3xl text-[13px] text-brand-charcoal-soft">
+        A page shows its publication date when its address or the search
+        result carried one. Otherwise it shows the date the tool read it.
+      </p>
       <ol className="mt-4 max-w-3xl list-decimal space-y-1.5 pl-5">
         {sources.map((s) => (
           <li key={s.url} className="text-[13px] leading-relaxed">
@@ -38,13 +43,7 @@ export function SourcesList({
               {s.title ?? s.url}
             </a>{" "}
             <span className="font-mono text-xs tabular-nums text-brand-steel">
-              (retrieved{" "}
-              {new Date(s.retrieved_at).toLocaleDateString("en-US", {
-                month: "short",
-                day: "numeric",
-                year: "numeric",
-              })}
-              )
+              ({sourceDatePhrase(s)})
             </span>
           </li>
         ))}
@@ -71,13 +70,7 @@ export function SourcesList({
                   {s.title ?? s.url}
                 </a>{" "}
                 <span className="font-mono text-xs tabular-nums text-brand-steel">
-                  (retrieved{" "}
-                  {new Date(s.retrieved_at).toLocaleDateString("en-US", {
-                    month: "short",
-                    day: "numeric",
-                    year: "numeric",
-                  })}
-                  )
+                  ({sourceDatePhrase(s)})
                 </span>
               </li>
             ))}

@@ -46,6 +46,16 @@ behind a namesake can now resolve identity and move up from "not enough to
 evaluate". Vendors with one record per registry are unchanged, and a bare
 name shared by several live companies still resolves nothing.
 
+**Sources and leads show a publication date when the page carries one.**
+Every source in a report showed only the date the tool read it, so a reader
+could not tell a story from 2019 from one published last week. Code now
+reads a publication date from the page address, when the address holds a
+date path, or from the age the search tool reports for the result. The
+report shows that date, and falls back to the retrieval date when neither
+is present. No page is fetched for this and no model supplies the date.
+Expected effect on verdicts: none. Dates are display only and nothing reads
+them.
+
 ## Version 1.7 (September 2026)
 
 **What changed in this version, in short.** The verdict tiers and their rules

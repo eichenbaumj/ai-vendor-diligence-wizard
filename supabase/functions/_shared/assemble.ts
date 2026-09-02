@@ -1878,6 +1878,7 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
       retrieved_at: c.retrieved_at,
       source_class: c.domain_class as 1 | 2 | 3,
       note: `${channelPhrase}: mentions ${subject}. This is ${classPhrase}.`.slice(0, 200),
+      published_at: c.published_at ?? null,
       ...(adverse ? { flag: "adverse_headline" as const } : {}),
     };
   });
@@ -1901,6 +1902,7 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
           ? null
           : c.title,
       retrieved_at: c.retrieved_at,
+      published_at: c.published_at ?? null,
     });
   }
 

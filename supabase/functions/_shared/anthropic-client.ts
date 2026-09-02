@@ -296,7 +296,7 @@ export async function streamAnthropic(
 
 export interface ResearchRunResult {
   narrative: string;
-  citations: { url: string; title: string | null; cited_text: string | null }[];
+  citations: { url: string; title: string | null; cited_text: string | null; page_age?: string | null }[];
   partial: boolean;
   usage: Usage;
   continuations: number;
@@ -368,17 +368,33 @@ export async function runResearchLoop(
   }
 }
 
-function collect(content: ContentBlock[]): {
+/* Exported for tests. Text-block citations are the citation set; the search
+   tool's result blocks (web_search_tool_result -> web_search_result) carry
+   a page_age per URL when the API returns one, joined here by exact URL
+   (methodology 1.8, citation-date.ts). A result block never adds a
+   citation: only what the model cited counts. */
+export function collectResearchContent(content: ContentBlock[]): {
   narrative: string;
-  citations: { url: string; title: string | null; cited_text: string | null }[];
+  citations: { url: string; title: string | null; cited_text: string | null; page_age: string | null }[];
 } {
   const narrativeParts: string[] = [];
   const citations: {
     url: string;
     title: string | null;
     cited_text: string | null;
+    page_age: string | null;
   }[] = [];
   const seen = new Set<string>();
+  const pageAges = new Map<string, string>();
+  for (const block of content) {
+    if (block.type === "web_search_tool_result" && Array.isArray(block.content)) {
+      for (const r of block.content as Record<string, unknown>[]) {
+        if (r && r.type === "web_search_result" && typeof r.url === "string" && typeof r.page_age === "string" && r.page_age.trim()) {
+          if (!pageAges.has(r.url)) pageAges.set(r.url, r.page_age.trim().slice(0, 60));
+        }
+      }
+    }
+  }
   for (const block of content) {
     if (block.type === "text" && typeof block.text === "string") {
       narrativeParts.push(block.text);
@@ -389,6 +405,7 @@ function collect(content: ContentBlock[]): {
             url: c.url,
             title: c.title ?? null,
             cited_text: c.cited_text ?? null,
+            page_age: pageAges.get(c.url) ?? null,
           });
         }
       }
@@ -396,3 +413,5 @@ function collect(content: ContentBlock[]): {
   }
   return { narrative: narrativeParts.join(""), citations };
 }
+
+const collect = collectResearchContent;

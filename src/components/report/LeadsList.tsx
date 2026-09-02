@@ -8,6 +8,7 @@
 */
 import type { LeadRef } from "@/lib/types";
 import { REPORT_SECTION_IDS } from "@/components/report/report-overview-model";
+import { sourceDatePhrase } from "@/lib/source-date";
 
 const CLASS_LABEL: Record<number, string> = {
   1: "Official source",
@@ -66,6 +67,9 @@ export function LeadsList({ leads }: { leads: LeadRef[] }) {
             </p>
             <p className="mt-2 text-[13px] leading-relaxed text-brand-charcoal-soft">
               {l.note}
+            </p>
+            <p className="mt-2 font-mono text-xs tabular-nums text-brand-steel">
+              {sourceDatePhrase(l)}
             </p>
           </li>
         ))}

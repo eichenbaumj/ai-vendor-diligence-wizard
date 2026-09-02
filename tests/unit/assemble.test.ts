@@ -578,6 +578,14 @@ describe("unverified leads", () => {
     expect(JSON.stringify(out.tierInputs)).not.toContain("adverse");
   });
 
+  it("leads and unassessed sources carry the citation's published_at (null when absent)", () => {
+    const dated = { ...cite("https://news.example.org/2024/03/15/acme-ai", 2, "Acme AI story", "Acme AI."), published_at: "2024-03-15" };
+    const undated = cite("https://www.ohio.gov/unrelated-budget", 1, "County budget 2026", "The budget passed.");
+    const out = assemble(input([], [dated, undated]));
+    expect(out.leads[0]).toMatchObject({ url: dated.url, published_at: "2024-03-15" });
+    expect(out.unassessedSources[0]).toMatchObject({ url: undated.url, published_at: null });
+  });
+
   it("the same citations in a different input order give byte-identical leads", () => {
     const cites = [
       cite("https://b.example.org/acme-ai", 2, "Acme AI profile"),

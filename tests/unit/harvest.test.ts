@@ -18,6 +18,24 @@ function run(citations: ApiCitation[], narrative: string, domains: string[] = []
   return harvestCitations({ citations, narrative }, domains, AT, cap);
 }
 
+describe("publication dates (methodology 1.8)", () => {
+  it("stamps published_at from the address, then the page age, else null; Channel B reads the address only", () => {
+    const out = harvestCitations(
+      {
+        citations: [
+          { url: "https://news.example.org/2024/03/15/story", title: "Story", cited_text: "text", page_age: "April 30, 2025" },
+          { url: "https://news.example.org/story", title: "Story", cited_text: "text", page_age: "April 30, 2025" },
+          { url: "https://news.example.org/plain", title: "Plain", cited_text: "text" },
+        ],
+        narrative: "See https://blog.example.org/2023/11/02/post and https://blog.example.org/about.",
+      },
+      [],
+      AT,
+    );
+    expect(out.map((c) => c.published_at)).toEqual(["2024-03-15", "2025-04-30", null, "2023-11-02", null]);
+  });
+});
+
 describe("Channel A: API citation passthrough", () => {
   it("preserves title and cited_text and stamps retrieved_at", () => {
     const out = run([api("https://sec.gov/x", "Form D", "filed 2025")], "");

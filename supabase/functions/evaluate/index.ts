@@ -79,6 +79,7 @@ import {
 import {
   type SiteDiscoveryFailureKind,
   siteDiscoveryFailureCheck,
+  siteForensicsFor,
 } from "../_shared/site-degradation.ts";
 import { isNamedOrganization, splitNameCandidates } from "../_shared/text-match.ts";
 import { PROGRAMS, affirmsProgram, programClaimBackstop } from "../_shared/claim-status.ts";
@@ -1220,6 +1221,11 @@ async function runPipeline(
       track(annotate(registry.checkGithubOrg({ candidates: feedNames, domain: discoveredDomain }, ctx()))),
     );
   }
+  /* Methodology 1.8: the website step's failure diagnostics travel to the
+     tail for the usage jsonb (record-free, capped). */
+  const siteStepForensics = siteDiscoveryFailure
+    ? siteForensicsFor(siteDiscoveryFailure, siteDiscoveryData)
+    : null;
   if (siteDiscoveryFailure) {
     /* Honest disclosure for the failed name-run website step: renders as
        a could_not_check honesty row. The tail upgrades a not_found story
@@ -1299,6 +1305,7 @@ async function runPipeline(
           siteStateMentioned,
           siteStatesFound,
           siteClaimQuotes,
+          siteForensics: siteStepForensics,
           researchDomains,
           usage: usageBox.value,
           stageUsage,
@@ -1437,6 +1444,7 @@ async function runPipeline(
       siteStateMentioned,
       siteStatesFound,
       siteClaimQuotes,
+      siteForensics: siteStepForensics,
       ...(deepHandoffFailed ? { deepHandoffFailed: true } : {}),
     },
   );

@@ -36,6 +36,7 @@ import {
   finishInsufficient,
   runPipelineTail,
 } from "../_shared/pipeline-tail.ts";
+import type { SiteForensics } from "../_shared/site-degradation.ts";
 
 interface Checkpoint {
   nonce: string;
@@ -64,6 +65,8 @@ interface Checkpoint {
   siteStateMentioned?: string | null;
   siteStatesFound?: string[];
   siteClaimQuotes: string[];
+  /* Optional: checkpoints written before 1.8 lack it. */
+  siteForensics?: SiteForensics | null;
   researchDomains: string[];
   usage: Usage;
   stageUsage: Record<string, Usage>;
@@ -274,6 +277,7 @@ async function runDeep(
       siteStateMentioned: cp.siteStateMentioned ?? null,
       siteStatesFound: cp.siteStatesFound ?? [],
       siteClaimQuotes: cp.siteClaimQuotes,
+      siteForensics: cp.siteForensics ?? null,
       deep: true,
     },
   );

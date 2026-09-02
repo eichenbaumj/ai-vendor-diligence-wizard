@@ -49,7 +49,7 @@ import {
 } from "./anthropic-client.ts";
 import { detectPlantedCorroboration } from "./adv-corroboration.ts";
 import { inferPrimaryDomain } from "./domain-inference.ts";
-import { reconcileLateFoundSite } from "./site-degradation.ts";
+import { reconcileLateFoundSite, type SiteForensics } from "./site-degradation.ts";
 import {
   adjudicateChecks,
   attributionTrace,
@@ -181,6 +181,10 @@ export interface TailState {
   siteStateMentioned?: string | null;
   siteStatesFound?: string[];
   siteClaimQuotes: string[];
+  /* Methodology 1.8: the website step's failure diagnostics for the usage
+     jsonb (site-degradation.ts siteForensicsFor). Null or absent when the
+     step succeeded or never applied. */
+  siteForensics?: SiteForensics | null;
   /* Marks the report as a deep-mode result in the usage jsonb. */
   deep?: boolean;
   /* A deep check was requested but the deep-research handoff failed, so
@@ -807,6 +811,9 @@ export async function runPipelineTail(
         /* Why each registry record was or was not credited: readable
            post hoc even though RegistryCheck.data is not persisted here. */
         attribution_trace: attributionTrace(checks),
+        /* Why the website step failed on a name run, when it did: reason
+           tags only (methodology 1.8; RegistryCheck.data is not persisted). */
+        ...(state.siteForensics ? { site_forensics: state.siteForensics } : {}),
         ...(state.deep ? { deep: true } : {}),
         ...(state.deepHandoffFailed
           ? { deep_requested: true, deep_handoff_failed: true }

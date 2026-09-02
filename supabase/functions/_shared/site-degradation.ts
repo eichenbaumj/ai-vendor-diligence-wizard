@@ -20,6 +20,52 @@
 */
 import type { RegistryCheck } from "./schemas.ts";
 
+/* Methodology 1.8 (operational, not a rule): the name-run website step's
+   failure diagnostics, persisted in the stored row's usage jsonb because
+   RegistryCheck.data is not persisted on standard runs and function
+   console logs are unreachable post hoc. Record-free by construction:
+   short reason strings only, no page text, capped in count and length.
+   Reads as data downstream; nothing in the report depends on it. */
+export interface SiteForensics {
+  outcome: "not_found" | "unreadable";
+  step: string | null;
+  fetch_failures: string[];
+  extract_attempts: string[];
+  /* The discovery lookup's own outcome tag and attempt count (not_found). */
+  discovery_outcome: string | null;
+  discovery_attempts: number | null;
+}
+
+const FORENSIC_STRING_CAP = 200;
+const FORENSIC_LIST_CAP = 6;
+
+function capList(v: unknown): string[] {
+  return Array.isArray(v)
+    ? v
+        .filter((x): x is string => typeof x === "string" && x.trim().length > 0)
+        .slice(0, FORENSIC_LIST_CAP)
+        .map((x) => x.slice(0, FORENSIC_STRING_CAP))
+    : [];
+}
+
+export function siteForensicsFor(
+  outcome: "not_found" | "unreadable",
+  data: Record<string, unknown>,
+): SiteForensics {
+  const step = typeof data["step"] === "string" ? (data["step"] as string).slice(0, 40) : null;
+  const discoveryOutcome = data["discovery_outcome"];
+  const discoveryAttempts = data["discovery_attempts"];
+  return {
+    outcome,
+    step,
+    fetch_failures: capList(data["fetch_failures"]),
+    extract_attempts: capList(data["extract_attempts"]),
+    discovery_outcome: typeof discoveryOutcome === "string" ? discoveryOutcome.slice(0, 40) : null,
+    discovery_attempts:
+      typeof discoveryAttempts === "number" && Number.isFinite(discoveryAttempts) ? discoveryAttempts : null,
+  };
+}
+
 export const SITE_DISCOVERY_CHECK_ID = "site_discovery";
 export const SITE_DISCOVERY_SOURCE = "Vendor website discovery";
 

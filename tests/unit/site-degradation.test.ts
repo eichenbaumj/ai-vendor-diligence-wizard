@@ -8,6 +8,45 @@
   the site — replace, never append.
 */
 import { describe, expect, it } from "vitest";
+import { siteForensicsFor } from "@shared/site-degradation.ts";
+
+describe("siteForensicsFor (methodology 1.8 usage diagnostics)", () => {
+  it("keeps only the outcome, the step, the discovery tags, and capped reason strings", () => {
+    const f = siteForensicsFor("unreadable", {
+      step: "fetch",
+      fetch_failures: ["apex=fetch failed www=HTTP 403", "", "x".repeat(500), 1, null, "a", "b", "c", "d", "e"],
+      extract_attempts: ["attempt1:schema", "attempt2:timeout"],
+      pages: [{ text: "never persisted" }],
+      domain_text: "should not appear",
+    });
+    expect(f.outcome).toBe("unreadable");
+    expect(f.step).toBe("fetch");
+    expect(f.fetch_failures).toHaveLength(6);
+    expect(f.fetch_failures[1]).toHaveLength(200);
+    expect(f.extract_attempts).toEqual(["attempt1:schema", "attempt2:timeout"]);
+    expect(f.discovery_outcome).toBeNull();
+    expect(JSON.stringify(f)).not.toContain("never persisted");
+    expect(JSON.stringify(f)).not.toContain("should not appear");
+    expect(Object.keys(f).sort()).toEqual([
+      "discovery_attempts",
+      "discovery_outcome",
+      "extract_attempts",
+      "fetch_failures",
+      "outcome",
+      "step",
+    ]);
+  });
+  it("carries the discovery lookup's outcome and attempts on not_found", () => {
+    expect(siteForensicsFor("not_found", { discovery_outcome: "no_candidate", discovery_attempts: 2 })).toEqual({
+      outcome: "not_found",
+      step: null,
+      fetch_failures: [],
+      extract_attempts: [],
+      discovery_outcome: "no_candidate",
+      discovery_attempts: 2,
+    });
+  });
+});
 import {
   LATE_FOUND_SUMMARY,
   SITE_DISCOVERY_CHECK_ID,

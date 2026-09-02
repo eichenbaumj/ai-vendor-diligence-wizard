@@ -11,7 +11,25 @@ import {
   hostBlocked,
   htmlToText,
   normalizeSubmittedUrl,
+  submittedHostOf,
 } from "@shared/ingest-url.ts";
+
+describe("submittedHostOf: the web address typed beside a vendor name (1.7)", () => {
+  it("accepts a bare host, a www host with a path and query, and an http address it upgrades", () => {
+    expect(submittedHostOf("polco.us")).toBe("polco.us");
+    expect(submittedHostOf("https://www.ConductorAI.com/about?x=1#y")).toBe("conductorai.com");
+    expect(submittedHostOf("http://vendor.example.com")).toBe("vendor.example.com");
+    expect(submittedHostOf("  WWW.Acme-Gov.com/  ")).toBe("acme-gov.com");
+  });
+  it("rejects what the web-address tab rejects, with the same copy", () => {
+    expect(() => submittedHostOf("localhost")).toThrow(UrlIngestError);
+    expect(() => submittedHostOf("127.0.0.1")).toThrow("that address is not one we can fetch");
+    expect(() => submittedHostOf("vendor")).toThrow("that address is not one we can fetch");
+    expect(() => submittedHostOf("ftp://vendor.example.com")).toThrow("submit a full https web address");
+    expect(() => submittedHostOf("https://vendor.example.com:8443")).toThrow("that address is not one we can fetch");
+    expect(() => submittedHostOf("")).toThrow(UrlIngestError);
+  });
+});
 
 describe("hostBlocked", () => {
   const blocked = [

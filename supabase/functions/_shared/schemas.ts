@@ -428,6 +428,12 @@ export const Report = z.object({
     vendor_display_name: z.string().max(160),
     research_partial: z.boolean(),
     input_kind: z.enum(["paste", "pdf", "url", "name"]),
+    /* Which web address the site checks ran against and where it came
+       from (methodology 1.7): the buyer submitted it (url tab, or typed
+       beside a name), the pitch stated it, or a name search found it.
+       Optional: reports stored before the fields existed omit them. */
+    assessed_domain: z.string().max(253).nullable().optional(),
+    domain_source: z.enum(["submitted", "pitch", "discovered"]).nullable().optional(),
   }),
 });
 export type Report = z.infer<typeof Report>;

@@ -104,22 +104,29 @@ export default function Check() {
   const submit = async () => {
     let value = "";
     let filename: string | undefined;
-    let effectiveKind: Tab = tab;
+    const effectiveKind: Tab = tab;
+    let website: string | undefined;
     if (tab === "name") {
       value = vendorName.trim();
       if (!value) {
         setError({ message: "Type the vendor's name first.", hint: null });
         return;
       }
-      /* A known website is the stronger submission: the pipeline reads the
-         site either way, but submitting it directly skips discovery. */
-      let site = vendorSite.trim();
+      /* The typed name stays the vendor name and drives every registry
+         search; the web address pins the site checks and keeps a namesake's
+         registration from being credited (methodology 1.7). Before this,
+         a supplied address silently turned the run into a web-address
+         check and threw the typed name away. */
+      const site = vendorSite.trim();
       if (site) {
-        if (!/^[a-z]+:\/\//i.test(site)) site = `https://${site}`;
-        if (/^https:\/\/.+\..+/i.test(site)) {
-          effectiveKind = "url";
-          value = site;
+        if (/\s/.test(site) || !/\./.test(site)) {
+          setError({
+            message: "That web address does not look right.",
+            hint: "Use the site address, like vendor.example.com, or leave it blank.",
+          });
+          return;
         }
+        website = site;
       }
     } else if (tab === "pdf") {
       if (!pdfFile) {
@@ -157,6 +164,7 @@ export default function Check() {
         input_kind: effectiveKind,
         content: value,
         filename,
+        website,
         state: stateCode || null,
         turnstile_token: turnstileTokenRef.current,
         /* Samples only ride along on the paste tab (they replay fixtures). */
@@ -247,13 +255,12 @@ export default function Check() {
                     type="url"
                     value={vendorSite}
                     onChange={(e) => setVendorSite(e.target.value)}
-                    placeholder="Their website, if you know it (optional)"
+                    placeholder="Their web address (optional)"
                     className="mt-3 w-full rounded-2xl border border-transparent bg-white px-5 py-4 font-mono text-[15px] shadow-soft outline-none focus:border-brand-cobalt"
                   />
                   <p className="mt-2 text-sm text-brand-charcoal-soft">
-                    With only a name we will search for the company's website
-                    and read it. If you already know the website, adding it
-                    here makes the report stronger.
+                    Have their web address? Adding it makes the check much
+                    stronger.
                   </p>
                 </div>
               ) : tab === "pdf" ? (

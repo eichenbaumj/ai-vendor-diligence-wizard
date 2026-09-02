@@ -82,6 +82,10 @@ export interface EvaluateRequest {
   client_token: string;
   /* Deep mode: an extended multi-lane research pass (pre-launch option). */
   deep?: boolean;
+  /* Name-only checks: the vendor's web address, if the user knows it. The
+     typed name still drives every registry search; the address pins the
+     site checks (methodology 1.7). */
+  website?: string;
 }
 
 /* What useEvaluation hands to the page. */

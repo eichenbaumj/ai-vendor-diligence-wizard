@@ -497,7 +497,7 @@ async function runCell(client: EvalClient, pc: PlannedCell, ids: string[]): Prom
   const t0 = Date.now();
   const { content, filename } = submitContent(pc);
   const id = await client.submit(
-    { input_kind: pc.input.input_kind, content, state: pc.input.state, filename },
+    { input_kind: pc.input.input_kind, content, state: pc.input.state, filename, website: pc.input.website },
     LEVEL_BODIES[pc.level],
   );
   ids.push(id);

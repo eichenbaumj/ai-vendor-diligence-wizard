@@ -659,6 +659,14 @@ export async function runPipelineTail(
     inputKind,
     generatedAt,
     researchPartial: state.researchPartial,
+    assessedDomain: state.submittedDomain ?? state.primaryDomain ?? state.discoveredDomain ?? null,
+    domainSource: state.submittedDomain
+      ? "submitted"
+      : state.primaryDomain
+        ? "pitch"
+        : state.discoveredDomain
+          ? "discovered"
+          : null,
   });
   const ledger = report.ledger;
 
@@ -1032,6 +1040,9 @@ export interface ComposeArgs {
   inputKind: "paste" | "name" | "pdf" | "url";
   generatedAt: string;
   researchPartial: boolean;
+  /* The address the site checks ran against, and its provenance. */
+  assessedDomain?: string | null;
+  domainSource?: "submitted" | "pitch" | "discovered" | null;
 }
 
 /* Compose the Report from the decided skeleton and the (guarded) model
@@ -1137,6 +1148,8 @@ export function composeReport(args: ComposeArgs): Report {
       vendor_display_name: args.vendorName,
       research_partial: args.researchPartial,
       input_kind: args.inputKind,
+      assessed_domain: args.assessedDomain ?? null,
+      domain_source: args.domainSource ?? null,
     },
   };
 }

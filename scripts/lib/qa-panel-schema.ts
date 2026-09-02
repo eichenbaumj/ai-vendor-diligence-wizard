@@ -181,6 +181,8 @@ export const PanelInput = z
     fixture: z.string().min(1).optional(),
     levels: z.array(LevelName).min(1).default(["L1"]),
     state: z.string().length(2).nullable().default(null),
+    /* Name runs only: the web address typed beside the name (1.7). */
+    website: z.string().min(3).optional(),
   })
   .strict()
   .refine((i) => (i.content ? 1 : 0) + (i.fixture ? 1 : 0) === 1, {

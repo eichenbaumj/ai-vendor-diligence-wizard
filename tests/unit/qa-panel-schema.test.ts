@@ -9,6 +9,16 @@ import { existsSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+import { PanelInput } from "../../scripts/lib/qa-panel-schema.ts";
+
+describe("PanelInput website field (1.7)", () => {
+  it("accepts a name input with a website and keeps the strict shape", () => {
+    const ok = PanelInput.safeParse({ input_kind: "name", content: "Polco", levels: ["L1"], state: null, website: "polco.us" });
+    expect(ok.success).toBe(true);
+    const unknown = PanelInput.safeParse({ input_kind: "name", content: "Polco", levels: ["L1"], state: null, web: "polco.us" });
+    expect(unknown.success).toBe(false);
+  });
+});
 import {
   PanelFile,
   panelProblems,

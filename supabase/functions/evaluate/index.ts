@@ -92,6 +92,7 @@ import {
   fetchSubmittedUrl,
   htmlToText,
   normalizeSubmittedUrl,
+  submittedHostOf,
 } from "../_shared/ingest-url.ts";
 import {
   PdfIngestError,
@@ -169,6 +170,9 @@ Deno.serve(async (req) => {
     client_token?: string;
     deep?: boolean;
     power?: { searches?: number; fetches?: number };
+    /* Name-only checks may carry the vendor's web address (methodology
+       1.7). Honored only when input_kind is "name"; ignored otherwise. */
+    website?: string;
   } | null;
 
   const inputKind = body?.input_kind;
@@ -185,6 +189,22 @@ Deno.serve(async (req) => {
   }
   if (inputKind === "name" && (content.length < 2 || content.length > 160)) {
     return json({ error: "vendor name between 2 and 160 characters" }, 400);
+  }
+  /* The typed name stays the vendor name and drives every registry search;
+     the address pins the site checks and acts as the D1.1 root check. It
+     is validated syntactically only (no fetch) so a site that refuses
+     server fetches never turns a real vendor away here. */
+  let nameWebsiteHost: string | null = null;
+  const websiteRaw = typeof body?.website === "string" ? body.website.trim() : "";
+  if (inputKind === "name" && websiteRaw.length > 0) {
+    try {
+      nameWebsiteHost = submittedHostOf(websiteRaw.slice(0, 2_048));
+    } catch (err) {
+      return json(
+        { error: err instanceof UrlIngestError ? err.message : "submit a full https web address" },
+        400,
+      );
+    }
   }
   /* PDF arrives base64 in content: cheap length gate before any work.
      8,400,000 base64 chars is ~6 MB decoded. */
@@ -268,7 +288,7 @@ Deno.serve(async (req) => {
      anyone's daily or monthly quota. Deep and harness runs are deliberate
      spend and never serve from cache. */
   if (inputKind === "name" && !deepRequested && !evalBypass) {
-    const key = vendorKeyFromName(content);
+    const key = nameRunVendorKey(content, nameWebsiteHost);
     const cached = await findCached(supabase, key);
     if (cached) {
       return json(
@@ -350,7 +370,10 @@ Deno.serve(async (req) => {
   const ingestNotes: string[] = [];
   const ingestAdv: AdvFinding[] = [];
   let hiddenSpans: string[] = [];
-  let sourceMeta: Record<string, unknown> = { kind: inputKind };
+  let sourceMeta: Record<string, unknown> = {
+    kind: inputKind,
+    ...(nameWebsiteHost ? { website: nameWebsiteHost } : {}),
+  };
 
   if (inputKind === "pdf") {
     let bytes: Uint8Array;
@@ -476,7 +499,7 @@ Deno.serve(async (req) => {
     userState,
     ingestNotes,
     inputKind === "url" && typeof sourceMeta.url === "string" ? sourceMeta.url : null,
-    { deep: deepRequested, budgetOverride, skipCache: deepRequested || evalBypass },
+    { deep: deepRequested, budgetOverride, skipCache: deepRequested || evalBypass, website: nameWebsiteHost },
   ).catch(async (err) => {
     console.error(`pipeline fatal for ${evaluationId}: ${String(err)}`);
     await supabase
@@ -504,6 +527,14 @@ function vendorKeyFromName(name: string): string {
     .replace(/\b(inc|llc|corp|co|ltd|pbc)\b/g, "")
     .replace(/\s+/g, "-")
     .replace(/^-|-$/g, "");
+}
+
+/* A name-only check keyed by the name alone; a name-plus-website check by
+   both, so it never serves or feeds a url-run result for the same host
+   (the result cache keys on vendor_key alone). */
+function nameRunVendorKey(name: string, website: string | null): string {
+  const base = vendorKeyFromName(name) || "unknown";
+  return website ? `${base}@${website}` : base;
 }
 
 async function findCached(
@@ -562,8 +593,15 @@ async function runPipeline(
   /* The normalized submitted URL for url-kind runs (the site pass fetches
      more pages of that host). */
   sourceUrl: string | null = null,
-  opts: { deep?: boolean; budgetOverride?: ResearchBudget; skipCache?: boolean } = {},
+  opts: {
+    deep?: boolean;
+    budgetOverride?: ResearchBudget;
+    skipCache?: boolean;
+    /* The web address typed beside a vendor name (name runs only). */
+    website?: string | null;
+  } = {},
 ): Promise<void> {
+  const submittedWebsite = inputKind === "name" ? (opts.website ?? null) : null;
   const pipelineStart = Date.now();
   const emitter = makeEmitter(supabase, env.supabaseUrl, env.serviceKey, evaluationId);
   const emit = (e: Partial<EvalEvent> & { stage: EvalEvent["stage"]; kind: EvalEvent["kind"]; label: string }) =>
@@ -606,7 +644,11 @@ async function runPipeline(
   if (inputKind === "name") {
     extract = {
       vendor_name_candidates: [pitchText],
-      domains: [],
+      /* A supplied website is the vendor's own address the way a url-tab
+         host is: it pins the site pass and the domain-record lanes. The
+         typed name stays candidates[0], so a product name on the page can
+         never take over the searches (the 2026-09-01 poisoning case). */
+      domains: submittedWebsite ? [submittedWebsite] : [],
       addresses: [],
       sender_email: null,
       people: [],
@@ -709,12 +751,15 @@ async function runPipeline(
     }
   }
   const primaryDomain = extract.domains[0] ?? null;
-  /* The domain the BUYER put in front of the tool. On a url run that is
-     the submitted host; pitch-stated, discovered, and inferred domains
-     never qualify. It gates registry credit through the D1.1 root check
-     (identity-ties.ts) and nothing else. */
-  const submittedDomain = inputKind === "url" ? primaryDomain : null;
-  const vendorKey = primaryDomain ?? vendorKeyFromName(vendorName || "unknown");
+  /* The domain the BUYER put in front of the tool: a url-tab host, or the
+     website typed beside a name. Pitch-stated, discovered, and inferred
+     domains never qualify. It gates registry credit through the D1.1 root
+     check (identity-ties.ts) and nothing else. */
+  const submittedDomain = inputKind === "url" ? primaryDomain : submittedWebsite;
+  const vendorKey =
+    inputKind === "name"
+      ? nameRunVendorKey(vendorName, submittedWebsite)
+      : primaryDomain ?? vendorKeyFromName(vendorName || "unknown");
   await supabase.from("evaluations").update({ vendor_key: vendorKey }).eq("id", evaluationId);
   await emit({
     stage: "parse",
@@ -845,6 +890,10 @@ async function runPipeline(
       }
       siteSourceLabel =
         "text extracted from additional pages of the website the user submitted, authored by the vendor";
+    } else if (inputKind === "name" && submittedWebsite) {
+      siteHost = submittedWebsite;
+      siteSourceLabel =
+        "text extracted from the website the user supplied for this vendor, authored by the vendor";
     } else if (primaryDomain) {
       siteHost = primaryDomain;
       siteSourceLabel =

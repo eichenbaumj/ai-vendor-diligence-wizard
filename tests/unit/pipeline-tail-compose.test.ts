@@ -179,6 +179,17 @@ describe("composeReport", () => {
     expect(injected.report.green_flags).toEqual(clean.report.green_flags);
   });
 
+  it("stamps the assessed domain and its source into meta, and parses without them", async () => {
+    const { report } = build(cleanNarrative);
+    expect(report.meta.assessed_domain).toBeNull();
+    expect(report.meta.domain_source).toBeNull();
+    const { Report } = await import("@shared/schemas.ts");
+    const { meta, ...rest } = report;
+    const { assessed_domain: _a, domain_source: _b, ...oldMeta } = meta;
+    expect(Report.safeParse({ ...rest, meta: oldMeta }).success).toBe(true);
+    expect(Report.safeParse({ ...rest, meta: { ...oldMeta, assessed_domain: "acmegov.com", domain_source: "submitted" } }).success).toBe(true);
+  });
+
   it("is lint-clean and schema-valid", async () => {
     const { report } = build(namesakeNarrative);
     expect(lintObject(report).filter((v) => v.kind === "banned")).toEqual([]);

@@ -61,6 +61,8 @@ export interface SubmitInput {
   content: string;
   state?: string | null;
   filename?: string;
+  /* Name runs only: the vendor's web address typed beside the name. */
+  website?: string;
 }
 
 export interface TerminalResult {
@@ -100,6 +102,7 @@ export function createEvalClient(tokens: {
         input_kind: input.input_kind,
         content: input.content,
         filename: input.filename,
+        ...(input.website ? { website: input.website } : {}),
         state: input.state ?? null,
         turnstile_token: null,
         client_token: randomUUID(),

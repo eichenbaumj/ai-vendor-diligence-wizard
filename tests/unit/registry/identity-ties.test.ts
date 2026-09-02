@@ -735,6 +735,16 @@ describe("the live exact-name census and the four round-2 shapes (adjudicateChec
     expect(withVendor.states.some((s) => s.code === "TX" && s.source === "coverage")).toBe(true);
   });
 
+  it("a name run with a supplied website seeds the root the same way a url run does", () => {
+    const c = corpusWith({
+      extract: { vendor_name_candidates: ["Polco"], domains: ["polco.us"] },
+      primaryDomain: "polco.us",
+      submittedDomain: "polco.us",
+    });
+    expect(c.submittedDomainRoot).toBe("polco");
+    expect(c.domains).toContain("polco.us");
+  });
+
   it("the corpus records the submitted root and the earliest vendor year", () => {
     const c = corpusWith({ submittedDomain: "www.Promise-Pay.com", foundingYear: 2018, domainYear: 2019 });
     expect(c.submittedDomainRoot).toBe("promisepay");

@@ -68,6 +68,21 @@ next steps) and gets up to 60 seconds when the run's clock allows. Expected
 effect on verdicts: none. The review can only tighten wording, and a
 review that does not finish still changes nothing.
 
+**Name-only checks can now carry the vendor's web address.** A name alone
+is the weakest input. The name tab has an optional web address field.
+Before this version, filling it in silently turned the check into a
+web-address check and threw the typed name away, which let a product name
+on the vendor's page take over the company name. Now the check keeps the
+typed name for every registry search and treats the address the way a
+submitted web address is treated. Its registration record counts toward
+identity, its pages are read as the vendor's own site, and its root name
+keeps a namesake's registration from being credited. An address that is
+not a valid https site stops the check with a message instead of being
+ignored. The report states which address it checked. Expected effect:
+name checks with the web address resolve identity for real single-record
+vendors that a bare name cannot, and stop crediting namesakes. A bare name
+behaves as before under the new attribution rule.
+
 ## Version 1.6 (September 2026)
 
 **Name-only checks get a steadier website step, and the report says so

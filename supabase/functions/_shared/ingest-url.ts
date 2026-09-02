@@ -85,6 +85,21 @@ export function normalizeSubmittedUrl(raw: string): string {
   return url.toString();
 }
 
+/* The host a buyer typed beside a vendor name (methodology 1.7, the
+   website field on name-only checks). Scheme-less input gets https; a
+   plain http address is upgraded; everything else goes through the same
+   https-only, no-port, blocked-host rules as the web-address tab. Returns
+   the lowercase host with a leading "www." removed. No fetch: vendor
+   sites refuse server fetches often enough that a reachability probe
+   here would turn real vendors away with a 400. Throws UrlIngestError
+   with user-facing copy. */
+export function submittedHostOf(raw: string): string {
+  const trimmed = raw.trim().replace(/^http:\/\//i, "https://");
+  const withScheme = /^[a-z][a-z0-9+.-]*:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+  const normalized = normalizeSubmittedUrl(withScheme);
+  return new URL(normalized).hostname.toLowerCase().replace(/^www\./, "");
+}
+
 export interface FetchedPage {
   html: string;
   final_url: string;

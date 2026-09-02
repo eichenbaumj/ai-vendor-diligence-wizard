@@ -154,6 +154,7 @@ export async function evaluate(params: {
   filename?: string;
   state: string | null;
   turnstile_token: string | null;
+  website?: string;
   sampleId?: SampleId;
   deep?: boolean;
 }): Promise<EvaluateResponse> {
@@ -173,6 +174,7 @@ export async function evaluate(params: {
     input_kind: params.input_kind,
     content: params.content,
     ...(params.filename ? { filename: params.filename } : {}),
+    ...(params.website ? { website: params.website } : {}),
     state: params.state,
     turnstile_token: params.turnstile_token,
     client_token: getClientToken(),

@@ -395,7 +395,8 @@ const STAGE_ANCHORS: Record<StageId, string[]> = {
     "supabase/functions/_shared/assemble.ts:1557-1574 (startup bar; tier inputs)",
     "supabase/functions/_shared/assemble.ts:1576-1598 (question selection by code)",
     "supabase/functions/_shared/assemble.ts:1600-1714 (honesty panel and manual cards; groups)",
-    "supabase/functions/_shared/assemble.ts:1716-1787 (leads, cap 8, no press wires; unassessed sources, cap 12)",
+    "supabase/functions/_shared/assemble.ts:1716-1815 (leads, cap 8, no press wires, no vendor pages, dispute headlines first; unassessed sources, cap 12)",
+    "supabase/functions/_shared/adverse-lexicon.ts:1-30 (the fixed dispute word list; a boolean, never echoed)",
     "supabase/functions/_shared/questions.ts:1-31 (composition order; 15 with 5 core reserved)",
     "supabase/functions/_shared/honesty-groups.ts:12-18 (the five group labels)",
     "supabase/functions/_shared/plausibility.ts:1-29 (arithmetic note: never a finding, never moves the tier)",
@@ -936,7 +937,7 @@ export const REPORT_PARTS: ReportPart[] = [
     id: "leads",
     label: "Leads",
     who: "code",
-    rule: "Code lists research pages that fit no row, up to eight, and each note says whether the page was read or only found. A lead is a follow-up for you and never counts as evidence. The section appears only when research found one, so the ClaraDocs sample has none.",
+    rule: "Code lists research pages that fit no row, up to eight. Pages on the vendor's own site are left out. A page whose headline mentions a lawsuit, settlement, breach, or ended contract is listed first and marked. Each note says whether the page was read or only found. A lead is a follow-up for you and never counts as evidence. The section appears only when research found one, so the ClaraDocs sample has none.",
   },
   {
     id: "next-steps",

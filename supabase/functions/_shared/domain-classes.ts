@@ -186,6 +186,23 @@ function matchesHost(host: string, set: Set<string>): boolean {
 }
 
 /**
+ * True when the URL's host is one of the vendor's domains or a subdomain of
+ * one (www. stripped on both sides). Shared by classifyDomain (vendor pages
+ * are class 3 regardless of TLD) and by the leads list in assemble.ts,
+ * which keeps the vendor's own pages out of the follow-up slots.
+ */
+export function isVendorHost(url: string, vendorDomains: string[]): boolean {
+  const host = hostnameOf(url);
+  if (!host) return false;
+  for (const vd of vendorDomains) {
+    const v = vd.toLowerCase().replace(/^www\./, "").trim();
+    if (!v) continue;
+    if (host === v || host.endsWith("." + v)) return true;
+  }
+  return false;
+}
+
+/**
  * Classify a cited URL. `vendorDomains` are the domains identified as
  * belonging to (or controlled by) the vendor being evaluated — always Class 3
  * regardless of TLD tricks.
@@ -197,10 +214,7 @@ export function classifyDomain(
   const host = hostnameOf(url);
   if (!host) return 3;
 
-  for (const vd of vendorDomains) {
-    const v = vd.toLowerCase().replace(/^www\./, "");
-    if (host === v || host.endsWith("." + v)) return 3;
-  }
+  if (isVendorHost(url, vendorDomains)) return 3;
 
   if (matchesHost(host, CLASS4_HOSTS)) return 4;
   if (matchesHost(host, CLASS1_HOSTS)) return 1;

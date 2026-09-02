@@ -598,6 +598,9 @@ export async function runPipelineTail(
     pitch_customer_count: state.pitchCustomerCount,
     generated_at: generatedAt,
     submitted_domain_root: tieCorpus.submittedDomainRoot,
+    /* The tie corpus already unions pitch-stated, submitted, and discovered
+       domains; leads keep the vendor's own pages out of the follow-up slots. */
+    vendor_domains: tieCorpus.domains,
   });
   const decision = computeTier(skeleton.tierInputs);
 

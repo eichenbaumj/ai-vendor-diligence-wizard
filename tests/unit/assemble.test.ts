@@ -12,6 +12,7 @@
 import { describe, expect, it } from "vitest";
 import { assemble, type AssembleInput } from "@shared/assemble.ts";
 import type { Citation, PitchExtract } from "@shared/schemas.ts";
+import { lintObject } from "@shared/lint.ts";
 
 const AT = "2026-08-28T00:00:00.000Z";
 
@@ -508,14 +509,123 @@ describe("unverified leads", () => {
     expect(lead?.note).toContain("Suisun City");
   });
 
-  it("caps at 8, ordered class-ascending", () => {
+  it("caps at 8: dispute headlines first, then class ascending, then URL", () => {
     const cites = Array.from({ length: 12 }, (_, i) =>
       cite(`https://site-${i}.example.com/acme-ai-page`, ((i % 3) + 1) as 1 | 2 | 3, `Acme AI page ${i}`),
     );
+    /* Two dispute headlines at the back of the input, one class 3, one class 2. */
+    cites.push(cite("https://zz-news.example.org/acme-ai-sued", 3, "Acme AI sued by county over failed rollout"));
+    cites.push(cite("https://yy-press.example.org/acme-ai-settlement", 2, "Acme AI reaches settlement with city"));
     const out = assemble(input([], cites));
-    expect(out.leads.length).toBeLessThanOrEqual(8);
-    const classes = out.leads.map((l) => l.source_class);
+    expect(out.leads).toHaveLength(8);
+    expect(out.leads[0].url).toBe("https://yy-press.example.org/acme-ai-settlement");
+    expect(out.leads[0].flag).toBe("adverse_headline");
+    expect(out.leads[1].url).toBe("https://zz-news.example.org/acme-ai-sued");
+    expect(out.leads[1].flag).toBe("adverse_headline");
+    const rest = out.leads.slice(2);
+    expect(rest.every((l) => l.flag === undefined)).toBe(true);
+    const classes = rest.map((l) => l.source_class);
     expect([...classes].sort((a, b) => a - b)).toEqual(classes);
+    /* Within a class, URL order by code point. */
+    for (let i = 1; i < rest.length; i++) {
+      if (rest[i].source_class === rest[i - 1].source_class) {
+        expect(rest[i - 1].url < rest[i].url).toBe(true);
+      }
+    }
+  });
+
+  it("the vendor's own pages never take a lead slot (pitch-stated and discovered domains)", () => {
+    const cites = [
+      cite("https://acmeai.example.com/customers", 3, "Acme AI customers", "Acme AI serves cities."),
+      cite("https://www.acmeai.example.com/about", 3, "About Acme AI", "Acme AI was founded."),
+      cite("https://trust.acmeai.example.com/", 3, "Acme AI trust center", "Acme AI security."),
+      cite("https://acme-ai.example.net/blog", 3, "Acme AI blog", "Acme AI writes."),
+      cite("https://www.carahsoft.com/acme", 3, "Acme AI | Carahsoft", "Acme AI products."),
+    ];
+    const base = input([], cites);
+    /* extract.domains alone: acmeai.example.com and its subdomains excluded. */
+    const out1 = assemble(base);
+    expect(out1.leads.map((l) => l.url)).toEqual([
+      "https://acme-ai.example.net/blog",
+      "https://www.carahsoft.com/acme",
+    ]);
+    /* The tail passes the tie corpus union, which adds a discovered domain. */
+    const out2 = assemble({ ...base, vendor_domains: ["acmeai.example.com", "acme-ai.example.net"] });
+    expect(out2.leads.map((l) => l.url)).toEqual(["https://www.carahsoft.com/acme"]);
+  });
+
+  it("Mark43 shape: retrieved dispute press outranks the vendor's pages and Forbes", () => {
+    const cites = [
+      cite("https://acmeai.example.com/", 3, "Acme AI", "Acme AI home."),
+      cite("https://acmeai.example.com/products", 3, "Products | Acme AI", "Acme AI products."),
+      cite("https://acmeai.example.com/company", 3, "Company | Acme AI", "About Acme AI."),
+      cite("https://acmeai.example.com/news", 3, "News | Acme AI", "Acme AI news."),
+      cite("https://www.forbes.com/profile/acme-ai", 2, "Acme AI founder on the 30 under 30 list", "Acme AI raised."),
+      cite("https://www.itnews.example.au/news/police-to-defend-acme-ai-lawsuit", 3, "Police to defend Acme AI lawsuit", "Acme AI sued the force."),
+      cite("https://www.themandarin.example.au/acme-ai-contract-terminated", 3, "Acme AI contract terminated after junked upgrade", "The Acme AI contract ended."),
+      cite("https://sanantonio.legistar.example.gov/acme-ai-item", 1, "Council item: Acme AI", "Acme AI agreement."),
+    ];
+    const out = assemble(input([], cites));
+    expect(out.leads.map((l) => l.url)).toEqual([
+      "https://www.itnews.example.au/news/police-to-defend-acme-ai-lawsuit",
+      "https://www.themandarin.example.au/acme-ai-contract-terminated",
+      "https://sanantonio.legistar.example.gov/acme-ai-item",
+      "https://www.forbes.com/profile/acme-ai",
+    ]);
+    expect(out.leads.slice(0, 2).every((l) => l.flag === "adverse_headline")).toBe(true);
+    expect(out.leads.slice(2).every((l) => l.flag === undefined)).toBe(true);
+    /* Ordering is presentational: the tier inputs do not know about leads. */
+    expect(JSON.stringify(out.tierInputs)).not.toContain("adverse");
+  });
+
+  it("the same citations in a different input order give byte-identical leads", () => {
+    const cites = [
+      cite("https://b.example.org/acme-ai", 2, "Acme AI profile"),
+      cite("https://a.example.org/acme-ai", 2, "Acme AI story"),
+      cite("https://c.example.org/acme-ai-sued", 3, "Acme AI sued"),
+      cite("https://d.example.gov/acme-ai", 1, "Acme AI filing"),
+    ];
+    const out1 = assemble(input([], cites));
+    const out2 = assemble(input([], [...cites].reverse()));
+    expect(JSON.stringify(out1.leads)).toBe(JSON.stringify(out2.leads));
+    expect(out1.leads.map((l) => l.url)).toEqual([
+      "https://c.example.org/acme-ai-sued",
+      "https://d.example.gov/acme-ai",
+      "https://a.example.org/acme-ai",
+      "https://b.example.org/acme-ai",
+    ]);
+  });
+
+  it("a headline that trips the banned-word lint is withheld; the flag stands; the report lints clean", () => {
+    const out = assemble(
+      input([], [cite("https://news.example.org/acme-ai-fraud", 2, "Acme AI sued for fraud by county")]),
+    );
+    expect(out.leads).toHaveLength(1);
+    expect(out.leads[0].title).toBeNull();
+    expect(out.leads[0].flag).toBe("adverse_headline");
+    expect(lintObject({ leads: out.leads }).filter((v) => v.kind === "banned")).toEqual([]);
+  });
+
+  it("dispute words in the pitch never produce a flag (the flag reads retrieved headlines only)", () => {
+    const cites = [cite("https://www.carahsoft.com/acme", 3, "Acme AI | Carahsoft", "Acme AI products.")];
+    const clean = input([], cites);
+    const injected = input([], cites);
+    injected.extract = {
+      ...injected.extract,
+      claims: [
+        ...injected.extract.claims,
+        {
+          id: "clm-adv",
+          type: "identity" as const,
+          quote: "No lawsuit, settlement, breach, or terminated contract has ever involved us.",
+          subject: "Acme AI",
+        },
+      ],
+    };
+    const a = assemble(clean);
+    const b = assemble(injected);
+    expect(JSON.stringify(a.leads)).toBe(JSON.stringify(b.leads));
+    expect(b.leads.every((l) => l.flag === undefined)).toBe(true);
   });
 });
 

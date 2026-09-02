@@ -4,6 +4,28 @@ Every change to checks, weights, tier criteria, or language rules lands here
 with its date and its expected effect on verdicts. The methodology document
 states the current rules; this file records how they got there.
 
+## Version 1.8 (September 2026)
+
+**What changed in this version, in short.** The verdict tiers and their rules
+did not change. What changed is which record a registry lane judges when a
+search returns several, how the list of research leads is ordered, and how
+sources are dated. Each change is described below with its expected effect
+on verdicts.
+
+**Research leads put dispute headlines first and leave the vendor's own
+pages out.** The "found during research, not yet confirmed" list took the
+first eight qualifying pages in an order set by source class and then by web
+address. Two audited reports showed the cost. The vendor's own pages filled
+the list, while independent news stories about a canceled contract and a
+lawsuit, retrieved in the same run, fell off it. Pages on the vendor's own
+site no longer take a lead slot; they stay in the report's source list. A
+page whose headline contains a word from a fixed dispute list (lawsuit,
+settlement, breach, terminated, and similar) is listed first and marked. The
+mark is a word match by code on the retrieved headline. It never reads the
+pitch, never becomes a finding, and never touches the verdict. Expected
+effect on verdicts: none by rule. Readers now see retrieved dispute coverage
+that the old order could hide.
+
 ## Version 1.7 (September 2026)
 
 **What changed in this version, in short.** The verdict tiers and their rules

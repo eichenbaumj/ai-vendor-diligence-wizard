@@ -33,7 +33,8 @@ import { computeTier } from "./tier.ts";
 import type { Finding, T1Trigger, TierInputs } from "./tier.ts";
 import type { SectorPack } from "./packs-types.ts";
 import { selectQuestions } from "./questions.ts";
-import { canVerify } from "./domain-classes.ts";
+import { canVerify, isVendorHost } from "./domain-classes.ts";
+import { adverseHeadlineHit } from "./adverse-lexicon.ts";
 import {
   contentMentions,
   hostCovers,
@@ -78,6 +79,12 @@ export interface AssembleInput {
      that took over the vendor name credited "CONDUIT"'s 50 federal awards
      to a company whose address is conductorai.com (probe, 2026-09-01). */
   submitted_domain_root?: string | null;
+  /* Every domain the run treats as the vendor's own (pitch-stated,
+     submitted, discovered), the same list harvestCitations received. The
+     leads list keeps pages on these hosts out of the follow-up slots.
+     Defaults to extract.domains, which misses a discovered domain, so the
+     tail passes the tie corpus's union. */
+  vendor_domains?: string[];
 }
 
 export interface AssembledSkeleton {
@@ -1721,7 +1728,18 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
      vendor — and its URL is not already attached to a row or a manual card.
      Leads are follow-ups for the reader, never evidence: class 4 (PR wires)
      never appears, class 3 carries a verify-independently note, and note
-     copy states honestly whether the page was read or only surfaced. */
+     copy states honestly whether the page was read or only surfaced.
+
+     Order (methodology 1.8, D2.4): the vendor's own pages take no slot;
+     pages whose retrieved headline carries a dispute word come first and
+     carry the adverse_headline flag; then source class ascending; then the
+     URL string, compared by code point so the order is the same on every
+     run. Before 1.8 the sort was class then URL and vendor pages were
+     eligible, so on Mark43 the eight slots went to the vendor's own pages
+     while the retrieved contract-termination and lawsuit stories, class 3
+     like the vendor pages, lost on the URL string (gauntlet round 2,
+     2026-09-01). The flag orders and marks; it is never a finding and
+     never reaches the tier inputs. */
   const usedUrls = new Set<string>([
     ...ledger.flatMap((r) => r.sources.map((s) => s.url)),
     ...manualChecks.flatMap((m) => (m.link ? [m.link] : [])),
@@ -1731,19 +1749,29 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
     ...people.map((p) => p.name),
     vendorName,
   ];
-  const leads: LeadRef[] = [];
-  const sortedCitations = [...citations].sort(
-    (a, b) => a.domain_class - b.domain_class || a.url.localeCompare(b.url),
-  );
-  for (const c of sortedCitations) {
-    if (leads.length >= 8) break;
+  const vendorDomains = input.vendor_domains ?? extract.domains;
+  const byCodePoint = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
+  const leadSeen = new Set<string>();
+  const leadCandidates: { c: Citation; retrieved: boolean; subject: string; adverse: boolean }[] = [];
+  for (const c of citations) {
     if (c.domain_class === 4) continue;
-    if (usedUrls.has(c.url)) continue;
+    if (usedUrls.has(c.url) || leadSeen.has(c.url)) continue;
+    if (isVendorHost(c.url, vendorDomains)) continue;
     const retrieved = c.title !== null || c.cited_text !== null;
     const subject = leadSubjects.find((s) =>
       retrieved ? contentMentions(c, s) || urlMentions(c.url, s) : urlMentions(c.url, s),
     );
     if (!subject) continue;
+    leadSeen.add(c.url);
+    leadCandidates.push({ c, retrieved, subject, adverse: adverseHeadlineHit(c.title) });
+  }
+  leadCandidates.sort(
+    (a, b) =>
+      Number(b.adverse) - Number(a.adverse) ||
+      a.c.domain_class - b.c.domain_class ||
+      byCodePoint(a.c.url, b.c.url),
+  );
+  const leads: LeadRef[] = leadCandidates.slice(0, 8).map(({ c, retrieved, subject, adverse }) => {
     const classPhrase =
       c.domain_class === 1
         ? "an official government source"
@@ -1753,16 +1781,20 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
     const channelPhrase = retrieved
       ? "Read during research"
       : "Surfaced during research but not opened";
+    /* A headline that trips the banned-word lint is withheld (the link
+       still renders as its URL); the flag stands, because the match was
+       made on the retrieved headline and the label is fixed copy. */
     const cleanTitle =
       c.title && lintText(c.title).some((v) => v.kind === "banned") ? null : c.title;
-    leads.push({
+    return {
       url: c.url,
       title: cleanTitle,
       retrieved_at: c.retrieved_at,
       source_class: c.domain_class as 1 | 2 | 3,
       note: `${channelPhrase}: mentions ${subject}. This is ${classPhrase}.`.slice(0, 200),
-    });
-  }
+      ...(adverse ? { flag: "adverse_headline" as const } : {}),
+    };
+  });
 
   /* Source accounting (structuring invariant): every class 1-2 citation
      lands in exactly one bucket — attached to a row or card, surfaced as

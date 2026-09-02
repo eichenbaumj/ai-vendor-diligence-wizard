@@ -7,4 +7,4 @@
   frontend through @shared. Bump it only with a methodology + changelog
   entry in the same commit (CLAUDE.md).
 */
-export const METHODOLOGY_VERSION = "1.7";
+export const METHODOLOGY_VERSION = "1.8";

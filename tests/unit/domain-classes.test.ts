@@ -8,7 +8,28 @@ import {
   BLOCKED_SEARCH_DOMAINS,
   canVerify,
   classifyDomain,
+  isVendorHost,
 } from "@shared/domain-classes.ts";
+
+describe("isVendorHost: the vendor's own pages by host", () => {
+  const domains = ["AcmeAI.example.com", "www.acme-ai.example.net", " ", ""];
+  it("matches the host and its subdomains, www stripped on both sides", () => {
+    expect(isVendorHost("https://acmeai.example.com/x", domains)).toBe(true);
+    expect(isVendorHost("https://www.acmeai.example.com/x", domains)).toBe(true);
+    expect(isVendorHost("https://trust.acmeai.example.com/", domains)).toBe(true);
+    expect(isVendorHost("https://acme-ai.example.net/blog", domains)).toBe(true);
+  });
+  it("never matches a lookalike, a suffix overlap, or an unparseable URL", () => {
+    expect(isVendorHost("https://notacmeai.example.com/", domains)).toBe(false);
+    expect(isVendorHost("https://acmeai.example.com.evil.test/", domains)).toBe(false);
+    expect(isVendorHost("https://www.itnews.com.au/acmeai", domains)).toBe(false);
+    expect(isVendorHost("not a url", domains)).toBe(false);
+    expect(isVendorHost("https://acmeai.example.com/", [])).toBe(false);
+  });
+  it("classifyDomain agrees: a vendor host is class 3 whatever its TLD", () => {
+    expect(classifyDomain("https://acmeai.example.gov/", ["acmeai.example.gov"])).toBe(3);
+  });
+});
 
 describe("classifyDomain: Class 1 (official / registry)", () => {
   const class1 = [

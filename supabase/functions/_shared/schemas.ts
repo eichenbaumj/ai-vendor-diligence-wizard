@@ -385,6 +385,13 @@ export const LeadRef = z.object({
   retrieved_at: z.string(),
   source_class: z.union([z.literal(1), z.literal(2), z.literal(3)]),
   note: z.string().max(200),
+  /* Set by code when the retrieved headline contains a word from the fixed
+     dispute list (adverse-lexicon.ts). A keyword, never prose: the reader-
+     facing label is a fixed sentence in the frontend, so no model text and
+     no headline word reaches the report through this field. Orders the
+     list; never a finding, never tier-bearing. Optional: older reports
+     lack it. */
+  flag: z.literal("adverse_headline").optional(),
 });
 export type LeadRef = z.infer<typeof LeadRef>;
 

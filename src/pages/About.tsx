@@ -22,8 +22,8 @@ export default function About() {
           A free check, from people who want government technology to work.
         </h1>
         <p className="mt-5 max-w-2xl font-sans text-lg leading-relaxed">
-          The AI Vendor Diligence Wizard is built by 17A and the Center for
-          Civic Futures. We are genuinely excited about what new AI tools can
+          The AI Vendor Diligence Wizard is built by 17A with New America.
+          We are genuinely excited about what new AI tools can
           do for state and local government, and we know what it is like to
           buy them right now. So we built the first hour of diligence and made
           it free.
@@ -62,9 +62,9 @@ export default function About() {
             <h2 className={BLOCK_HEADING}>Who we are</h2>
             <p className={BLOCK_BODY}>
               17A is a consulting firm that works with state and local
-              governments on technology and data. The Center for Civic Futures
-              convenes public-sector technology leaders around the healthy use
-              of new tools.
+              governments on technology and data. New America is a
+              nonpartisan think tank in Washington, D.C. that works on
+              technology and public policy.
             </p>
             <div className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-4">
               <a href="https://group17a.com" aria-label="17A">
@@ -74,13 +74,17 @@ export default function About() {
                   className="h-9 w-auto"
                 />
               </a>
-              {/* Text lockup until the CCF logo file is delivered (same
-                  standing TODO as the footer). */}
-              <span className="border-l border-brand-silver pl-6 font-serif text-lg font-bold leading-snug text-brand-ink">
-                Center for
-                <br />
-                Civic Futures
-              </span>
+              <a
+                href="https://www.newamerica.org/"
+                aria-label="New America"
+                className="border-l border-brand-silver pl-6"
+              >
+                <img
+                  src="/brand-newamerica-ink.svg"
+                  alt="New America"
+                  className="h-8 w-auto"
+                />
+              </a>
             </div>
           </div>
 

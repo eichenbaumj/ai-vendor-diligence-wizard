@@ -65,13 +65,13 @@ export function SiteFooter() {
           </h2>
           <div className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-4">
             <img src="/brand-17a-white.svg" alt="17A" className="h-8 w-auto" />
-            {/* TODO: swap this text lockup for the Center for Civic Futures
-                logo file once delivered. */}
-            <span className="border-l border-white/25 pl-6 font-serif text-lg font-bold leading-snug text-white">
-              Center for
-              <br />
-              Civic Futures
-            </span>
+            <a
+              href="https://www.newamerica.org/"
+              aria-label="New America"
+              className="border-l border-white/25 pl-6"
+            >
+              <img src="/brand-newamerica-white.svg" alt="New America" className="h-7 w-auto" />
+            </a>
           </div>
         </div>
       </div>

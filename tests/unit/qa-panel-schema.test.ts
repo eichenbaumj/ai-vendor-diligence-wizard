@@ -211,7 +211,7 @@ describe("tests/qa/panel/synthetic.panel.json", () => {
     const parsed = PanelFile.safeParse(raw);
     expect(parsed.success).toBe(true);
     if (parsed.success) {
-      expect(parsed.data.panel_version).toBe("2026-09-01");
+      expect(parsed.data.panel_version).toBe("2026-09-02");
       expect(parsed.data.entries).toHaveLength(9);
       expect(panelProblems(parsed.data, { isPublicFile: true })).toEqual([]);
     }

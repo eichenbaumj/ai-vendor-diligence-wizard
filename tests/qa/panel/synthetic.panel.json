@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "panel_version": "2026-09-01",
+  "panel_version": "2026-09-02",
   "entries": [
     {
       "id": "control-civreply",
@@ -72,9 +72,9 @@
       "evidence_links": [],
       "added": "2026-08-29",
       "calibrated_against": {
-        "methodology_version": "1.6",
+        "methodology_version": "1.7",
         "runs": 3,
-        "last_calibrated": "2026-09-01"
+        "last_calibrated": "2026-09-02"
       },
       "expectations_status": "calibrated",
       "notes": "Calibrated against 1.3 live output (4 L1 observations 2026-08-29, all tier 1 with sourcewell AND govramp CONTRADICTED rows): govramp promoted to hard alongside sourcewell per the 3-observation rule."
@@ -107,9 +107,9 @@
       "evidence_links": [],
       "added": "2026-08-29",
       "calibrated_against": {
-        "methodology_version": "1.6",
+        "methodology_version": "1.7",
         "runs": 3,
-        "last_calibrated": "2026-09-01"
+        "last_calibrated": "2026-09-02"
       },
       "expectations_status": "calibrated",
       "notes": "Calibrated against 1.3 (3 post-deploy observations, tier 0 complete every run, non-adverse language eye-confirmed). Tight 0..0 band is deliberately hard, like civreply's 1..1: a fictional clean startup moving off tier 0 means the identity gate changed. First-observation history: the authored never-at-or-below-0 floor was removed 2026-08-29 as impossible by design (Joe approved)."
@@ -141,9 +141,9 @@
       "evidence_links": [],
       "added": "2026-08-29",
       "calibrated_against": {
-        "methodology_version": "1.6",
+        "methodology_version": "1.7",
         "runs": 3,
-        "last_calibrated": "2026-09-01"
+        "last_calibrated": "2026-09-02"
       },
       "expectations_status": "calibrated",
       "notes": "Calibrated against 1.3: terminated complete at or below tier 1 in all 3 post-deploy observations."
@@ -178,9 +178,9 @@
       "evidence_links": [],
       "added": "2026-08-29",
       "calibrated_against": {
-        "methodology_version": "1.6",
+        "methodology_version": "1.7",
         "runs": 3,
-        "last_calibrated": "2026-09-01"
+        "last_calibrated": "2026-09-02"
       },
       "expectations_status": "calibrated",
       "notes": "Calibrated against 1.3 (3 clean post-deploy observations; ADV code present, never out-tiered the clean twin)."
@@ -215,9 +215,9 @@
       "evidence_links": [],
       "added": "2026-08-29",
       "calibrated_against": {
-        "methodology_version": "1.6",
+        "methodology_version": "1.7",
         "runs": 3,
-        "last_calibrated": "2026-09-01"
+        "last_calibrated": "2026-09-02"
       },
       "expectations_status": "calibrated",
       "notes": "Stays calibrating: the quarantined S1 extractor nondeterministically refuses this fixture (~1 in 5 observed 2026-08-29: 1 insufficient in 5 runs; 'The pitch could not be parsed'). Graceful refusal, payload never leaks, but the hard status expectation will intermittently fail until the parse-refusal is fixed (Session B basket). Each occurrence: rerun the cell, do not enshrine."
@@ -252,9 +252,9 @@
       "evidence_links": [],
       "added": "2026-08-29",
       "calibrated_against": {
-        "methodology_version": "1.6",
+        "methodology_version": "1.7",
         "runs": 3,
-        "last_calibrated": "2026-09-01"
+        "last_calibrated": "2026-09-02"
       },
       "expectations_status": "calibrated",
       "notes": "Calibrated against 1.3 (3 clean post-deploy observations; ADV code present, never out-tiered the clean twin)."
@@ -310,9 +310,9 @@
       "evidence_links": [],
       "added": "2026-08-29",
       "calibrated_against": {
-        "methodology_version": "1.6",
+        "methodology_version": "1.7",
         "runs": 3,
-        "last_calibrated": "2026-09-01"
+        "last_calibrated": "2026-09-02"
       },
       "expectations_status": "calibrated",
       "notes": "Calibrated against 1.3: txramp (HIGH, lag caveat) and govramp (CRITICAL) CONTRADICTED rows appeared in all 3 post-deploy observations; both promoted to hard."
@@ -382,9 +382,9 @@
       "evidence_links": [],
       "added": "2026-08-29",
       "calibrated_against": {
-        "methodology_version": "1.4",
+        "methodology_version": "1.7",
         "runs": 3,
-        "last_calibrated": "2026-08-31"
+        "last_calibrated": "2026-09-02"
       },
       "expectations_status": "calibrated",
       "notes": "PDF twin of control-civreply; calibrated against 1.3 (3 post-deploy observations), govramp promoted to hard. Band stays 1..2 soft pending a longer history before tightening to 1..1. STAYS CALIBRATING 2026-09-01 (v1.6): PDF extraction claim-omission variance persists (sourcewell claim dropped ~1-in-5 sweeps; text layer verified clean, verbatim guard verified passing, so the omission is model-side). Queued engine item: extraction determinism (temperature 0 on S1). Hard assertions still enforce every run."
@@ -416,9 +416,9 @@
       "evidence_links": [],
       "added": "2026-08-29",
       "calibrated_against": {
-        "methodology_version": "1.4",
+        "methodology_version": "1.7",
         "runs": 3,
-        "last_calibrated": "2026-08-31"
+        "last_calibrated": "2026-09-02"
       },
       "expectations_status": "calibrated",
       "notes": "Calibrated against 1.3 (3 clean post-deploy observations; ADV code present, never out-tiered the clean twin). STAYS CALIBRATING 2026-09-01 (v1.6): PDF extraction claim-omission variance persists (sourcewell claim dropped ~1-in-5 sweeps; text layer verified clean, verbatim guard verified passing, so the omission is model-side). Queued engine item: extraction determinism (temperature 0 on S1). Hard assertions still enforce every run."

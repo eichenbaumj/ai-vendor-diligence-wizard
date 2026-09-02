@@ -10,7 +10,17 @@
   - cobalt #1F1FD6 on white 9.44:1, on cream #FAF5E4 8.65:1 — AA/AAA pass
   - charcoal #3B3B3B on white 11.2:1 — pass
   - carolina #21A8E0 on white 2.71:1 — FAILS AA for text; decorative use only
+  - steel #878786 on cream 3.3:1, on white 3.6:1 — FAILS AA for text at any
+    size used here; steel is for strokes, borders and glyphs only. Secondary
+    text (labels, kickers, counters, mono meta) uses charcoal-soft #5A5A5A:
+    6.3:1 on cream, 6.9:1 on white, 5.8:1 on cream-deep, 6.1:1 on vellum
+  - status-warn #A36505 on white 4.75:1 passes, but on status-warn-soft
+    #FBF2E2 it is 4.3:1 — FAILS AA. Text set on the soft tint uses
+    status-warn-text #8A5504: 5.6:1 on the soft, 6.2:1 on white
   - verdict tiers are never color alone: always color + icon + label
+
+  Element rules live in @layer base so a per-element utility (text-brand-cobalt
+  on an h2, text-white on an h1) wins over the heading default, as intended.
 */
 
 @font-face {
@@ -88,6 +98,7 @@
   --color-status-good-soft: #e6f4ec;
   --color-status-warn: #a36505;
   --color-status-warn-soft: #fbf2e2;
+  --color-status-warn-text: #8a5504; /* warn text on the soft tint, AA 5.6:1 */
   --color-status-bad: #b32d2d;
   --color-status-bad-soft: #fae6e6;
 
@@ -130,29 +141,32 @@
   --foreground: var(--color-brand-charcoal);
 }
 
-html,
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-sans);
-  font-feature-settings: "kern" 1, "liga" 1, "calt" 1;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
+@layer base {
+  html,
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    font-feature-settings: "kern" 1, "liga" 1, "calt" 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
 
-h1,
-h2,
-h3,
-h4,
-h5 {
-  font-family: var(--font-serif);
-  letter-spacing: -0.015em;
-  /* Dark color-blocked sections set --heading-color: #fff on their wrapper. */
-  color: var(--heading-color, var(--color-brand-ink));
-}
+  h1,
+  h2,
+  h3,
+  h4,
+  h5 {
+    font-family: var(--font-serif);
+    letter-spacing: -0.015em;
+    /* Dark color-blocked sections set --heading-color: #fff on their wrapper;
+       a color utility on the element itself beats this default. */
+    color: var(--heading-color, var(--color-brand-ink));
+  }
 
-button {
-  font-family: inherit;
+  button {
+    font-family: inherit;
+  }
 }
 
 /* Ambient dot-grid texture (brand pattern 01, circles). */

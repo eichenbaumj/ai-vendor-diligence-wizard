@@ -28,6 +28,8 @@ import {
   FEDRAMP_SCENARIOS,
   HONESTY_GROUP_LABELS,
   HOW_IT_WORKS_METHODOLOGY_VERSION,
+  POINTS,
+  POINT_GROUPS,
   REGISTRY_LANES,
   ROW_RESULT_LABELS,
   SOURCE_CLASSES,
@@ -148,6 +150,12 @@ describe("2. tier labels, presets, ladder, and cap", () => {
     expect(capExplanation(tierScenarioToInputs({ ...TIER_DEFAULT, adv: "web" }).adv_findings)).toMatch(/never moves the tier/);
   });
 
+  it("the three point groups cover the seven points once each, in order", () => {
+    expect(POINT_GROUPS.flatMap((g) => g.points.map((p) => p.id))).toEqual(POINTS.map((p) => p.id));
+    expect(POINT_GROUPS.map((g) => g.points.length)).toEqual([2, 4, 1]);
+    expect(POINTS).toHaveLength(7);
+  });
+
   it("the 'nothing to research' preset still earns the no-open-finding point", () => {
     const p = TIER_PRESETS.find((x) => x.id === "nothing")!;
     expect(runTier(p.scenario).decision.checks_met.met).toBe(1);
@@ -218,6 +226,15 @@ describe("3. the credit rule and its truth table", () => {
     }
     /* Every row in the table is reachable from the controls. */
     for (const row of TRUTH_TABLE) expect(seen.has(row.id), row.id).toBe(true);
+  });
+
+  it("effect tiles take their tone from meaning: a warning that can fire is never the good tone", () => {
+    for (const s of everyCreditScenario()) {
+      const [identity, green, warning] = runCredit(s).effects;
+      expect(identity.tone).toBe(identity.answer === "Yes" ? "good" : "muted");
+      expect(green.tone).toBe(green.answer === "Yes" ? "good" : "muted");
+      expect(warning.tone).toBe(warning.answer === "No" ? "muted" : "warn");
+    }
   });
 
   it("an ended registration is never shown as a green Verified row, and a candidate never arms a warning", () => {

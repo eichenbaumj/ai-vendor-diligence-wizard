@@ -9,10 +9,10 @@ export function SiteHeader() {
   return (
     <header className="no-print sticky top-0 z-40 border-b border-brand-ink/10 bg-brand-cream/95 backdrop-blur-sm">
       <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-5 py-3.5 md:px-8">
-        <span className="flex items-center gap-3">
+        <span className="flex min-w-0 items-center gap-3">
           <Link
             to="/"
-            className="flex items-center gap-2.5 font-serif text-lg font-bold leading-tight text-brand-ink no-underline md:text-xl"
+            className="flex items-center gap-2.5 whitespace-nowrap font-serif text-lg font-bold leading-tight text-brand-ink no-underline md:text-xl"
           >
             <img
               src="/brand-17a-cobalt.svg"
@@ -26,14 +26,14 @@ export function SiteHeader() {
           </Link>
           {IS_MOCK && (
             <span
-              className="rounded-pill border border-status-warn bg-status-warn-soft px-2.5 py-0.5 font-sans text-xs font-bold uppercase tracking-wide text-status-warn"
+              className="hidden rounded-pill border border-status-warn bg-status-warn-soft px-2.5 py-0.5 font-sans text-xs font-bold uppercase tracking-wide text-status-warn-text sm:inline-block"
               title="The live research engine is not connected. Evaluations replay fictional sample reports."
             >
               Preview
             </span>
           )}
         </span>
-        <nav aria-label="Main" className="flex items-center gap-3 md:gap-7">
+        <nav aria-label="Main" className="flex shrink-0 items-center gap-3 md:gap-7">
           <Link to="/methodology" className={`hidden lg:block ${NAV_LINK}`}>
             Methodology
           </Link>
@@ -43,13 +43,17 @@ export function SiteHeader() {
           <Link to="/your-data" className={`hidden md:block ${NAV_LINK}`}>
             Your data
           </Link>
-          {/* Purpose and attribution stay reachable without scrolling, on
-              every page and every screen size. */}
-          <Link to="/about" className={NAV_LINK}>
-            <span className="sm:hidden">Why</span>
-            <span className="hidden sm:inline">Why we made this</span>
+          {/* Purpose and attribution stay reachable without scrolling from
+              sm up. Below sm the row is logo, title and the one button, so
+              nothing wraps at 375px; /about stays one tap away in the footer. */}
+          <Link to="/about" className={`hidden sm:block ${NAV_LINK}`}>
+            Why we made this
           </Link>
-          <PillButton to="/check" size="md">
+          <PillButton
+            to="/check"
+            size="md"
+            className="shrink-0 max-sm:px-4 max-sm:py-2 max-sm:text-sm"
+          >
             Check a pitch
           </PillButton>
         </nav>

@@ -16,8 +16,10 @@ export interface PillButtonProps {
   children: ReactNode;
 }
 
+/* A pill never wraps: a wrapped pill collapses into a circle. Labels are
+   short by contract, so nowrap costs nothing. */
 const BASE =
-  "inline-flex items-center justify-center gap-2 rounded-pill font-sans font-bold no-underline transition-[background-color,color,opacity] duration-150 select-none";
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-pill font-sans font-bold no-underline transition-[background-color,color,opacity] duration-150 select-none";
 
 const SIZES: Record<PillButtonSize, string> = {
   md: "px-6 py-2.5 text-base",

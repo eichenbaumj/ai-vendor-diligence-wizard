@@ -6,8 +6,11 @@
   Layout rules (Joe, 2026-09-01): one typographic hierarchy, a consistent
   spacing rhythm, no abutting or overlapping elements, AA contrast, no text
   overflow, connectors that never cross text, the pipeline legible at 13px
-  in an 1100-wide viewBox and stacked cleanly at 375px. Colors come from the
-  brand tokens in brand.css; SVG uses currentColor and token classes only.
+  in a viewBox about 1150 wide and stacked cleanly at 375px. Colors come from
+  the brand tokens in brand.css; SVG uses currentColor and token classes only.
+  Heading color is a utility on the element (brand.css keeps its heading
+  default in @layer base). Secondary text is charcoal-soft; steel is for
+  strokes, borders and the unfilled pip glyph only, since it fails AA as text.
 */
 import {
   useEffect,
@@ -41,7 +44,7 @@ import {
   LANE_LEGEND,
   PART_LEADS,
   PART_SCREEN,
-  POINTS,
+  POINT_GROUPS,
   REGISTRY_LANES,
   REPORT_PARTS,
   SECTIONS,
@@ -84,12 +87,11 @@ const REPO = "https://github.com/eichenbaumj/ai-vendor-diligence-wizard/blob/mai
 
 const KICKER =
   "flex items-baseline gap-3 font-sans text-sm font-bold tracking-[0.14em] [font-variant-caps:all-small-caps] text-brand-cobalt";
-const KICKER_N = "font-mono text-[13px] font-medium tracking-normal text-brand-steel";
+const KICKER_N = "font-mono text-[13px] font-medium tracking-normal text-brand-charcoal-soft";
 const H2 = "mt-4 max-w-3xl font-serif text-[clamp(1.9rem,3.4vw,2.75rem)] font-bold leading-tight text-brand-cobalt";
-const INTRO = "mt-5 max-w-3xl font-sans text-lg leading-relaxed";
-const LABEL = "font-sans text-sm font-bold tracking-[0.1em] [font-variant-caps:all-small-caps] text-brand-steel";
+const INTRO = "mt-5 max-w-2xl font-sans text-lg leading-relaxed";
+const LABEL = "font-sans text-sm font-bold tracking-[0.1em] [font-variant-caps:all-small-caps] text-brand-charcoal-soft";
 const CARD = "rounded-md border border-brand-silver-soft bg-white p-6 shadow-soft";
-const LIGHT = "[--heading-color:var(--color-brand-cobalt)]";
 const INLINE_LINK =
   "font-medium text-brand-cobalt underline decoration-brand-carolina decoration-2 underline-offset-2 hover:decoration-brand-cobalt";
 
@@ -112,7 +114,7 @@ const LANE_CHIP: Record<Lane, string> = {
 function WhoChip({ lane }: { lane: Lane }) {
   return (
     <span
-      className={`inline-flex items-center gap-2 rounded-pill px-3 py-1 font-sans text-xs font-bold uppercase tracking-wide ${LANE_CHIP[lane]}`}
+      className={`inline-flex items-center gap-2 rounded-pill px-3 py-1 font-sans text-[11px] font-bold uppercase tracking-wide ${LANE_CHIP[lane]}`}
     >
       <LaneSwatch lane={lane} />
       {WHO_CHIP[lane]}
@@ -259,7 +261,7 @@ function Token({ tone, children }: { tone: "good" | "warn" | "muted" | "cobalt";
     tone === "good"
       ? "bg-status-good-soft text-status-good"
       : tone === "warn"
-        ? "bg-status-warn-soft text-status-warn"
+        ? "bg-status-warn-soft text-status-warn-text"
         : tone === "cobalt"
           ? "bg-brand-cobalt-100 text-brand-cobalt"
           : "bg-brand-vellum text-brand-charcoal-soft";
@@ -274,35 +276,31 @@ function Token({ tone, children }: { tone: "good" | "warn" | "muted" | "cobalt";
 
 /* ------------------------------------------------------------------ hero */
 
-function DoorIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-6 w-6 shrink-0" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
-      <path d="M4 21V5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v16" />
-      <path d="M4 21h16" />
-      <path d="M9 21V9h6v12" />
-    </svg>
-  );
-}
+/* The dot pattern fades toward the title and the fold instead of ending at
+   a box edge: two gradients intersected with the pattern mask. */
+const PATTERN_MASK = "url(/brand-pattern-01-mixed.svg), linear-gradient(to bottom, #000 45%, transparent 100%), linear-gradient(to right, transparent 0%, #000 30%)";
 
 function Hero() {
   return (
     <Section tone="cobalt" className="relative overflow-hidden">
       {/* Decoration only: the 17A mixed-dot pattern, masked so it takes the
-          field's text color at low opacity. Hidden below lg, where the
-          title block spans the full width. */}
+          field's text color at low opacity and dissolves at its edges.
+          Hidden below lg, where the title block spans the full width. */}
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute right-0 top-0 hidden h-[320px] w-[34%] bg-current opacity-[0.16] lg:block"
+        className="pointer-events-none absolute right-0 top-0 hidden h-[560px] w-[38%] bg-current opacity-[0.16] lg:block"
         style={{
           color: "#fff",
-          maskImage: "url(/brand-pattern-01-mixed.svg)",
-          WebkitMaskImage: "url(/brand-pattern-01-mixed.svg)",
-          maskSize: "cover",
-          WebkitMaskSize: "cover",
+          maskImage: PATTERN_MASK,
+          WebkitMaskImage: PATTERN_MASK,
+          maskSize: "cover, 100% 100%, 100% 100%",
+          WebkitMaskSize: "cover, 100% 100%, 100% 100%",
           maskRepeat: "no-repeat",
           WebkitMaskRepeat: "no-repeat",
           maskPosition: "left top",
           WebkitMaskPosition: "left top",
+          maskComposite: "intersect",
+          WebkitMaskComposite: "source-in",
         }}
       />
       <div className="relative">
@@ -325,7 +323,11 @@ function Hero() {
           {HERO.lanes.map((lane) => (
             <div key={lane.id} className="rounded-md border border-white/20 bg-white/10 p-5">
               <div className="flex items-center gap-3">
-                <span aria-hidden="true" className={`h-3 w-3 rounded-sm ${lane.id === "ai" ? "bg-brand-carolina" : lane.id === "code" ? "bg-white" : "bg-brand-cream"}`} />
+                {/* The legend's own swatch on a white chip, so the key learned
+                    here is the key the diagram uses. */}
+                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-sm bg-white">
+                  <LaneSwatch lane={lane.id as Lane} />
+                </span>
                 <h2 className="font-serif text-xl font-bold leading-snug">{lane.title}</h2>
               </div>
               <ul className="mt-4 space-y-2.5 font-sans text-base leading-relaxed text-brand-cobalt-100">
@@ -348,14 +350,11 @@ function Hero() {
               <ol className="mt-5 space-y-4">
                 {HERO.wall.doors.map((door, i) => (
                   <li key={door.id} className="flex gap-4">
-                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-brand-carolina/70 text-brand-carolina">
-                      <DoorIcon />
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-brand-carolina/70 font-mono text-base font-bold text-brand-carolina">
+                      {i + 1}
                     </span>
                     <div>
-                      <p className="font-sans text-base font-bold">
-                        <span className="font-mono text-[13px] font-medium text-brand-carolina">{i + 1}</span>{" "}
-                        {door.label}
-                      </p>
+                      <p className="font-sans text-base font-bold">{door.label}</p>
                       <p className="mt-1 font-sans text-base leading-relaxed text-brand-cobalt-100">{door.text}</p>
                     </div>
                   </li>
@@ -367,8 +366,8 @@ function Hero() {
                 {HERO.wall.neverTitle}
               </h3>
               <ul className="mt-3 grid gap-x-4 gap-y-2 font-sans text-base font-medium sm:grid-cols-2">
-                {HERO.wall.never.map((n) => (
-                  <li key={n} className="flex items-baseline gap-2">
+                {HERO.wall.never.map((n, i) => (
+                  <li key={n} className={`flex items-baseline gap-2 ${i === HERO.wall.never.length - 1 ? "sm:col-span-2" : ""}`}>
                     <span aria-hidden="true" className="text-brand-carolina">×</span>
                     {n}
                   </li>
@@ -410,20 +409,28 @@ function nodeProps(stage: Stage, selected: boolean, onSelect: (id: Stage["id"]) 
 }
 
 function PipelineWide({ selected, onSelect }: { selected: Stage["id"]; onSelect: (id: Stage["id"]) => void }) {
-  const W = 1100;
-  const PAD = 10;
-  const GAP = 10;
-  const GAP_B = 22; /* the wider gap that holds gate B */
+  /* Node geometry. Every gap that holds a gate is GAP_G wide, so the r=9
+     circle clears both node edges by 6 and the dashed tier box (inset
+     BOX_IN) by 2. The gap into the verdict node is GAP + 4, so its arrow can
+     stop on the dashed box instead of crossing it. W follows from the sum. */
+  const PAD = 6;
+  const GAP = 8;
+  const GAP_G = 30;
   const NW = 67;
+  const BOX_IN = 4;
   const AI_Y = 36;
   const CODE_Y = 142;
   const NH = 64;
   const DIV = 121;
   const H = 246;
-  const xs = STAGES.map((_, i) => PAD + i * (NW + GAP) + (i >= 3 ? GAP_B - GAP : 0));
-  const gateX = (fromIdx: number) => xs[fromIdx] + NW + (fromIdx === 2 ? GAP_B : GAP) / 2;
-  const laneY = (lane: Lane) => (lane === "ai" ? AI_Y + NH / 2 : CODE_Y + NH / 2);
   const gates = new Map(WALL_GATES.map((g) => [g.from, g]));
+  const gapAfter = (i: number) =>
+    gates.has(STAGES[i].id) ? GAP_G : STAGES[i + 1]?.id === "verdict" ? GAP + BOX_IN : GAP;
+  const xs: number[] = [];
+  for (let i = 0; i < STAGES.length; i++) xs.push(i === 0 ? PAD : xs[i - 1] + NW + gapAfter(i - 1));
+  const W = xs[STAGES.length - 1] + NW + PAD;
+  const gateX = (fromIdx: number) => xs[fromIdx] + NW + GAP_G / 2;
+  const laneY = (lane: Lane) => (lane === "ai" ? AI_Y + NH / 2 : CODE_Y + NH / 2);
   const idx = (id: Stage["id"]) => STAGES.findIndex((s) => s.id === id);
   const titleId = "hiw-wide-title";
   const descId = "hiw-wide-desc";
@@ -441,10 +448,15 @@ function PipelineWide({ selected, onSelect }: { selected: Stage["id"]; onSelect:
         <marker id="hiw-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
           <path d="M 0 0 L 10 5 L 0 10 z" className="fill-brand-steel" />
         </marker>
+        <clipPath id="hiw-wide-field">
+          <rect x={0} y={0} width={W} height={H} rx={6} />
+        </clipPath>
       </defs>
-      {/* lane bands */}
-      <rect x={0} y={0} width={W} height={DIV} rx={6} className="fill-brand-carolina-50" />
-      <rect x={0} y={DIV} width={W} height={H - DIV} rx={6} className="fill-brand-cobalt-50" />
+      {/* lane bands, painted inside one rounded field so the divider ends without a notch */}
+      <g clipPath="url(#hiw-wide-field)">
+        <rect x={0} y={0} width={W} height={DIV} className="fill-brand-carolina-50" />
+        <rect x={0} y={DIV} width={W} height={H - DIV} className="fill-brand-cobalt-50" />
+      </g>
       <line x1={0} y1={DIV} x2={W} y2={DIV} strokeWidth={2} strokeDasharray="6 5" className="stroke-brand-deepblue" />
       <text x={PAD} y={18} fontSize={13} fontWeight={700} className={`${T} fill-brand-charcoal`} style={{ fontVariantCaps: "all-small-caps", letterSpacing: "0.08em" }}>
         {LANE_LEGEND.ai}
@@ -458,7 +470,8 @@ function PipelineWide({ selected, onSelect }: { selected: Stage["id"]; onSelect:
         const next = STAGES[i + 1];
         const gate = gates.get(s.id);
         const x1 = xs[i] + NW;
-        const x2 = xs[i + 1] - 1;
+        /* The arrow into the verdict node stops on the dashed tier box. */
+        const x2 = xs[i + 1] - (next.id === "verdict" ? BOX_IN + 1 : 1);
         let d: string;
         if (gate && gate.to === next.id) {
           const yFrom = laneY(s.lane === "both" || s.lane === "you" ? "code" : s.lane);
@@ -477,7 +490,7 @@ function PipelineWide({ selected, onSelect }: { selected: Stage["id"]; onSelect:
         const i = idx("verdict");
         return (
           <g aria-hidden="true">
-            <rect x={xs[i] - 5} y={CODE_Y - 6} width={NW + 10} height={NH + 12} rx={8} fill="none" strokeWidth={1.5} strokeDasharray="5 4" className="stroke-brand-cobalt" />
+            <rect x={xs[i] - BOX_IN} y={CODE_Y - BOX_IN} width={NW + 2 * BOX_IN} height={NH + 2 * BOX_IN} rx={10} fill="none" strokeWidth={1.5} strokeDasharray="5 4" className="stroke-brand-cobalt" />
             <text x={xs[i] + NW / 2} y={H - 12} fontSize={13} fontWeight={700} textAnchor="middle" className={`${T} fill-brand-cobalt`}>
               {TIER_SET_HERE.join(" ")}
             </text>
@@ -543,7 +556,7 @@ function PipelineWide({ selected, onSelect }: { selected: Stage["id"]; onSelect:
         const gx = gateX(idx(g.from));
         return (
           <g key={g.id} aria-hidden="true">
-            <circle cx={gx} cy={DIV} r={10} className="fill-brand-deepblue" />
+            <circle cx={gx} cy={DIV} r={9} className="fill-brand-deepblue" />
             <text x={gx} y={DIV + 5} fontSize={13} fontWeight={700} textAnchor="middle" className={`${T} fill-white`}>{g.id}</text>
           </g>
         );
@@ -553,14 +566,19 @@ function PipelineWide({ selected, onSelect }: { selected: Stage["id"]; onSelect:
 }
 
 function PipelineNarrow({ selected, onSelect }: { selected: Stage["id"]; onSelect: (id: Stage["id"]) => void }) {
+  /* One-line labels in 146-wide boxes. PITCH - NH = 28 holds the r=9 gate
+     circle with 5 clear above and below; the dashed tier box (inset BOX_IN)
+     stays 2 clear of gate C. */
   const W = 320;
   const AI_X = 6;
   const CODE_X = 168;
   const CW = 146;
+  const INSET = 10;
   const DIV = 160;
   const Y0 = 30;
-  const NH = 48;
-  const PITCH = 68;
+  const NH = 44;
+  const PITCH = 72;
+  const BOX_IN = 3;
   const H = Y0 + (STAGES.length - 1) * PITCH + NH + 8;
   const ys = STAGES.map((_, i) => Y0 + i * PITCH);
   const cx = (lane: Lane) => (lane === "ai" ? AI_X + CW / 2 : CODE_X + CW / 2);
@@ -582,9 +600,14 @@ function PipelineNarrow({ selected, onSelect }: { selected: Stage["id"]; onSelec
         <marker id="hiw-arrow-n" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
           <path d="M 0 0 L 10 5 L 0 10 z" className="fill-brand-steel" />
         </marker>
+        <clipPath id="hiw-narrow-field">
+          <rect x={0} y={0} width={W} height={H} rx={6} />
+        </clipPath>
       </defs>
-      <rect x={0} y={0} width={DIV} height={H} rx={6} className="fill-brand-carolina-50" />
-      <rect x={DIV} y={0} width={W - DIV} height={H} rx={6} className="fill-brand-cobalt-50" />
+      <g clipPath="url(#hiw-narrow-field)">
+        <rect x={0} y={0} width={DIV} height={H} className="fill-brand-carolina-50" />
+        <rect x={DIV} y={0} width={W - DIV} height={H} className="fill-brand-cobalt-50" />
+      </g>
       <line x1={DIV} y1={0} x2={DIV} y2={H} strokeWidth={2} strokeDasharray="6 5" className="stroke-brand-deepblue" />
       <text x={AI_X + CW / 2} y={18} fontSize={13} fontWeight={700} textAnchor="middle" className={`${T} fill-brand-charcoal`} style={{ fontVariantCaps: "all-small-caps", letterSpacing: "0.08em" }}>An AI model</text>
       <text x={CODE_X + CW / 2} y={18} fontSize={13} fontWeight={700} textAnchor="middle" className={`${T} fill-brand-charcoal`} style={{ fontVariantCaps: "all-small-caps", letterSpacing: "0.08em" }}>Plain code</text>
@@ -593,7 +616,7 @@ function PipelineNarrow({ selected, onSelect }: { selected: Stage["id"]; onSelec
         const next = STAGES[i + 1];
         const gate = gates.get(s.id);
         const y1 = ys[i] + NH;
-        const y2 = ys[i + 1] - 1;
+        const y2 = ys[i + 1] - (next.id === "verdict" ? BOX_IN + 1 : 1);
         const mid = y1 + (PITCH - NH) / 2;
         let d: string;
         if (gate && gate.to === next.id) {
@@ -611,9 +634,9 @@ function PipelineNarrow({ selected, onSelect }: { selected: Stage["id"]; onSelec
         const i = idx("verdict");
         return (
           <g aria-hidden="true">
-            <rect x={CODE_X - 4} y={ys[i] - 5} width={CW + 8} height={NH + 10} rx={8} fill="none" strokeWidth={1.5} strokeDasharray="5 4" className="stroke-brand-cobalt" />
-            <text x={DIV - 12} y={ys[i] + 20} fontSize={13} fontWeight={700} textAnchor="end" className={`${T} fill-brand-cobalt`}>{TIER_SET_HERE[0]}</text>
-            <text x={DIV - 12} y={ys[i] + 37} fontSize={13} fontWeight={700} textAnchor="end" className={`${T} fill-brand-cobalt`}>{TIER_SET_HERE[1]}</text>
+            <rect x={CODE_X - BOX_IN} y={ys[i] - BOX_IN} width={CW + 2 * BOX_IN} height={NH + 2 * BOX_IN} rx={10} fill="none" strokeWidth={1.5} strokeDasharray="5 4" className="stroke-brand-cobalt" />
+            <text x={DIV - 12} y={ys[i] + 18} fontSize={13} fontWeight={700} textAnchor="end" className={`${T} fill-brand-cobalt`}>{TIER_SET_HERE[0]}</text>
+            <text x={DIV - 12} y={ys[i] + 35} fontSize={13} fontWeight={700} textAnchor="end" className={`${T} fill-brand-cobalt`}>{TIER_SET_HERE[1]}</text>
           </g>
         );
       })()}
@@ -629,11 +652,10 @@ function PipelineNarrow({ selected, onSelect }: { selected: Stage["id"]; onSelec
             <g key={s.id} {...props}>
               <title>{`${s.n}. ${s.title}`}</title>
               <rect x={x} y={y} width={CW} height={NH} rx={8} strokeWidth={sel ? 3 : 1.5} className={`${sel ? f.on : f.idle} ${f.stroke}`} />
-              <text x={x + 12} y={y + 20} fontSize={13} fontWeight={500} className={`${T} fill-brand-charcoal`}>
+              <text x={x + INSET} y={y + 27} fontSize={13} fontWeight={500} className={`${T} fill-brand-charcoal`}>
                 <tspan fontWeight={700} className="fill-brand-cobalt">{s.n}</tspan>
-                {"  "}{s.label[0]}
+                {"  "}{s.label.join(" ")}
               </text>
-              <text x={x + 12} y={y + 37} fontSize={13} fontWeight={500} className={`${T} fill-brand-charcoal`}>{s.label[1]}</text>
             </g>
           );
         }
@@ -643,7 +665,7 @@ function PipelineNarrow({ selected, onSelect }: { selected: Stage["id"]; onSelec
             <g key={s.id} {...props}>
               <title>{`${s.n}. ${s.title}`}</title>
               <rect x={AI_X} y={y} width={w} height={NH} rx={10} strokeWidth={sel ? 3 : 1.5} className="fill-brand-cream-deep stroke-brand-steel" />
-              <text x={DIV} y={y + 29} fontSize={13} fontWeight={500} textAnchor="middle" className={`${T} fill-brand-charcoal`}>
+              <text x={DIV} y={y + 27} fontSize={13} fontWeight={500} textAnchor="middle" className={`${T} fill-brand-charcoal`}>
                 <tspan fontWeight={700} className="fill-brand-cobalt">{s.n}</tspan>
                 {"  "}{s.label.join(" ")}
               </text>
@@ -661,10 +683,10 @@ function PipelineNarrow({ selected, onSelect }: { selected: Stage["id"]; onSelec
               <rect x={DIV} y={y} width={AI_X + w - DIV} height={NH} className="fill-brand-cobalt-100" />
             </g>
             <rect x={AI_X} y={y} width={w} height={NH} rx={10} fill="none" strokeWidth={sel ? 3 : 1.5} className="stroke-brand-deepblue" />
-            <text x={AI_X + 12} y={y + 29} fontSize={13} fontWeight={700} className={`${T} fill-brand-deepblue`}>AI</text>
-            <text x={AI_X + w - 12} y={y + 29} fontSize={13} fontWeight={700} textAnchor="end" className={`${T} fill-brand-cobalt`}>Code</text>
+            <text x={AI_X + 12} y={y + 27} fontSize={13} fontWeight={700} className={`${T} fill-brand-deepblue`}>AI</text>
+            <text x={AI_X + w - 12} y={y + 27} fontSize={13} fontWeight={700} textAnchor="end" className={`${T} fill-brand-cobalt`}>Code</text>
             <rect x={DIV - 72} y={y + 6} width={144} height={NH - 12} rx={7} className={sel ? "fill-brand-vellum" : "fill-white"} />
-            <text x={DIV} y={y + 29} fontSize={13} fontWeight={500} textAnchor="middle" className={`${T} fill-brand-charcoal`}>
+            <text x={DIV} y={y + 27} fontSize={13} fontWeight={500} textAnchor="middle" className={`${T} fill-brand-charcoal`}>
               <tspan fontWeight={700} className="fill-brand-cobalt">{s.n}</tspan>
               {"  "}{s.label.join(" ")}
             </text>
@@ -702,14 +724,14 @@ function StageCard({ stage, standalone }: { stage: Stage; standalone?: boolean }
     <article className={CARD} aria-labelledby={`stage-${stage.id}-h`}>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <WhoChip lane={stage.lane} />
-        <span className="font-mono text-[13px] tabular-nums text-brand-steel">
+        <span className="font-mono text-[13px] tabular-nums text-brand-charcoal-soft">
           {SECTIONS.pipeline.stepOf(stage.n)}
         </span>
       </div>
       <h3 id={`stage-${stage.id}-h`} className={`mt-4 font-serif font-bold leading-snug text-brand-cobalt ${standalone ? "text-2xl" : "text-2xl md:text-3xl"}`}>
         {stage.title}
       </h3>
-      <p className="mt-4 max-w-3xl font-sans text-base leading-relaxed md:text-lg">{stage.plain}</p>
+      <p className="mt-4 max-w-2xl font-sans text-base leading-relaxed md:text-lg">{stage.plain}</p>
 
       <dl className="mt-6 grid gap-6 md:grid-cols-2">
         <div>
@@ -736,7 +758,8 @@ function StageCard({ stage, standalone }: { stage: Stage; standalone?: boolean }
         <p className="mt-2 font-sans text-base leading-relaxed">{stage.inThisCheck}</p>
       </div>
 
-      <div className="mt-6 border-l-4 border-status-warn pl-4">
+      {/* A rule, not an alert: the carolina rule idiom, like the other callouts. */}
+      <div className="mt-6 border-l-4 border-brand-carolina pl-4">
         <p className={LABEL}>{STAGE_FIELD_LABELS.never}</p>
         <p className="mt-1 font-sans text-base leading-relaxed">{stage.never}</p>
       </div>
@@ -804,19 +827,23 @@ function PipelineSection() {
   }, [selected]);
 
   return (
-    <Section tone="cream" id="pipeline" className={LIGHT}>
+    <Section tone="cream" id="pipeline">
       <Kicker n={SECTIONS.pipeline.kicker} text={SECTIONS.pipeline.eyebrow} />
       <h2 className={H2}>{SECTIONS.pipeline.title}</h2>
       <p className={INTRO}>{SECTIONS.pipeline.intro}</p>
-      <p className="mt-2 max-w-3xl font-sans text-base text-brand-charcoal-soft min-[1060px]:hidden">
+      <p className="mt-2 max-w-2xl font-sans text-base text-brand-charcoal-soft min-[1140px]:hidden">
         {SECTIONS.pipeline.narrowIntro}
       </p>
 
-      <div className="mt-10 rounded-md border border-brand-silver-soft bg-white p-1.5 shadow-soft sm:p-3 md:p-4 min-[1180px]:-mx-6">
-        <div className="hidden overflow-x-auto min-[1060px]:block print:hidden">
+      {/* The wide diagram needs about 1090px of card interior to sit at
+          13px without scrolling: section padding 64 + card padding 32 puts
+          that at a 1140 viewport with the card bled 24px; at xl the bleed
+          grows to the section gutter so the card edge meets the column. */}
+      <div className="mt-10 rounded-md border border-brand-silver-soft bg-white p-1.5 shadow-soft sm:p-3 md:p-4 min-[1140px]:-mx-6 xl:-mx-8">
+        <div className="hidden overflow-x-auto min-[1140px]:block print:hidden">
           <PipelineWide selected={selected} onSelect={setSelected} />
         </div>
-        <div className="flex justify-center min-[1060px]:hidden print:flex">
+        <div className="flex justify-center min-[1140px]:hidden print:flex">
           <PipelineNarrow selected={selected} onSelect={setSelected} />
         </div>
       </div>
@@ -843,7 +870,7 @@ function PipelineSection() {
       </div>
 
       <div ref={panelRef} className="mt-10">
-        <div className="flex flex-wrap items-center justify-between gap-4 print:hidden">
+        <div className="flex flex-wrap items-center justify-between gap-4 text-brand-cobalt print:hidden">
           <div className="flex flex-wrap gap-3">
             <PillButton
               variant="ghost"
@@ -901,11 +928,11 @@ function ReportPartsSection() {
     refs.current[j]?.focus();
   };
   return (
-    <Section tone="white" id="who-wrote-it" className={LIGHT}>
+    <Section tone="white" id="who-wrote-it">
       <Kicker n={SECTIONS.parts.kicker} text={SECTIONS.parts.eyebrow} />
       <h2 className={H2}>{SECTIONS.parts.title}</h2>
       <p className={INTRO}>{SECTIONS.parts.intro}</p>
-      <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
+      <div className="mt-10 grid gap-8 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
         <div role="radiogroup" aria-labelledby={id} className="flex flex-wrap gap-2">
           <span id={id} className="sr-only">{SECTIONS.parts.title}</span>
           {REPORT_PARTS.map((p, i) => {
@@ -922,7 +949,7 @@ function ReportPartsSection() {
                 tabIndex={checked ? 0 : -1}
                 onClick={() => setPart(p.id)}
                 onKeyDown={(e) => move(e, i)}
-                className={`rounded-pill border px-4 py-2 font-sans text-sm font-medium transition-colors ${
+                className={`rounded-pill border px-3.5 py-1.5 font-sans text-sm font-medium leading-snug transition-colors ${
                   checked
                     ? "border-brand-cobalt bg-brand-cobalt text-white"
                     : "border-brand-silver bg-white text-brand-charcoal hover:border-brand-cobalt"
@@ -968,7 +995,7 @@ function CoverageLimitedCard() {
         <div className="flex flex-wrap items-center gap-2.5">
           <ResultChip result={c.row.result} />
           <EvidenceTierBadge tier={c.row.evidenceTier} />
-          <span className="font-mono text-xs font-bold text-brand-steel">D1</span>
+          <span className="font-mono text-xs font-bold text-brand-charcoal-soft">D1</span>
         </div>
         <p className="mt-3 font-sans text-sm text-brand-charcoal-soft">
           <span className="font-bold text-brand-charcoal">What we checked:</span> {c.row.whatChecked}
@@ -987,10 +1014,10 @@ function CoverageLimitedCard() {
       </div>
 
       <div className="mt-4 rounded-md border border-brand-silver-soft p-4">
-        <h4 className="font-serif text-lg font-bold leading-snug">{c.manual.label}</h4>
+        <h4 className="font-serif text-lg font-bold leading-snug text-brand-ink">{c.manual.label}</h4>
         <p className="mt-2 font-sans text-sm leading-relaxed">{c.manual.instructions}</p>
         <p className="mt-3 border-t border-brand-silver-soft pt-3 font-sans text-[13px] leading-relaxed text-brand-charcoal-soft">
-          <span className="font-bold text-status-warn">What bad looks like:</span> {c.manual.whatBad}
+          <span className="font-bold text-status-warn-text">What bad looks like:</span> {c.manual.whatBad}
         </p>
       </div>
 
@@ -1021,7 +1048,7 @@ function CreditSection() {
   const credited = result.verdict === "attributed";
 
   return (
-    <Section tone="tint" id="credit-lab" className={LIGHT}>
+    <Section tone="tint" id="credit-lab">
       <Kicker n={SECTIONS.credit.kicker} text={SECTIONS.credit.eyebrow} />
       <h2 className={H2}>{SECTIONS.credit.title}</h2>
       <p className={INTRO}>{SECTIONS.credit.intro}</p>
@@ -1086,7 +1113,7 @@ function CreditSection() {
                   <div key={e.question} className="rounded-md bg-brand-vellum p-4">
                     <dt className="font-sans text-sm font-bold text-brand-ink">{e.question}</dt>
                     <dd className="mt-2">
-                      <Token tone={e.answer === "No" ? "muted" : e.answer === "Yes" ? "good" : "warn"}>{e.answer}</Token>
+                      <Token tone={e.tone}>{e.answer}</Token>
                       <p className="mt-2 font-sans text-[13px] leading-relaxed text-brand-charcoal-soft">{e.detail}</p>
                     </dd>
                   </div>
@@ -1098,7 +1125,7 @@ function CreditSection() {
                 <div className="flex flex-wrap items-center gap-2.5">
                   <ResultChip result={result.ledger.result} />
                   <EvidenceTierBadge tier={result.ledger.evidenceTier} />
-                  <span className="font-mono text-xs font-bold text-brand-steel">D1</span>
+                  <span className="font-mono text-xs font-bold text-brand-charcoal-soft">D1</span>
                   {result.ledger.candidate && <CandidateChip />}
                   {result.ledger.severity && <Token tone="warn">{result.ledger.severity}</Token>}
                 </div>
@@ -1123,9 +1150,17 @@ function CreditSection() {
 
       <div className="mt-14">
         <h3 className="font-serif text-2xl font-bold leading-snug text-brand-cobalt">{SECTIONS.credit.tableTitle}</h3>
-        <p className="mt-2 max-w-3xl font-sans text-base leading-relaxed">{SECTIONS.credit.tableIntro}</p>
-        <div className="mt-6 overflow-x-auto rounded-md border border-brand-silver-soft bg-white">
-          <table className="w-full min-w-[720px] border-collapse text-left font-sans text-sm">
+        <p className="mt-2 max-w-prose font-sans text-base leading-relaxed">{SECTIONS.credit.tableIntro}</p>
+        {/* md and up: the table, with Situation and Result at fixed widths so
+            the Result column never collapses. Below md: one stacked card per
+            rule, so nothing sits off-screen. Same rows, one visible at a time. */}
+        <div className="mt-6 hidden overflow-hidden rounded-md border border-brand-silver-soft bg-white md:block">
+          <table className="w-full border-collapse text-left font-sans text-sm">
+            <colgroup>
+              <col className="w-[26%]" />
+              <col />
+              <col className="w-[24%]" />
+            </colgroup>
             <thead className="border-b-2 border-brand-ink/20">
               <tr>
                 <th scope="col" className="px-4 py-3 font-bold text-brand-ink">{TRUTH_TABLE_HEADERS.situation}</th>
@@ -1159,6 +1194,31 @@ function CreditSection() {
             </tbody>
           </table>
         </div>
+        <ol className="mt-6 md:hidden" aria-label={SECTIONS.credit.tableTitle}>
+          {TRUTH_TABLE.map((row, i) => {
+            const live = !unreachable && row.id === result.ruleId;
+            const firstOfGroup = i === 0 || TRUTH_TABLE[i - 1].group !== row.group;
+            return (
+              <li key={row.id} className={firstOfGroup ? (i === 0 ? "" : "mt-8") : "mt-3"}>
+                {firstOfGroup && <p className={`mb-3 ${LABEL}`}>{row.group}</p>}
+                <div
+                  aria-current={live ? "true" : undefined}
+                  className={`rounded-md border p-4 ${live ? "border-brand-cobalt/40 bg-brand-cobalt-50" : "border-brand-silver-soft bg-white"}`}
+                >
+                  <p className="flex flex-wrap items-center gap-2 font-sans text-base font-bold text-brand-ink">
+                    {row.situation}
+                    {live && <Token tone="cobalt">{TRUTH_TABLE_HEADERS.live}</Token>}
+                  </p>
+                  <p className="mt-2 font-sans text-sm leading-relaxed">{row.rule}</p>
+                  <p className="mt-3 font-sans text-sm leading-relaxed">
+                    <span className={`mr-2 ${LABEL}`}>{TRUTH_TABLE_HEADERS.result}</span>
+                    {row.result}
+                  </p>
+                </div>
+              </li>
+            );
+          })}
+        </ol>
       </div>
     </Section>
   );
@@ -1188,7 +1248,7 @@ function LadderSvg({ tier, capped }: { tier: number; capped: boolean }) {
   const top = 28;
   const gap = 56;
   const rungY = (idx: number) => top + gap * idx;
-  const H = top + gap * 4 + 40;
+  const H = top + gap * 4 + 56;
   const capIdx = TIER_LADDER.findIndex((r) => r.tier === 2);
   const yCap = rungY(capIdx) - 28;
   return (
@@ -1222,7 +1282,10 @@ function LadderSvg({ tier, capped }: { tier: number; capped: boolean }) {
           <text x={x1 + 4} y={yCap - 6} fontSize={13} fontWeight={700} textAnchor="end" className={`${T} fill-status-warn`}>{LADDER_TEXT.cap}</text>
         </g>
       )}
-      <text x={x0 - 8} y={H - 6} fontSize={13} className={`${T} fill-brand-charcoal-soft`}>{LADDER_TEXT.foot}</text>
+      {/* The foot sits on the rung-label column, two lines so it never runs past the right rail. */}
+      {LADDER_TEXT.foot.map((line, i) => (
+        <text key={line} x={x0 + 20} y={H - 22 + i * 16} fontSize={13} className={`${T} fill-brand-charcoal-soft`}>{line}</text>
+      ))}
     </svg>
   );
 }
@@ -1259,7 +1322,7 @@ function TierSection() {
   const tier = decision.tier as 0 | 1 | 2 | 3 | 4;
 
   return (
-    <Section tone="cream" id="tier-lab" className={LIGHT}>
+    <Section tone="cream" id="tier-lab">
       <Kicker n={SECTIONS.tier.kicker} text={SECTIONS.tier.eyebrow} />
       <h2 className={H2}>{SECTIONS.tier.title}</h2>
       <p className={INTRO}>{SECTIONS.tier.intro}</p>
@@ -1297,14 +1360,21 @@ function TierSection() {
         </div>
 
         <div>
+          {/* Two fixed rows for every tier: label and count on the first,
+              badge and cap on the second. The longest badge plus the cap
+              token fits the strip at lg, so the shape never changes. */}
           <div
-            className="z-10 hidden items-center gap-3 rounded-md border border-brand-silver-soft bg-white/95 px-4 py-3 shadow-soft backdrop-blur-sm lg:sticky lg:top-[4.5rem] lg:flex lg:flex-wrap"
+            className="z-10 hidden gap-y-2 rounded-md border border-brand-silver-soft bg-white/95 px-4 py-3 shadow-soft backdrop-blur-sm lg:sticky lg:top-[4.5rem] lg:grid"
             aria-live="polite"
           >
-            <span className={LABEL}>{TIER_RESULT_LABELS.strip}</span>
-            <TierBadge tier={tier} />
-            <span className="font-sans text-sm font-bold">{TIER_RESULT_LABELS.meets(decision.checks_met.met, decision.checks_met.total)}</span>
-            {outcomes.cap === "Applies" && <Token tone="warn">{LADDER_TEXT.cap}</Token>}
+            <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+              <p className={LABEL}>{TIER_RESULT_LABELS.strip}</p>
+              <span className="font-sans text-sm font-bold">{TIER_RESULT_LABELS.meets(decision.checks_met.met, decision.checks_met.total)}</span>
+            </div>
+            <div className="flex flex-wrap items-center gap-3">
+              <TierBadge tier={tier} />
+              {outcomes.cap === "Applies" && <Token tone="warn">{LADDER_TEXT.cap}</Token>}
+            </div>
           </div>
 
           <div className={`${CARD} lg:mt-6`} aria-live="polite">
@@ -1313,26 +1383,33 @@ function TierSection() {
             <p className="mt-1 font-sans text-base font-bold">{TIER_RESULT_LABELS.meets(decision.checks_met.met, decision.checks_met.total)}</p>
 
             <p className={`mt-6 ${LABEL}`}>{TIER_RESULT_LABELS.points}</p>
-            <ol className="mt-2 grid grid-cols-4 gap-2 sm:grid-cols-7">
-              {POINTS.map((p) => {
-                const on = met[p.id];
-                return (
-                  <li key={p.id} className="flex flex-col items-center gap-1 text-center">
-                    <span
-                      aria-hidden="true"
-                      className={`flex h-9 w-9 items-center justify-center rounded-md border text-base font-bold ${
-                        on ? "border-brand-cobalt bg-brand-cobalt text-white" : "border-brand-silver bg-white text-brand-steel"
-                      }`}
-                    >
-                      {on ? "✓" : "–"}
-                    </span>
-                    <span className="font-sans text-[13px] leading-tight text-brand-charcoal-soft">
-                      {p.label}
-                      <span className="sr-only">{on ? ": met" : ": not met"}</span>
-                    </span>
-                  </li>
-                );
-              })}
+            {/* Seven pips in the three groups the rule counts: groups side by
+                side with a label under each from sm up, one group per row
+                below. Every pip names its own point for screen readers. */}
+            <ol className="mt-3 flex flex-col gap-3 sm:flex-row sm:gap-6">
+              {POINT_GROUPS.map((g) => (
+                <li key={g.id} className="flex items-center gap-3 sm:flex-col sm:items-start sm:gap-2">
+                  <ol className="flex shrink-0 gap-1.5" aria-label={g.label}>
+                    {g.points.map((pt) => {
+                      const on = met[pt.id];
+                      return (
+                        <li
+                          key={pt.id}
+                          className={`flex h-9 w-9 items-center justify-center rounded-md border text-base font-bold ${
+                            on ? "border-brand-cobalt bg-brand-cobalt text-white" : "border-brand-silver bg-white text-brand-steel"
+                          }`}
+                        >
+                          <span aria-hidden="true">{on ? "✓" : "–"}</span>
+                          <span className="sr-only">{`${pt.label}: ${on ? "met" : "not met"}`}</span>
+                        </li>
+                      );
+                    })}
+                  </ol>
+                  <span aria-hidden="true" className="max-w-[9rem] font-sans text-[13px] leading-snug text-brand-charcoal-soft">
+                    {g.label}
+                  </span>
+                </li>
+              ))}
             </ol>
 
             <p className={`mt-6 ${LABEL}`}>{TIER_RESULT_LABELS.steps}</p>
@@ -1341,8 +1418,8 @@ function TierSection() {
                 const o = outcomes.steps[i].outcome;
                 const live = o === "Applies";
                 return (
-                  <li key={step.id} aria-current={live ? "true" : undefined} className={`flex gap-4 py-3 ${live ? "-mx-3 rounded-md bg-brand-cobalt-50 px-3" : ""}`}>
-                    <span className="w-24 shrink-0 pt-0.5">
+                  <li key={step.id} aria-current={live ? "true" : undefined} className={`flex flex-col gap-1.5 py-3 sm:flex-row sm:gap-4 ${live ? "-mx-3 rounded-md bg-brand-cobalt-50 px-3" : ""}`}>
+                    <span className="sm:w-24 sm:shrink-0 sm:pt-0.5">
                       <Token tone={live ? "cobalt" : o === "Passed" ? "good" : "muted"}>{o}</Token>
                     </span>
                     <span>
@@ -1352,8 +1429,8 @@ function TierSection() {
                   </li>
                 );
               })}
-              <li aria-current={outcomes.cap === "Applies" ? "true" : undefined} className={`flex gap-4 py-3 ${outcomes.cap === "Applies" ? "-mx-3 rounded-md bg-status-warn-soft px-3" : ""}`}>
-                <span className="w-24 shrink-0 pt-0.5">
+              <li aria-current={outcomes.cap === "Applies" ? "true" : undefined} className={`flex flex-col gap-1.5 py-3 sm:flex-row sm:gap-4 ${outcomes.cap === "Applies" ? "-mx-3 rounded-md bg-status-warn-soft/50 px-3" : ""}`}>
+                <span className="sm:w-24 sm:shrink-0 sm:pt-0.5">
                   <Token tone={outcomes.cap === "Applies" ? "warn" : "muted"}>{outcomes.cap}</Token>
                 </span>
                 <span>
@@ -1422,7 +1499,7 @@ function SourceSection() {
     refs.current[j]?.focus();
   };
   return (
-    <Section tone="white" id="source-lab" className={LIGHT}>
+    <Section tone="white" id="source-lab">
       <Kicker n={SECTIONS.sources.kicker} text={SECTIONS.sources.eyebrow} />
       <h2 className={H2}>{SECTIONS.sources.title}</h2>
       <p className={INTRO}>{SECTIONS.sources.intro}</p>
@@ -1446,7 +1523,7 @@ function SourceSection() {
                     tabIndex={checked ? 0 : -1}
                     onClick={() => setPick(e.id)}
                     onKeyDown={(ev) => move(ev, i)}
-                    className={`rounded-pill border px-3.5 py-1.5 font-mono text-[13px] transition-colors ${
+                    className={`rounded-pill border px-3.5 py-1.5 font-mono text-[13px] leading-snug transition-colors ${
                       checked
                         ? "border-brand-cobalt bg-brand-cobalt text-white"
                         : "border-brand-silver bg-white text-brand-charcoal hover:border-brand-cobalt"
@@ -1477,7 +1554,7 @@ function SourceSection() {
             <div>
               <p className={LABEL}>{SECTIONS.sources.classTitle(result.cls)}</p>
               <h3 className="mt-1 font-serif text-2xl font-bold leading-snug text-brand-cobalt">{result.className}</h3>
-              <p className="mt-1 font-mono text-[13px] text-brand-steel">{example.label}</p>
+              <p className="mt-1 font-mono text-[13px] text-brand-charcoal-soft">{example.label}</p>
             </div>
           </div>
           <p className="mt-5 font-sans text-base leading-relaxed">{example.why}</p>
@@ -1506,21 +1583,23 @@ function SourceSection() {
 
 function FairnessSection() {
   return (
-    <Section tone="tint" id="fairness" className={LIGHT}>
+    <Section tone="tint" id="fairness">
       <Kicker n={SECTIONS.fairness.kicker} text={SECTIONS.fairness.eyebrow} />
       <h2 className={H2}>{SECTIONS.fairness.title}</h2>
       <p className={INTRO}>{SECTIONS.fairness.intro}</p>
-      <ul className="mt-10 grid gap-4 md:grid-cols-2">
-        {FAIRNESS_LINES.map((f) => (
-          <li key={f.id} className="flex gap-4 rounded-md border border-brand-silver-soft bg-white p-5 shadow-soft">
-            <span className="mt-1 h-full w-1 shrink-0 rounded-full bg-brand-carolina" aria-hidden="true" />
-            <div>
-              <p className={LABEL}>{SECTIONS.fairness.keeps}</p>
-              <p className="mt-1 font-sans text-base leading-relaxed">{f.text}</p>
-            </div>
+      {/* A numbered two-column list on the tint with carolina hairlines: the
+          brand's rule idiom, not a card grid. One label for the list. */}
+      <p className={`mt-10 ${LABEL}`}>{SECTIONS.fairness.keeps}</p>
+      <ol className="mt-3 grid gap-x-12 border-b border-brand-carolina md:grid-cols-2">
+        {FAIRNESS_LINES.map((f, i) => (
+          <li key={f.id} className="flex gap-4 border-t border-brand-carolina py-5">
+            <span aria-hidden="true" className="pt-0.5 font-mono text-[13px] font-bold tabular-nums text-brand-cobalt">
+              {String(i + 1).padStart(2, "0")}
+            </span>
+            <p className="font-sans text-base leading-relaxed">{f.text}</p>
           </li>
         ))}
-      </ul>
+      </ol>
     </Section>
   );
 }

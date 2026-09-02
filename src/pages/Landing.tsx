@@ -12,6 +12,7 @@ import {
 } from "@/components/report/VerificationLedger";
 import { SAMPLE_REPORTS } from "@/lib/sample-reports";
 import type { LedgerRow } from "@/lib/types";
+import { METHODOLOGY_VERSION } from "@shared/version.ts";
 
 /*
   The hero specimen is a genuine fragment of the Kestrel sample report
@@ -125,7 +126,7 @@ export default function Landing() {
         <div className="relative grid items-center gap-12 lg:grid-cols-[7fr_5fr]">
           <div>
             <p className="font-mono text-[13px] tracking-wide text-white/70">
-              methodology v1.5 · open source · 30+ public-record checks
+              methodology v{METHODOLOGY_VERSION} · open source · 30+ public-record checks
             </p>
             <h1 className="mt-5 font-serif text-[clamp(2.6rem,5.4vw,4.5rem)] font-bold leading-[1.02] tracking-tight">
               Got an AI vendor pitch? Check it before you spend an hour on it.

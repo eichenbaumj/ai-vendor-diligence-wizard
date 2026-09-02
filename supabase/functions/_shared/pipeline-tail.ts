@@ -66,7 +66,8 @@ import { STATE_ITEMS } from "./state-items.ts";
 import type { S5UserInput } from "./prompts/s5-structure.ts";
 import * as registry from "./registry/index.ts";
 
-export const METHODOLOGY_VERSION = "1.7";
+import { METHODOLOGY_VERSION } from "./version.ts";
+export { METHODOLOGY_VERSION };
 
 const TAIL_TIMEOUTS = {
   registryPerEndpoint: 8_000,

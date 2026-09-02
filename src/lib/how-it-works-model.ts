@@ -50,8 +50,9 @@ import {
 import { HONESTY_GROUPS } from "@shared/honesty-groups.ts";
 import { RESULT_LABELS } from "@/components/report/VerificationLedger";
 import { SAMPLE_REPORTS } from "@/lib/sample-reports";
+import { METHODOLOGY_VERSION } from "@shared/version.ts";
 
-export const HOW_IT_WORKS_METHODOLOGY_VERSION = "1.7";
+export const HOW_IT_WORKS_METHODOLOGY_VERSION = METHODOLOGY_VERSION;
 
 /* The fictional sample followed through every stage. */
 const CLARA = SAMPLE_REPORTS.claradocs;
@@ -742,7 +743,7 @@ export const STAGE_FIELD_LABELS = {
   rule: "The rule, in plain words",
   inputs: "What goes in",
   outputs: "What comes out",
-  inThisCheck: `In this check (${VENDOR_FULL})`,
+  inThisCheck: `In this check: ${VENDOR_FULL}`,
   never: "Never",
   gate: "Across the wall",
   method: "Read this part of the method",
@@ -1351,6 +1352,9 @@ export const CREDIT_STAMPS: Record<Attribution, string> = {
 export interface EffectTile {
   question: string;
   answer: "Yes" | "No" | "Only with a strong tie";
+  /* The tile's color follows the meaning, never the answer's text: a
+     warning that can fire is a warn tone even when the answer is Yes. */
+  tone: "good" | "warn" | "muted";
   detail: string;
 }
 
@@ -1466,6 +1470,7 @@ export function runCredit(s: CreditScenario): CreditResult {
     {
       question: EFFECT_QUESTIONS.identity,
       answer: credited ? "Yes" : "No",
+      tone: credited ? "good" : "muted",
       detail: credited
         ? ended
           ? "A credited record counts, even an ended one. The ended status becomes the finding."
@@ -1475,6 +1480,7 @@ export function runCredit(s: CreditScenario): CreditResult {
     {
       question: EFFECT_QUESTIONS.green,
       answer: credited && !ended ? "Yes" : "No",
+      tone: credited && !ended ? "good" : "muted",
       detail:
         credited && !ended
           ? "Code writes it from this record, with the source and the check date."
@@ -1485,6 +1491,7 @@ export function runCredit(s: CreditScenario): CreditResult {
     {
       question: EFFECT_QUESTIONS.warning,
       answer: !credited ? "No" : ended && strong ? "Yes" : "Only with a strong tie",
+      tone: !credited ? "muted" : "warn",
       detail: !credited
         ? "A candidate never arms a warning."
         : ended && strong
@@ -1959,6 +1966,22 @@ export const POINTS: Point[] = [
   { id: "no-open", label: "No open High or Critical finding" },
 ];
 
+/* The seven points grouped the way the rule counts them: identity resolved
+   is worth two, each verified green area one (up to four), and no open High
+   or Critical finding the last. The page draws one pip per point and one
+   label per group. */
+export interface PointGroup {
+  id: string;
+  label: string;
+  points: Point[];
+}
+
+export const POINT_GROUPS: PointGroup[] = [
+  { id: "identity", label: "Identity resolved on two records", points: POINTS.slice(0, 2) },
+  { id: "green", label: "Areas with a verified green flag", points: POINTS.slice(2, 6) },
+  { id: "no-open", label: "No open High or Critical finding", points: POINTS.slice(6) },
+];
+
 export function pointsMet(inputs: TierInputs): Record<string, boolean> {
   const unresolvedHigh = inputs.findings.some(
     (f) => !f.resolved && (f.severity === "HIGH" || f.severity === "CRITICAL"),
@@ -1990,7 +2013,9 @@ export const TIER_LADDER: Rung[] = ([4, 3, 2, 1, 0] as VerdictTier[]).map((t) =>
 export const LADDER_TEXT = {
   here: "you are here",
   cap: "cap: never above Tier 2",
-  foot: "Five tiers. No number. No AI model touches this ladder.",
+  /* Two lines, so the foot sits in the ladder's label column without
+     running past the right rail. */
+  foot: ["Five tiers. No number.", "No AI model touches this ladder."],
   title: "The five tiers as a ladder",
   desc: "Five rungs from Tier 0 at the bottom to Tier 4 at the top. A marker shows where the current inputs land. A dashed line at Tier 2 appears when content in the submitted material caps the verdict.",
 } as const;
@@ -2352,7 +2377,7 @@ export function allReaderCopy(): string[] {
     else if (Array.isArray(v)) v.forEach(push);
     else if (v && typeof v === "object") {
       for (const [k, val] of Object.entries(v)) {
-        if (k === "id" || k === "url" || k === "href" || k === "to" || k === "key" || k === "value") continue;
+        if (k === "id" || k === "url" || k === "href" || k === "to" || k === "key" || k === "value" || k === "tone") continue;
         if (typeof val === "function") continue;
         push(val);
       }
@@ -2402,6 +2427,7 @@ export function allReaderCopy(): string[] {
   push(Object.values(TIER_CAP_STEP));
   push(Object.values(CAP_EXPLANATIONS));
   push(POINTS.map((p) => p.label));
+  push(POINT_GROUPS.map((g) => g.label));
   push(TIER_LADDER.map((r) => [r.label, r.short]));
   push(Object.values(LADDER_TEXT));
   push(Object.values(TIER_RESULT_LABELS).filter((v) => typeof v === "string"));

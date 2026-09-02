@@ -13,6 +13,9 @@ export interface PillButtonProps {
   type?: "button" | "submit" | "reset";
   disabled?: boolean;
   className?: string;
+  /* Disclosure state, for a pill that opens or closes a region. */
+  "aria-expanded"?: boolean;
+  "aria-controls"?: string;
   children: ReactNode;
 }
 
@@ -47,20 +50,23 @@ export function PillButton({
   type = "button",
   disabled = false,
   className = "",
+  "aria-expanded": ariaExpanded,
+  "aria-controls": ariaControls,
   children,
 }: PillButtonProps) {
   const classes = `${BASE} ${SIZES[size]} ${VARIANTS[variant]} ${className}`;
+  const aria = { "aria-expanded": ariaExpanded, "aria-controls": ariaControls };
 
   if (to && !disabled) {
     return (
-      <Link to={to} onClick={onClick} className={classes}>
+      <Link to={to} onClick={onClick} className={classes} {...aria}>
         {children}
       </Link>
     );
   }
   if (href && !disabled) {
     return (
-      <a href={href} onClick={onClick} className={classes}>
+      <a href={href} onClick={onClick} className={classes} {...aria}>
         {children}
       </a>
     );
@@ -71,6 +77,7 @@ export function PillButton({
       onClick={onClick}
       disabled={disabled}
       className={`${classes} disabled:cursor-not-allowed disabled:opacity-50`}
+      {...aria}
     >
       {children}
     </button>

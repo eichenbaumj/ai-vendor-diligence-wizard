@@ -41,7 +41,8 @@ export const RESULT_LABELS: Record<LedgerResult, string> = Object.fromEntries(
   (Object.keys(RESULT_STYLES) as LedgerResult[]).map((k) => [k, RESULT_STYLES[k].label]),
 ) as Record<LedgerResult, string>;
 
-const TIER_TITLES: Record<EvidenceTier, string> = {
+/* Exported so the How it works chip key can be held to the same words. */
+export const TIER_TITLES: Record<EvidenceTier, string> = {
   T1: "T1: verified public record (government registry, official feed, or archive)",
   T2: "T2: vendor-published (the vendor's own site or documents)",
   T3: "T3: third-party coverage (press, conference programs, reviews)",

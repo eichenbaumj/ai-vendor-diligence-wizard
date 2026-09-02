@@ -967,11 +967,14 @@ const claradocsReport: Report = {
     label: TIER_LABELS[3],
     summary:
       "A young vendor whose claims are consistent with public records. The Colorado registration, the SEC filing, and the domain history all match the story the pitch tells, and the pitch avoids the inflated claims we screen for. Early-stage is not a defect: the checklist below is calibrated to what a nine-person company should be able to produce, not to what a ten-year platform vendor would have.",
-    checks_met: { met: 4, total: 7 },
+    /* Two green dimensions under assemble.ts: D1 (identity resolved on the
+       Colorado and SEC records) and D5 (the co-founder corroborated on a
+       class-2 page, cla-L8). 2 + 2 + 1 = 5 of 7; the rationale is the one
+       line computeTier prints for a Tier 3 that meets the startup bar (here
+       the credited SEC filing). The How it works tests hold both. */
+    checks_met: { met: 5, total: 7 },
     rationale: [
-      "Identity verified on two independent identifiers: Colorado Secretary of State registration and an SEC Form D filing.",
-      "No high-severity findings; every checked claim was either verified or is normal for a company at this stage.",
-      "The vendor meets the startup calibration bar: a completed SOC 2 Type I, a named auditor engaged for Type II, and one government pilot offered as a reference.",
+      "Identity verified; no high-severity findings; the vendor meets the startup calibration bar. Early-stage is not a defect, and the question pack below is calibrated to what a company this size should be able to produce.",
     ],
   },
   ledger: [
@@ -1407,13 +1410,10 @@ const claradocsReport: Report = {
       retrieved_at: RETRIEVED,
     },
   ],
-  review: {
-    reviewed: true,
-    model: "claude-haiku-4-5",
-    adjustments: [
-      "Reframed the pilot ledger row from a gap to a neutral could-not-verify with the reference path.",
-    ],
-  },
+  /* The wording review runs only at Tier 2 or below, on a contradicted
+     row, or on an adversarial-content finding (pipeline-tail.ts); none
+     applies here, so the run stores null, as composeReport does. */
+  review: null,
   meta: {
     generated_at: GENERATED_AT,
     expires_at: EXPIRES_AT,

@@ -79,8 +79,8 @@ submitted web address is treated. Its registration record counts toward
 identity, its pages are read as the vendor's own site, and its root name
 keeps a namesake's registration from being credited. An address that is
 not a valid https site stops the check with a message instead of being
-ignored. The report states which address it checked. Expected effect:
-name checks with the web address resolve identity for real single-record
+ignored. The stored report records which address it checked. Expected
+effect: name checks with the web address resolve identity for real single-record
 vendors that a bare name cannot, and stop crediting namesakes. A bare name
 behaves as before under the new attribution rule.
 
@@ -112,6 +112,17 @@ reader left it out. Pending or in-process wording still never arms a
 contradiction. Expected effect on verdicts: a pitch that states one of
 these programs is checked against the program's list every run, not most
 runs.
+
+**Four methodology passages corrected to match the code.** The
+methodology's wording for the startup calibration bar, the Tier 1
+rationale lines, the could-not-verify notes, and the website address
+record now says what the code does. The bar counts a credited GovRAMP
+listing, a verified named customer, a federal award record, or an SEC
+filing. A rationale line names the check that logged a contradiction, and
+the evidence link sits on that check's ledger row. Could-not-verify notes
+outside the identity row are phrased by the writing model in the absence
+shape. The assessed web address is stored in the report data. No rule
+changed. Expected effect on verdicts: none.
 
 ## Version 1.6 (September 2026)
 

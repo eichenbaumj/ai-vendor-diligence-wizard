@@ -3,6 +3,9 @@ import { TIER_LABELS } from "@shared/schemas.ts";
 export interface TierBadgeProps {
   tier: 0 | 1 | 2 | 3 | 4;
   size?: string; // "md" | "lg"
+  /* Icon and color only, the label kept for screen readers: for a tight
+     control whose own text already names the tier. */
+  iconOnly?: boolean;
 }
 
 /*
@@ -81,18 +84,18 @@ function TierIcon({ tier, className }: { tier: 0 | 1 | 2 | 3 | 4; className: str
   }
 }
 
-export function TierBadge({ tier, size = "md" }: TierBadgeProps) {
+export function TierBadge({ tier, size = "md", iconOnly = false }: TierBadgeProps) {
   const colors = TIER_COLORS[tier];
   const isLg = size === "lg";
   return (
     <span
       className={`inline-flex items-center rounded-pill font-sans font-bold ${
-        isLg ? "gap-2.5 px-5 py-2.5 text-lg" : "gap-2 px-4 py-1.5 text-sm"
+        iconOnly ? "p-2" : isLg ? "gap-2.5 px-5 py-2.5 text-lg" : "gap-2 px-4 py-1.5 text-sm"
       }`}
       style={{ color: colors.fg, backgroundColor: colors.bg }}
     >
       <TierIcon tier={tier} className={isLg ? "h-6 w-6 shrink-0" : "h-4 w-4 shrink-0"} />
-      <span>{TIER_LABELS[tier]}</span>
+      <span className={iconOnly ? "sr-only" : undefined}>{TIER_LABELS[tier]}</span>
     </span>
   );
 }

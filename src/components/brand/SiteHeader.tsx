@@ -34,7 +34,10 @@ export function SiteHeader() {
           )}
         </span>
         <nav aria-label="Main" className="flex items-center gap-3 md:gap-7">
-          <Link to="/methodology" className={`hidden sm:block ${NAV_LINK}`}>
+          <Link to="/methodology" className={`hidden lg:block ${NAV_LINK}`}>
+            Methodology
+          </Link>
+          <Link to="/how-it-works" className={`hidden sm:block ${NAV_LINK}`}>
             How it works
           </Link>
           <Link to="/your-data" className={`hidden md:block ${NAV_LINK}`}>

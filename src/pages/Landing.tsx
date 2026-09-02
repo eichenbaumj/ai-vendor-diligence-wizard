@@ -249,6 +249,11 @@ export default function Landing() {
             </div>
           ))}
         </div>
+        <div className="mt-12">
+          <PillButton to="/how-it-works" variant="ghost" size="lg">
+            See how one check runs
+          </PillButton>
+        </div>
       </Section>
 
       {/* 4. Kinetic texture: the checks themselves as a marquee band. */}

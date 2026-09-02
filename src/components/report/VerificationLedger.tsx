@@ -34,6 +34,13 @@ const RESULT_STYLES: Record<LedgerResult, { label: string; glyph: string; classN
   },
 };
 
+/* The five chip labels on their own, for pages that describe the ledger
+   without rendering one (the How it works page): derived from RESULT_STYLES
+   so the words can never drift from the chips. */
+export const RESULT_LABELS: Record<LedgerResult, string> = Object.fromEntries(
+  (Object.keys(RESULT_STYLES) as LedgerResult[]).map((k) => [k, RESULT_STYLES[k].label]),
+) as Record<LedgerResult, string>;
+
 const TIER_TITLES: Record<EvidenceTier, string> = {
   T1: "T1: verified public record (government registry, official feed, or archive)",
   T2: "T2: vendor-published (the vendor's own site or documents)",

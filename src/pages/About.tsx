@@ -110,7 +110,13 @@ export default function About() {
               <Link to="/methodology" className={INLINE_LINK}>
                 methodology
               </Link>{" "}
-              lists every check the tool runs and every source it consults.{" "}
+              lists every check the tool runs and every source it consults.
+              For a plain-language walk through one check, with rules you
+              can try yourself, read{" "}
+              <Link to="/how-it-works" className={INLINE_LINK}>
+                how a check runs
+              </Link>
+              .{" "}
               <Link to="/your-data" className={INLINE_LINK}>
                 Your data
               </Link>{" "}

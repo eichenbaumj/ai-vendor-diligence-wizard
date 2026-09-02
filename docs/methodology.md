@@ -23,7 +23,7 @@ A free triage tool for state and local government staff. Give it an AI vendor's 
 - Reports are not consumer reports under the Fair Credit Reporting Act, and the tool is not a consumer reporting agency. **Do not use this tool or its output to make decisions about any person's employment, hiring, promotion, credit, insurance, or housing.** The tool looks at named individuals only in their business capacity, and only when the vendor itself presents them as its leadership.
 - The tool evaluates the pitch in front of you against public records. Where records and claims disagree, it shows you both, with links and dates, and leaves the conclusion to you. It never judges character.
 
-**Who runs it.** The tool is open source. The code, this methodology, and the sector question packs are public. Anyone can read exactly how it works, and anyone can point out where it is wrong.
+**Who runs it.** The tool is open source. The code, this methodology, and the sector question packs are public. Anyone can read exactly how it works, and anyone can point out where it is wrong. A plain-language walkthrough of one check, with the rules you can try yourself, is at [/how-it-works](/how-it-works).
 
 ---
 
@@ -121,7 +121,7 @@ Real government contracts leave public traces: payment records, contract lists, 
 
 **What we look at.** When a pitch claims a cooperative purchasing contract ("available on Sourcewell," "NASPO contract holder"), whether the cooperative's own published list includes the vendor or its named reseller.
 **Public sources.** [Sourcewell contract search](https://www.sourcewell-mn.gov/contract-search); [NASPO ValuePoint contractor list](https://www.naspovaluepoint.org/contractors/); [OMNIA Partners supplier list](https://www.omniapartners.com/what-we-do/suppliers-contracts).
-**How it runs.** Automatic lookup (Sourcewell), AI-assisted web research for the others. We search for the vendor and for common resellers before concluding anything.
+**How it runs.** Automatic lookup (Sourcewell), AI-assisted web research for the others. We search for the vendor and for common resellers before concluding anything. Code also reads the pitch text itself for a cooperative-contract claim, under the same wording rules, so a claim the AI reader missed still gets checked.
 **If adverse.** A claimed cooperative contract absent from the cooperative's own list is weighted Critical. This is a registry contradiction: the kind of deterministic event that can contribute to the harshest verdict tier. A verified contract is a green flag and a verified row in the ledger.
 
 ### D2.3 State and city payment records
@@ -177,7 +177,7 @@ Credit from every compliance feed in this dimension (and the cooperative list in
 
 **What we look at.** Any FedRAMP claim, checked against the government's own machine-readable marketplace feed.
 **Public source.** [FedRAMP Marketplace data](https://raw.githubusercontent.com/FedRAMP/marketplace-fedramp-gov-data/main/data.json), refreshed daily, published by the FedRAMP program office.
-**How it runs.** Automatic lookup.
+**How it runs.** Automatic lookup. For FedRAMP, GovRAMP, TX-RAMP, and cooperative contracts, code also reads the pitch text itself for the program's designation wording, so a claim the AI reader missed still gets checked; the same pending-language rule applies.
 **If adverse.** "FedRAMP Authorized" claimed but absent from the official feed is weighted Critical and is a registry contradiction (see Section 4). The contradiction arms only when the pitch states the designation as a current status: vague vocabulary like "FedRAMP compliant," "FedRAMP equivalent," or "built on FedRAMP infrastructure" is weighted Medium to High instead, because these are [not recognized designations](https://www.fedramp.gov/), and the report explains the difference. "In process" or "pending" language never arms the contradiction; it becomes a question to the vendor. Having no FedRAMP status at all is neutral for vendors selling to state and local government.
 
 ### D3.2 GovRAMP and StateRAMP claims

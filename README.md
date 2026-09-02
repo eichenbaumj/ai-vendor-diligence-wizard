@@ -16,6 +16,9 @@ also renders inside the app.
 
 ## How it works
 
+The app's `/how-it-works` page walks through one check in plain language,
+with the credit, verdict, and source rules to try yourself.
+
 1. **Parse.** The pitch is scanned for hidden text and then distilled into
    typed claims (identity, customers, compliance, performance, team, pricing).
 2. **Registry checks.** Plain code queries public sources: state business

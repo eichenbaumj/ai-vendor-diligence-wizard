@@ -6,7 +6,7 @@ A concise technical map for contributors. For what the tool checks and why, read
 
 | Layer | Technology | Notes |
 |---|---|---|
-| Frontend | React 18 + TypeScript + Vite + Tailwind 4, deployed to Cloudflare Pages | Static SPA; renders reports, streams pipeline progress, renders this documentation at `/methodology` |
+| Frontend | React 18 + TypeScript + Vite + Tailwind 4, deployed to Cloudflare Pages | Static SPA; renders reports, streams pipeline progress, renders this documentation at `/methodology` and `/how-it-works`, whose labs call the shared pure functions |
 | Backend | Supabase Edge Functions (Deno) | `evaluate` (the pipeline), `deep-research` (the chained deep-mode research pass), `get-evaluation`, `chat` (grounded Q&A over a finished report), `dispute` (correction channel), `gov-request-code` / `gov-verify-code` (the verified-government-email tier) |
 | Database | Supabase Postgres | Evaluations (with a 30-day per-vendor result cache, skipped whenever adversarial-content findings are present), cached registry results, source snapshots (litigation-hold-ready logging), disputes |
 | AI | Anthropic API | Claude Haiku 4.5 and Claude Sonnet 5; server-side `web_search` and `web_fetch` tools in the research stage |

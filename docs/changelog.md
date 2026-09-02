@@ -95,6 +95,24 @@ registry searches stop early on an exact match and cap their lists.
 Expected effect on verdicts: none. The row is informational, and the
 candidate records it points to already earn nothing.
 
+**A plain-language How it works page.** The site gains a page at
+/how-it-works that follows one fictional check from start to finish. Its
+three labs run the same code the tool runs: the record credit rule, the
+verdict tier rule, and the source class rule. Every sentence on the page
+paraphrases this methodology, and a test holds it to that. Expected effect
+on verdicts: none.
+
+**Program claims are read by code as a backstop.** The AI pitch reader
+sometimes leaves out a claim, even with randomness off. When the claim it
+drops names FedRAMP, GovRAMP, TX-RAMP, or a cooperative contract, the
+registry check that would test it never runs. Code now reads the pitch
+text itself for those programs' designation wording, under the same rules
+the reader's claims follow, and adds the sentence word for word when the
+reader left it out. Pending or in-process wording still never arms a
+contradiction. Expected effect on verdicts: a pitch that states one of
+these programs is checked against the program's list every run, not most
+runs.
+
 ## Version 1.6 (September 2026)
 
 **Name-only checks get a steadier website step, and the report says so

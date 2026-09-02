@@ -5,6 +5,7 @@ import Landing from "@/pages/Landing";
 import CheckPage from "@/pages/Check";
 import EvaluationPage from "@/pages/Evaluation";
 import Methodology from "@/pages/Methodology";
+import HowItWorks from "@/pages/HowItWorks";
 import DataSafety from "@/pages/DataSafety";
 import Disputes from "@/pages/Disputes";
 import About from "@/pages/About";
@@ -56,6 +57,7 @@ export default function App() {
           <Route path="/check" element={<CheckPage />} />
           <Route path="/r/:id" element={<EvaluationPage />} />
           <Route path="/methodology" element={<Methodology />} />
+          <Route path="/how-it-works" element={<HowItWorks />} />
           <Route path="/your-data" element={<DataSafety />} />
           <Route path="/disputes" element={<Disputes />} />
           <Route path="/about" element={<About />} />

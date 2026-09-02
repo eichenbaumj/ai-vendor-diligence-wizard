@@ -34,6 +34,9 @@ export interface LedgerMapEntry {
   /* v1.5 attribution verdict; absent on rows without one and on runs
      recorded before the field existed. */
   attribution?: string | null;
+  /* The row's note, for note_never_contains locks (B8). Absent on cells
+     recorded before the field was captured. */
+  note?: string | null;
 }
 
 export interface QaMetrics {

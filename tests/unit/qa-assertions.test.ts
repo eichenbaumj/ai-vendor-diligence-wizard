@@ -64,6 +64,7 @@ function cellFrom(
           evidence_tier: r.evidence_tier,
           severity: r.severity,
           methodology_ref: r.methodology_ref,
+          note: r.note,
         },
       ]),
     ),
@@ -790,3 +791,48 @@ describe("ledger expectations: optional presence + forbidden_result_in (v1.4)", 
     expect(fr?.hardness).toBe("hard");
   });
 });
+
+describe("note_never_contains (the never-attributes lock, B8)", () => {
+  const lock = makeEntry({
+    ledger: [
+      {
+        match: { id: "identity" },
+        presence: "optional",
+        note_never_contains: ["CONDUIT, LLC"],
+        hardness: "hard",
+      },
+    ],
+  });
+  const row = (note: string | null | undefined) => ({
+    identity: {
+      result: "VERIFIED",
+      evidence_tier: "T1",
+      severity: null,
+      methodology_ref: "d1-1",
+      attribution: "attributed",
+      ...(note === undefined ? {} : { note }),
+    },
+  });
+
+  it("passes when the row's note is clean, and emits no presence assertion", () => {
+    const out = evaluateExpectations(lock, cellFrom(meridian, { ledger_map: row("SEC company records list ConductorAI Corp (checked 2026-09-01).") }));
+    const r = out.find((x) => x.code === "ledger.identity.note_never_contains");
+    expect(r).toMatchObject({ hardness: "hard", pass: true, actual: "clean" });
+    expect(out.some((x) => x.code === "ledger.identity.presence")).toBe(false);
+  });
+
+  it("fails hard, case-insensitively, when the note names the locked record", () => {
+    const out = evaluateExpectations(lock, cellFrom(meridian, { ledger_map: row("Texas Comptroller lists Conduit, LLC with status ACTIVE (checked 2026-09-01).") }));
+    const r = out.find((x) => x.code === "ledger.identity.note_never_contains");
+    expect(r).toMatchObject({ hardness: "hard", pass: false });
+    expect(r?.actual).toContain("identity");
+  });
+
+  it("is vacuously true when the row is absent or the cell predates note capture", () => {
+    const absent = evaluateExpectations(lock, cellFrom(meridian, { ledger_map: {} }));
+    expect(absent.find((x) => x.code === "ledger.identity.note_never_contains")).toMatchObject({ pass: true, actual: "absent" });
+    const noNote = evaluateExpectations(lock, cellFrom(meridian, { ledger_map: row(undefined) }));
+    expect(noNote.find((x) => x.code === "ledger.identity.note_never_contains")).toMatchObject({ pass: true });
+  });
+});
+

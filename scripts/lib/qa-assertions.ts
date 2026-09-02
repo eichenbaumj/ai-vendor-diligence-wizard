@@ -318,6 +318,30 @@ function evaluateLedger(
       ),
     );
   }
+  /* note_never_contains: no matched row's note may contain any of the
+     strings, case-insensitively. Vacuously true when the row is absent. A
+     cell recorded without notes cannot exhibit the string and passes. */
+  if (le.note_never_contains) {
+    const needles = (le.note_never_contains as string[]).map((s) => s.toLowerCase());
+    const offending = matches.filter((m) => {
+      const note = (m.row.note ?? "").toLowerCase();
+      return needles.some((n) => note.includes(n));
+    });
+    out.push(
+      result(
+        `ledger.${key}.note_never_contains`,
+        le.hardness,
+        offending.length === 0,
+        `no row note containing [${(le.note_never_contains as string[]).join(", ")}]`,
+        present
+          ? offending.length === 0
+            ? "clean"
+            : `found in ${fmtList(offending.map((m) => m.id))}`
+          : "absent",
+      ),
+    );
+  }
+
   /* attribution_in: EVERY matched row's attribution must be allowed (a
      missing field counts as candidate — unadjudicated never mints).
      Vacuously true when the row is absent, like forbidden_result_in. */

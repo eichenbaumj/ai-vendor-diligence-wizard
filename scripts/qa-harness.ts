@@ -473,6 +473,8 @@ function buildLedgerMap(report: Report | null): Record<string, LedgerMapEntry> {
       severity: row.severity,
       methodology_ref: row.methodology_ref,
       ...(row.attribution ? { attribution: row.attribution } : {}),
+      /* For note_never_contains locks (B8): the row's note, verbatim. */
+      note: row.note,
     };
   }
   return map;

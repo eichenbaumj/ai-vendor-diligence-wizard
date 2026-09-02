@@ -96,6 +96,12 @@ export const LedgerExpectation = z
       .array(z.enum(["attributed", "candidate"]))
       .min(1)
       .optional(),
+    /* No matched row's note may contain any of these strings
+       (case-insensitive). Vacuously true when the row is absent. The
+       never-attributes lock: "the identity row never names CONDUIT, LLC"
+       is a deterministic ground-truth invariant and may be hard. The
+       strings live in the private panel, never in the public repo. */
+    note_never_contains: z.array(z.string().min(3).max(120)).min(1).optional(),
     /* Research-dependent VERIFIED statuses must always be soft. */
     hardness: z.enum(["hard", "soft"]),
   })

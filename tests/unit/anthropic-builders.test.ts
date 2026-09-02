@@ -30,6 +30,12 @@ describe("buildExtractRequest (S1 pitch extract and S1b site extract)", () => {
     expect(req.tools).toBeUndefined();
   });
 
+  it("tells the extractor that a product name is never the company name (methodology 1.8, non-load-bearing)", () => {
+    const req = buildExtractRequest("label", "pitch");
+    expect(String(req.system)).toContain("never a product name");
+    expect(String(req.system)).toContain("leave the company name out rather than substitute the product");
+  });
+
   it("carries the source label and the pitch text verbatim in one user message", () => {
     const req = buildExtractRequest("label-x", "verbatim pitch body");
     expect(req.messages).toHaveLength(1);

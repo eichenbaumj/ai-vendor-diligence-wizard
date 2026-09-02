@@ -56,6 +56,17 @@ is present. No page is fetched for this and no model supplies the date.
 Expected effect on verdicts: none. Dates are display only and nothing reads
 them.
 
+**The pitch reader is told that a product name is never the company name.**
+On one audited web-address run the vendor's page named its product eight
+times and the company never, and the reader adopted the product name as
+the company name, so every registry search ran on it. Version 1.7 closed
+the harm in code: a record the web address does not cover is never
+credited. The reader's instructions now also say that the company name is
+the legal or trading name and that a page naming only a product leaves the
+company name out. This is a prompt change, not a rule change, and the code
+protection stands with or without it. Expected effect on verdicts: none by
+rule.
+
 ## Version 1.7 (September 2026)
 
 **What changed in this version, in short.** The verdict tiers and their rules

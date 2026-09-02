@@ -853,7 +853,7 @@ async function main() {
     "",
     args.noCleanup
       ? "Cleanup was SKIPPED (--no-cleanup). Rows are publicly fetchable by UUID; delete them:"
-      : "Cleanup ran at the end of this invocation. SQL for reference:",
+      : "Cleanup runs at the end of this invocation; the log records the outcome. SQL for reference:",
     "```sql",
     cleanupSql(),
     "```",
@@ -873,12 +873,15 @@ async function main() {
   if (args.promoteBaseline) {
     if (hardFailures.length > 0) {
       console.error(`qa-harness: NOT promoting baseline: ${hardFailures.length} hard failure(s)`);
+    } else if (infraCells.length + submitFailures.length > 0) {
+      /* A baseline is the comparison point for every future drift read; a run
+         with missing cells would report each gap as drift forever. Re-run
+         instead. (Copy results.json into baselines/ by hand only if a gapped
+         baseline is truly intended.) */
+      console.error(
+        `qa-harness: NOT promoting baseline: ${infraCells.length + submitFailures.length} infra gap(s); a baseline must be a complete run`,
+      );
     } else {
-      if (infraCells.length + submitFailures.length > 0) {
-        console.error(
-          "qa-harness: warning: promoting a baseline with infra gaps; missing cells will show as drift later",
-        );
-      }
       const baseDir = join(resolve(panelDirEnv as string), "baselines");
       mkdirSync(baseDir, { recursive: true });
       /* Full stamp, not date-only: two promotions on the same day must not
@@ -891,9 +894,27 @@ async function main() {
   }
 
   /* ---- cleanup (default ON) ---- */
+  let cleanupFailed = false;
   if (!args.noCleanup && allIds.length > 0) {
-    await client.sql(cleanupSql());
-    console.log(`cleaned up ${allIds.length} evaluation row(s)`);
+    /* Rows are publicly fetchable by UUID; a transient network failure here
+       must not leave them behind. Three attempts with backoff, then the SQL
+       printed loudly for a manual run (delete-rows.mts takes the ids). */
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        await client.sql(cleanupSql());
+        console.log(`cleaned up ${allIds.length} evaluation row(s)`);
+        break;
+      } catch (e) {
+        if (attempt === 3) {
+          cleanupFailed = true;
+          console.error(
+            `qa-harness: cleanup FAILED after 3 attempts (${e}); ${allIds.length} row(s) are LIVE IN PRODUCTION. Run:\n${cleanupSql()}`,
+          );
+        } else {
+          await new Promise((r) => setTimeout(r, attempt * 5000));
+        }
+      }
+    }
   } else if (allIds.length > 0) {
     console.log(`cleanup skipped (--no-cleanup); SQL:\n${cleanupSql()}`);
   }
@@ -910,7 +931,7 @@ async function main() {
   }
   if (hardFailures.length > 0) process.exit(1);
   if (args.strict && (softFailures.length > 0 || driftItems.length > 0)) process.exit(1);
-  if (infraCount > 0) process.exit(2);
+  if (infraCount > 0 || cleanupFailed) process.exit(2);
 }
 
 main().catch((e) => {

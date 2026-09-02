@@ -179,6 +179,39 @@ describe("composeReport", () => {
     expect(injected.report.green_flags).toEqual(clean.report.green_flags);
   });
 
+  it("adds the collision row only when asked, after the tier, and never to the tier inputs", () => {
+    const { report } = build(cleanNarrative);
+    expect(report.honesty_panel.some((h) => h.check_id === "name_collision")).toBe(false);
+    const withRow = (() => {
+      const skeletonInput: AssembleInput = {
+        extract: extractWith(),
+        checks,
+        identity: { identity_resolved: true, identifiers_found: ["a", "b"] },
+        citations: [],
+        adv_findings: [],
+        sector: { pack_ids: [], elevated: false, overlay_reason: null, state_items: [] },
+        packs: {},
+        resolvable: true,
+        research_partial: false,
+        generated_at: AT,
+      };
+      const skeleton = assemble(skeletonInput);
+      const decision = computeTier(skeleton.tierInputs);
+      const guard = buildSynthesisGuard({ checks, extract: skeletonInput.extract, vendorName: "Ironclad", greenFlagFacts: skeleton.greenFlagFacts, ranStates: [] });
+      return composeReport({
+        skeleton, decision, narrative: cleanNarrative, guard, checks, citations: [], adv: [],
+        sector: skeletonInput.sector, vendorName: "Ironclad", vendorKey: "ironclad", inputKind: "name",
+        generatedAt: AT, researchPartial: false, namesakeRecords: 3, nameCollision: true,
+      });
+    })();
+    const row = withRow.honesty_panel.find((h) => h.check_id === "name_collision");
+    expect(row?.status).toBe("flag");
+    expect(row?.reason).toContain("At least 3 registry records");
+    expect(withRow.meta.namesake_records).toBe(3);
+    expect(withRow.verdict.tier).toBe(report.verdict.tier);
+    expect(withRow.verdict.rationale).toEqual(report.verdict.rationale);
+  });
+
   it("stamps the assessed domain and its source into meta, and parses without them", async () => {
     const { report } = build(cleanNarrative);
     expect(report.meta.assessed_domain).toBeNull();

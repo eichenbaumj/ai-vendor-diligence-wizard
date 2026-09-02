@@ -74,6 +74,9 @@ export interface OverviewModel {
      row): the reader should know the website checks are missing and how
      to get them. */
   siteNotice: string | null;
+  /* Set when a bare-name run found exact-name registry records it could
+     not tie to the vendor (the name_collision honesty row, 1.7). */
+  collisionNotice: string | null;
   found: {
     claims: {
       targetId: string;
@@ -153,6 +156,16 @@ export function buildOverviewModel(report: Report): OverviewModel {
     ? "We could not find or read this vendor's website during this run, so the checks that read its pages are missing. The honesty panel has the details. To include those checks, run a new check with the vendor's web address pasted in."
     : null;
 
+  /* Mirrors the name_collision honesty row (name-collision.ts): records-
+     only wording, because "refused" means untied, not "another company"
+     (dual entities exist). Kept byte-identical to NAME_COLLISION_NOTICE
+     in the shared module by test. */
+  const collisionNotice = report.honesty_panel.some(
+    (h) => h.check_id === "name_collision" && h.status === "flag",
+  )
+    ? "Other registry records under this vendor's name could not be tied to it. They earn no credit and drive no warning. Confirm the legal name with the vendor. Adding the web address to a new check makes the match much stronger."
+    : null;
+
   /* ------------------------------------------------------- what we found */
 
   const claimSegments: BarSegment[] = RESULT_ORDER.map((result) => ({
@@ -230,7 +243,9 @@ export function buildOverviewModel(report: Report): OverviewModel {
 
   /* --------------------------------------------------- what we could check */
 
-  const honesty = report.honesty_panel;
+  /* The collision notice is a notice, not a check that ran: it never
+     counts toward the coverage bar. */
+  const honesty = report.honesty_panel.filter((h) => h.check_id !== "name_collision");
   const ran = honesty.filter((h) => h.status === "pass" || h.status === "flag").length;
   const couldNotRun = honesty.filter((h) => h.status === "could_not_check").length;
   const notApplicable = honesty.filter((h) => h.status === "not_applicable").length;
@@ -301,6 +316,7 @@ export function buildOverviewModel(report: Report): OverviewModel {
     bluf,
     partialNotice,
     siteNotice,
+    collisionNotice,
     found: { claims, tiles: foundTiles },
     coverage,
     next: { tiles: nextTiles },

@@ -434,6 +434,11 @@ export const Report = z.object({
        Optional: reports stored before the fields existed omit them. */
     assessed_domain: z.string().max(253).nullable().optional(),
     domain_source: z.enum(["submitted", "pitch", "discovered"]).nullable().optional(),
+    /* Refused exact-name registry records this run found (a floor; see
+       identity-ties.ts namesakeCensus). Stored on every run so the sweeps
+       can measure whether the collision notice belongs on other input
+       kinds too. */
+    namesake_records: z.number().int().nonnegative().optional(),
   }),
 });
 export type Report = z.infer<typeof Report>;

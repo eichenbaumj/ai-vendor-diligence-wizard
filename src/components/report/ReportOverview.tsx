@@ -265,6 +265,12 @@ export function ReportOverview({ report }: { report: Report }) {
           </p>
         )}
 
+        {model.collisionNotice && (
+          <p className="mt-3 rounded-xl bg-status-warn-soft px-4 py-2.5 text-sm leading-relaxed text-brand-charcoal">
+            {model.collisionNotice}
+          </p>
+        )}
+
         {/* ------------------------------------------------ what we found */}
         <div className="mt-6">
           <GroupLabel>{OVERVIEW_GROUP_LABELS.found}</GroupLabel>

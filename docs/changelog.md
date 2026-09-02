@@ -83,6 +83,17 @@ name checks with the web address resolve identity for real single-record
 vendors that a bare name cannot, and stop crediting namesakes. A bare name
 behaves as before under the new attribution rule.
 
+**Name-only reports now say when the name collides.** In every audited
+case of a namesake's record slipping into a report, the input was a bare
+name shared by several registered companies, and the report never said
+so. When a name-only check without a web address finds at least two
+registry records under the exact name that nothing ties to the vendor,
+the honesty panel carries a "Name collision check" row under "Needs your
+attention", and the overview repeats the notice. The count is a floor:
+registry searches stop early on an exact match and cap their lists.
+Expected effect on verdicts: none. The row is informational, and the
+candidate records it points to already earn nothing.
+
 ## Version 1.6 (September 2026)
 
 **Name-only checks get a steadier website step, and the report says so

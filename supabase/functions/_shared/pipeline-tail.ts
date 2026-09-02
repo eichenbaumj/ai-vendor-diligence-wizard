@@ -56,8 +56,10 @@ import {
   buildTieCorpus,
   discoverBridgeNames,
   domainRegistrationYear,
+  namesakeCensus,
   tieFactsForCheck,
 } from "./identity-ties.ts";
+import { nameCollisionApplies, nameCollisionItem } from "./name-collision.ts";
 import { splitNameCandidates } from "./text-match.ts";
 import { PACKS, PACK_RELEASE } from "./packs.gen.ts";
 import { STATE_ITEMS } from "./state-items.ts";
@@ -640,6 +642,7 @@ export async function runPipelineTail(
       .map(([, name]) => name),
   });
 
+  const namesakeRecords = namesakeCensus(checks);
   const narrative = await runStructurePass(deps.anthropicKey, s5Input, guard);
   deps.usageBox.value = addUsage(deps.usageBox.value, narrative.usage);
   deps.stageUsage.s5 = narrative.usage;
@@ -667,6 +670,12 @@ export async function runPipelineTail(
         : state.discoveredDomain
           ? "discovered"
           : null,
+    namesakeRecords,
+    nameCollision: nameCollisionApplies({
+      inputKind,
+      submittedDomain: state.submittedDomain ?? null,
+      namesakeRecords,
+    }),
   });
   const ledger = report.ledger;
 
@@ -1043,6 +1052,10 @@ export interface ComposeArgs {
   /* The address the site checks ran against, and its provenance. */
   assessedDomain?: string | null;
   domainSource?: "submitted" | "pitch" | "discovered" | null;
+  /* Refused exact-name registry records (identity-ties.ts namesakeCensus)
+     and whether the collision notice applies to this run. */
+  namesakeRecords?: number;
+  nameCollision?: boolean;
 }
 
 /* Compose the Report from the decided skeleton and the (guarded) model
@@ -1117,6 +1130,13 @@ export function composeReport(args: ComposeArgs): Report {
     });
   const nextSteps = (stepsDraft.length > 0 ? stepsDraft : defaultNextSteps(decision.tier)).slice(0, 8);
 
+  /* The collision notice rides the honesty panel (no schema change) and
+     never touches the tier: computeTier ran before this point on inputs
+     that do not read the panel. */
+  const honesty = args.nameCollision
+    ? [...skeleton.honesty, nameCollisionItem(args.namesakeRecords ?? 0)]
+    : skeleton.honesty;
+
   return {
     verdict: {
       tier: decision.tier,
@@ -1128,7 +1148,7 @@ export function composeReport(args: ComposeArgs): Report {
     ledger: ledger.map((r) => ({ ...r, sources: firewallSources(r.sources) })),
     green_flags: skeleton.greenFlagFacts.slice(0, 15).map(renderGreenFlag),
     adv_findings: adv.slice(0, 6),
-    honesty_panel: skeleton.honesty,
+    honesty_panel: honesty,
     questions: skeleton.questions,
     manual_checks: skeleton.manualChecks,
     leads: skeleton.leads,
@@ -1150,6 +1170,7 @@ export function composeReport(args: ComposeArgs): Report {
       input_kind: args.inputKind,
       assessed_domain: args.assessedDomain ?? null,
       domain_source: args.domainSource ?? null,
+      ...(typeof args.namesakeRecords === "number" ? { namesake_records: args.namesakeRecords } : {}),
     },
   };
 }

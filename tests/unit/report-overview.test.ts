@@ -196,6 +196,23 @@ describe("buildOverviewModel: the minimal report", () => {
   });
 });
 
+describe("buildOverviewModel: the collision notice (1.7)", () => {
+  it("shows the notice exactly when the name_collision row flags, byte-identical to the shared copy, and keeps the row out of the coverage count", async () => {
+    const { NAME_COLLISION_NOTICE, nameCollisionItem } = await import("@shared/name-collision.ts");
+    const withRow = Report.parse({
+      ...minimal,
+      honesty_panel: [...minimal.honesty_panel, nameCollisionItem(2)],
+    });
+    const m = buildOverviewModel(withRow);
+    expect(m.collisionNotice).toBe(NAME_COLLISION_NOTICE);
+    expect(buildOverviewModel(minimal).collisionNotice).toBeNull();
+    const baseline = buildOverviewModel(minimal);
+    expect(m.coverage?.segments.find((s) => s.key === "ran")?.count ?? 0).toBe(
+      baseline.coverage?.segments.find((s) => s.key === "ran")?.count ?? 0,
+    );
+  });
+});
+
 describe("buildOverviewModel: copy discipline", () => {
   it.each([...fixtures, ["minimal", minimal] as const])(
     "%s: zero banned-language findings and zero em dashes in every template",
@@ -205,6 +222,7 @@ describe("buildOverviewModel: copy discipline", () => {
         bluf: m.bluf,
         partial: m.partialNotice ?? "",
         site: m.siteNotice ?? "",
+        collision: m.collisionNotice ?? "",
         groups: Object.values(OVERVIEW_GROUP_LABELS),
         tiles: allTiles(m).map((t) => `${t.label} ${t.detail ?? ""}`),
         claims: m.found.claims

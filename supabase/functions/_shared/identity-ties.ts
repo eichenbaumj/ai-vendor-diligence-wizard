@@ -906,6 +906,57 @@ export function exactLiveKeys(checks: RegistryCheck[]): Map<string, Set<string>>
   return keys;
 }
 
+/* The refused-namesake census for the collision notice: distinct
+   exact-name records (live or dissolved) across the registry lanes that
+   were NOT credited to the vendor. Similarity matches and the rejected
+   product-only or investment-vehicle names are not namesakes and never
+   count. A name credited anywhere never counts, wherever else it appears
+   (the same entity registered in several states). The count is a floor:
+   lanes stop on the first exact match and cap their lists. */
+export function namesakeCensus(checks: RegistryCheck[]): number {
+  const credited = new Set<string>();
+  const seen = new Set<string>();
+  const facts = new Map<RegistryCheck, RecordTieFacts | null>();
+  for (const check of checks) {
+    const f = tieFactsForCheck(check);
+    facts.set(check, f);
+    if (f && check.attribution === "attributed") credited.add(normalizeUnstripped(f.legal_name));
+  }
+  for (const check of checks) {
+    if (check.status !== "hit") continue;
+    const data = (check.data ?? {}) as Record<string, unknown>;
+    const names: string[] = [];
+    if (check.check_id.startsWith("sos_")) {
+      const matches = Array.isArray(data["matches"]) ? (data["matches"] as SosLaneMatch[]) : [];
+      for (const m of matches) {
+        if (str(m.confidence) === "exact") {
+          const n = str(m.name);
+          if (n) names.push(n);
+        }
+      }
+    } else if (/edgar/.test(check.check_id)) {
+      const entities = Array.isArray(data["filing_entities"])
+        ? (data["filing_entities"] as Record<string, unknown>[])
+        : [];
+      for (const e of entities) {
+        if (str(e["confidence"]) === "exact") {
+          const n = str(e["name"]);
+          if (n) names.push(n);
+        }
+      }
+    } else if (/^sam(_entity)?$/.test(check.check_id) && check.confidence === "exact") {
+      const n = str(data["legal_business_name"]);
+      if (n) names.push(n);
+    }
+    for (const n of names) {
+      const key = normalizeUnstripped(n);
+      if (!key || credited.has(key)) continue;
+      seen.add(key);
+    }
+  }
+  return seen.size;
+}
+
 /* Guard facts for one check, from the census and the corpus. */
 export function guardFor(
   check: RegistryCheck,

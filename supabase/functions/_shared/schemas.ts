@@ -127,6 +127,12 @@ export const TieEvidence = z.object({
      fairness guard keeps that from ever being adverse. */
   checkable: z.boolean(),
   signals: z.array(TieSignal).max(8),
+  /* Methodology 1.7 age veto: the record was formed more than five years
+     before the earliest year the run knows for the vendor (a stated
+     founding year, or the registration year of the vendor's own domain).
+     A weak tie cannot credit such a record; a strong tie still can.
+     Optional so checks stored before the field existed still parse. */
+  age_contradicted: z.boolean().optional(),
 });
 export type TieEvidence = z.infer<typeof TieEvidence>;
 

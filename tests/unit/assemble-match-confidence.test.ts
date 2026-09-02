@@ -95,7 +95,7 @@ describe("USAspending favorable credit requires an exact match", () => {
     expect(out.greenFlagFacts.some((f) => /federal payment/i.test(f.fact))).toBe(false);
   });
 
-  it("an exact recipient on a distinctive name earns the verified row and green flag", () => {
+  it("an exact recipient on a distinctive name WITH awards earns the verified row and green flag", () => {
     const out = assemble(
       input({
         extract: baseExtract({ vendor_name_candidates: ["Polimorphic"] }),
@@ -103,7 +103,9 @@ describe("USAspending favorable credit requires an exact match", () => {
           {
             ...similarityUsasp,
             confidence: "exact",
-            data: { recipient_name: "POLIMORPHIC, INC." },
+            summary:
+              "USAspending.gov shows 2 federal contract awards to a recipient named POLIMORPHIC, INC. in the last five years, totaling about $120,000. Federal payment records are strong evidence of real government work when the recipient is the same company; the identity check weighs the name match.",
+            data: { recipient_name: "POLIMORPHIC, INC.", award_count: 2, total_amount: 120000 },
           },
         ],
       }),
@@ -112,7 +114,40 @@ describe("USAspending favorable credit requires an exact match", () => {
     expect(row!.result).toBe("VERIFIED");
     expect(row!.match_confidence).toBe("exact");
     expect(row!.attribution).toBe("attributed");
+    /* Methodology 1.7: the note is the lane's own summary, so the "same
+       company" caution survives into the row (R2-F2, R2-F11 hedge loss). */
+    expect(row!.note).toContain("same company");
     expect(out.tierInputs.green_dimensions).toContain("D2");
+    const fact = out.greenFlagFacts.find((f) => /federal award/i.test(f.fact));
+    expect(fact!.fact).toContain("2 federal awards");
+    expect(fact!.fact).toContain("same company");
+  });
+
+  it("an exact recipient ENTRY with zero awards is a candidate row, never credit (methodology 1.7)", () => {
+    /* Forerunner and Ironclad, round 2: the lane reported a recipient with
+       "did not find contract awards in the last five years" and the run
+       still minted a VERIFIED row and a federal track-record green flag. */
+    const out = assemble(
+      input({
+        extract: baseExtract({ vendor_name_candidates: ["Polimorphic"] }),
+        checks: [
+          {
+            ...similarityUsasp,
+            confidence: "exact",
+            summary:
+              "USAspending.gov lists a recipient named POLIMORPHIC, INC., but we did not find contract awards in the last five years. If this is the same company, ask the vendor when it last worked with a federal agency.",
+            data: { recipient_name: "POLIMORPHIC, INC.", award_count: 0, total_amount: 0 },
+          },
+        ],
+      }),
+    );
+    const row = out.ledger.find((r) => r.methodology_ref === "d2-1");
+    expect(row!.result).toBe("COULD_NOT_VERIFY");
+    expect(row!.attribution).toBe("candidate");
+    expect(row!.note).toContain("did not find contract awards");
+    expect(row!.note).not.toContain("Names this short");
+    expect(out.tierInputs.green_dimensions).not.toContain("D2");
+    expect(out.greenFlagFacts.some((f) => /federal award/i.test(f.fact))).toBe(false);
   });
 
   it("an exact recipient on a degenerate short name stays a candidate (the seventeen-a lock, now in code)", () => {

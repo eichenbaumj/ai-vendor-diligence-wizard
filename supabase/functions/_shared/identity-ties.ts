@@ -52,6 +52,7 @@ import {
   productOnlyTokens,
 } from "./registry/sam.ts";
 import { isRegistryGradeHost } from "./domain-classes.ts";
+import { registrableDomain } from "./domain-inference.ts";
 import { contentMentions, tokensOf } from "./text-match.ts";
 
 /* ------------------------------------------------------------- state names */
@@ -196,6 +197,90 @@ export interface VendorTieCorpus {
   submittedNames: string[];
   /* Class 1-2 citations only. */
   coverage: Citation[];
+  /* The registrable root label of a SUBMITTED domain (the web-address
+     tab's host, or the address typed beside a vendor name), lowercase,
+     letters and digits only ("acmegov" from www.acmegov.com). Null on
+     bare-name runs and for pitch-stated, discovered, or inferred domains:
+     only an address the buyer put in front of the tool is a statement
+     about WHICH company is being checked. It is a name-consistency check
+     on record credit (methodology D1.1), never a tie: a product name that
+     took over the vendor name on a URL run ("Conduit" for a company whose
+     address is conductorai.com, 2026-09-01) must not mint an unrelated
+     exact-name record. */
+  submittedDomainRoot: string | null;
+  /* The earliest vendor-side year the run knows: a founding year the
+     pitch states, or the registration year of the vendor's own domain
+     (pitch-stated or submitted, or discovered and confirmed). Null when
+     neither exists. Drives the age veto in computeTies: a record formed
+     long before the vendor existed is a namesake until a strong detail
+     says otherwise (a 1996 corporation minted a 2019 startup's identity,
+     gauntlet round 2, R2-F1). */
+  vendorYear: number | null;
+}
+
+/* Years a record may predate the vendor's earliest known year before the
+   age veto applies. Five: a company can be older than its current website
+   or its stated founding story by a few years; two decades is a namesake. */
+export const AGE_VETO_YEARS = 5;
+
+/* The root label of a host's registrable domain, letters and digits only:
+   "www.Acme-Gov.com" -> "acmegov"; "vendor.co.uk" -> "vendor". */
+export function domainRootOf(host: string): string {
+  const clean = host.toLowerCase().replace(/^www\./, "").trim();
+  const root = registrableDomain(clean).split(".")[0] ?? "";
+  return root.replace(/[^a-z0-9]/g, "");
+}
+
+/* Tokens that carry no identity in a legal name: a root must cover a
+   DISTINCTIVE token, never only one of these. */
+const GENERIC_NAME_TOKENS = new Set([
+  "group", "holdings", "technologies", "technology", "tech", "solutions",
+  "systems", "services", "software", "labs", "global", "international",
+  "america", "american", "national", "united", "partners", "enterprises",
+  "industries", "network", "networks", "digital", "data", "capital",
+  "ventures", "management", "consulting", "associates", "the", "and", "of",
+]);
+
+/* Does a submitted domain's root label cover a record's legal name? The
+   record's name tokens (suffixes stripped) are checked AGAINST the root,
+   never the reverse: tokenMajority(root, name) would fail every real
+   multi-token legal name ("ZENCITY TECHNOLOGIES US" vs "zencity" covers
+   one token of three). A distinctive token (four or more characters, not
+   a generic business word) contained in the root covers the name; so does
+   the whole name concatenated. Short names with no distinctive token fall
+   back to the concatenation ("zip" in "zipsec"), and the degenerate-name
+   rule upstream still demands a strong tie for those. */
+export function domainRootCoversName(root: string, legalName: string): boolean {
+  const r = root.toLowerCase().replace(/[^a-z0-9]/g, "");
+  if (!r) return false;
+  const tokens = normalizeCompanyName(legalName).toLowerCase().split(" ").filter(Boolean);
+  if (tokens.length === 0) return false;
+  const concat = tokens.join("");
+  const distinctive = tokens.filter((t) => t.length >= 4 && !GENERIC_NAME_TOKENS.has(t));
+  if (distinctive.length === 0) {
+    return concat.length >= 3 && r.includes(concat);
+  }
+  if (distinctive.some((t) => r.includes(t))) return true;
+  if (r.includes(concat)) return true;
+  return r.length >= 4 && concat.includes(r);
+}
+
+/* The registration year of the vendor's own domain, when the run knows
+   it: the RDAP lane's hit for a pitch-stated or submitted domain, or a
+   discovered domain the site itself confirmed (the same provenance rule
+   identity resolution applies). Null otherwise. */
+export function domainRegistrationYear(checks: RegistryCheck[]): number | null {
+  const rdap = checks.find((c) => c.check_id === "rdap_domain_age" && c.status === "hit");
+  if (!rdap) return null;
+  const d = (rdap.data ?? {}) as {
+    registered_year?: unknown;
+    discovered_domain?: unknown;
+    confirmed_name_match?: unknown;
+  };
+  if (d.discovered_domain && d.confirmed_name_match !== true) return null;
+  return typeof d.registered_year === "number" && Number.isFinite(d.registered_year)
+    ? d.registered_year
+    : null;
 }
 
 export function buildTieCorpus(args: {
@@ -212,6 +297,14 @@ export function buildTieCorpus(args: {
   siteState?: string | null;
   /* Deterministic footer states harvested by siteStatesFromText. */
   siteStates?: string[];
+  /* A domain the BUYER submitted (url tab host, or the website typed
+     beside a name). Never the pitch-stated, discovered, or inferred
+     domain. */
+  submittedDomain?: string | null;
+  /* The founding year the pitch states, if any. */
+  foundingYear?: number | null;
+  /* The registration year of the vendor's own domain (domainRegistrationYear). */
+  domainYear?: number | null;
 }): VendorTieCorpus {
   const { extract } = args;
   const peopleNames = extract.people.map((p, i) => ({
@@ -246,6 +339,12 @@ export function buildTieCorpus(args: {
      2026-09-01 run 1). */
   for (const c of args.citations) {
     if (c.domain_class > 2) continue;
+    /* Methodology 1.7: a citation's state names count only when the
+       citation also mentions the vendor. A full state name anywhere in a
+       class 1-2 page tied namesakes to this vendor (the accela cell's
+       promoted baseline anchored on ACCELA AVALON MANAGEMENT LLC through a
+       coverage state, 2026-09-01). */
+    if (!extract.vendor_name_candidates.some((n) => contentMentions(c, n))) continue;
     const text = `${c.title ?? ""} ${c.cited_text ?? ""}`.toUpperCase();
     for (const [name, code] of Object.entries(STATE_NAME_TO_CODE)) {
       if (text.includes(name)) addState(code, "coverage");
@@ -259,6 +358,9 @@ export function buildTieCorpus(args: {
   if (args.primaryDomain) {
     domains.add(args.primaryDomain.toLowerCase().replace(/^www\./, ""));
   }
+  const years = [args.foundingYear ?? null, args.domainYear ?? null].filter(
+    (y): y is number => typeof y === "number" && Number.isFinite(y),
+  );
   return {
     peopleNames,
     addresses,
@@ -267,6 +369,8 @@ export function buildTieCorpus(args: {
     productNames: args.productNames,
     submittedNames: extract.vendor_name_candidates,
     coverage: args.citations.filter((c) => c.domain_class <= 2),
+    submittedDomainRoot: args.submittedDomain ? domainRootOf(args.submittedDomain) || null : null,
+    vendorYear: years.length > 0 ? Math.min(...years) : null,
   };
 }
 
@@ -290,6 +394,11 @@ export interface RecordTieFacts {
      attribution verdict, not the tie computation. */
   match_confidence?: "exact" | "name_similarity";
   containment?: "query_in_record" | "record_in_query";
+  /* The record's registration or formation year in the lane that found
+     it, when the dataset states one. A foreign registration date is later
+     than formation, which only makes the record look younger: the age
+     veto never fires on it wrongly. */
+  formation_year?: number | null;
   /* The record carries an affirmative end-of-registration designation.
      Such a record needs a STRONG tie to be attributed at all: without this,
      a weak state tie could mint identity from a dissolved namesake while
@@ -489,11 +598,20 @@ export function computeTies(
     }
   }
 
+  /* Age veto (methodology 1.7): a record formed more than AGE_VETO_YEARS
+     before the vendor's earliest known year is a namesake until a strong
+     detail says otherwise. Evidence only; attributionFor applies it. */
+  const ageContradicted =
+    typeof record.formation_year === "number" &&
+    typeof corpus.vendorYear === "number" &&
+    record.formation_year < corpus.vendorYear - AGE_VETO_YEARS;
+
   return {
     tied: signals.length > 0,
     strong: signals.some((s) => s.strength === STRONG),
     checkable,
     signals,
+    ...(ageContradicted ? { age_contradicted: true } : {}),
   };
 }
 
@@ -511,6 +629,8 @@ const SOS_LANE_STATE: Record<string, string> = {
 interface SosLaneMatch {
   name?: unknown;
   confidence?: unknown;
+  status?: unknown;
+  date?: unknown;
   street?: unknown;
   city?: unknown;
   addr_state?: unknown;
@@ -528,6 +648,12 @@ function strArray(v: unknown): string[] {
   return Array.isArray(v)
     ? v.filter((x): x is string => typeof x === "string" && x.trim().length > 0)
     : [];
+}
+
+/* A four-digit year at the start of a lane date ("2019-05-20", "1996"). */
+function yearOf(raw: string | null): number | null {
+  const m = raw?.match(/^((?:19|20)\d{2})/);
+  return m ? Number(m[1]) : null;
 }
 
 /* Record-side facts for the check's BEST match — the record the downstream
@@ -557,6 +683,7 @@ export function tieFactsForCheck(check: RegistryCheck): RecordTieFacts | null {
       agent: str(best.agent),
       registration_state: SOS_LANE_STATE[check.check_id] ?? null,
       jurisdiction: str(best.jurisdiction),
+      formation_year: yearOf(str(best.date)),
       ...(confidence === "exact" || confidence === "name_similarity"
         ? { match_confidence: confidence }
         : {}),
@@ -652,23 +779,77 @@ export function isDegenerateBrandName(name: string): boolean {
    the Madison-based company will ever mention; 2026-09-01 run 2), and no
    audited false attribution came from that class. Ties still matter for
    such records: adverse findings on them require a STRONG tie always. */
+export interface AttributionGuard {
+  /* The record's family takes the symmetric rules (state registries, SEC,
+     SAM). Compliance feeds keep the plain exact-match verdict here: their
+     credit is decided by feedCredited in assemble, under its own rules. */
+  symmetric: boolean;
+  /* Whether the submitted domain's root covers the record's name; null
+     when the run has no submitted domain. */
+  rootCovered: boolean | null;
+  /* The record came through the research-to-registry name bridge, whose
+     whole purpose is a legal name the brand (and so the root) cannot
+     reveal: the root check does not apply to it. */
+  bridged: boolean;
+  /* Census verdict across the run's registry lanes: true when no other
+     live exact-name record under a DIFFERENT name competes, or when this
+     record's name is backed by strictly more independent registries than
+     every competitor. False when a competitor is at least as well
+     supported. Null when no census ran (direct calls). */
+  anchor: boolean | null;
+}
+
+const DEFAULT_GUARD: AttributionGuard = {
+  symmetric: true,
+  rootCovered: null,
+  bridged: false,
+  anchor: null,
+};
+
+/* Methodology 1.7 (symmetric attribution). Before 1.7 an exact match on a
+   distinctive live name attributed untied, while adverse records needed a
+   strong tie: the favorable side had no gate, and a 1996 Colorado namesake
+   minted a 2019 startup's identity (round 2, R2-F1), a product name minted
+   an unrelated Texas LLC on a URL run (2026-09-01), and a Connecticut
+   namesake LLC joined a Delaware corporation's identity row (R2-F10). The
+   untied exact path now needs, in order: a strong tie (always enough); no
+   age contradiction and a covering submitted root (else candidate); any
+   tie (enough); otherwise the census: the record's name must be the only
+   live exact name in the run or the best-supported one. Real single-record
+   startups whose registrations tie to nothing public (Polco's true Texas
+   record) still attribute: nothing competes with them. */
 export function attributionFor(
   facts: RecordTieFacts,
   tie: TieEvidence,
+  guard: Partial<AttributionGuard> = {},
 ): "attributed" | "candidate" {
+  const g: AttributionGuard = { ...DEFAULT_GUARD, ...guard };
   if (facts.dissolved && !tie.strong) return "candidate";
   if (isDegenerateBrandName(facts.legal_name)) {
     return tie.strong ? "attributed" : "candidate";
   }
+  /* A weak or absent tie cannot carry a record that is too old for this
+     vendor or that the buyer's own web address does not cover. */
+  const vetoed =
+    g.symmetric &&
+    !tie.strong &&
+    (tie.age_contradicted === true || (g.rootCovered === false && !g.bridged));
   if (facts.match_confidence === "exact") {
-    return "attributed";
+    if (tie.strong) return "attributed";
+    if (vetoed) return "candidate";
+    if (tie.tied) return "attributed";
+    if (!g.symmetric) return "attributed";
+    return g.anchor === false ? "candidate" : "attributed";
   }
   if (facts.match_confidence === "name_similarity") {
-    /* Promotable direction (record ⊇ query): any tie promotes. Namesake
-       direction (record ⊂ query): only a STRONG tie promotes — a shared
-       officer or address means the shorter-named record is genuinely
-       connected, while a state coincidence means nothing there. */
+    /* Promotable direction (record ⊇ query): any tie promotes, unless the
+       age or root veto applies. Namesake direction (record ⊂ query): only
+       a STRONG tie promotes; a shared officer or address means the
+       shorter-named record is genuinely connected, while a state
+       coincidence means nothing there. */
     if (facts.containment === "query_in_record") {
+      if (tie.strong) return "attributed";
+      if (vetoed) return "candidate";
       return tie.tied ? "attributed" : "candidate";
     }
     if (facts.containment === "record_in_query") {
@@ -676,6 +857,71 @@ export function attributionFor(
     }
   }
   return "candidate";
+}
+
+/* Statuses that mark a registry record as no longer live, for the census
+   only (the dissolution surface has its own detector). A record that is
+   not live cannot compete for the vendor's identity. */
+const NOT_LIVE_STATUS = /dissol|revok|forfeit|terminat|surrender|withdraw|cancel|inactive/i;
+
+const SYMMETRIC_FAMILY = /^sos_|edgar|^sam(_entity)?$/;
+
+/* The live exact-name census: every live registry record whose name
+   exactly matches a query, keyed by unstripped normalized name, with the
+   set of independent registries (each state lane, EDGAR, SAM) that hold
+   it. Reads every lane match, not only the best one. */
+export function exactLiveKeys(checks: RegistryCheck[]): Map<string, Set<string>> {
+  const keys = new Map<string, Set<string>>();
+  const add = (name: string | null, lane: string) => {
+    if (!name) return;
+    const k = normalizeUnstripped(name);
+    if (!k) return;
+    if (!keys.has(k)) keys.set(k, new Set());
+    keys.get(k)!.add(lane);
+  };
+  for (const check of checks) {
+    if (check.status !== "hit") continue;
+    const data = (check.data ?? {}) as Record<string, unknown>;
+    if (check.check_id.startsWith("sos_")) {
+      const matches = Array.isArray(data["matches"]) ? (data["matches"] as SosLaneMatch[]) : [];
+      for (const m of matches) {
+        if (str(m.confidence) !== "exact") continue;
+        const status = str(m.status);
+        if (status && NOT_LIVE_STATUS.test(status)) continue;
+        add(str(m.name), check.check_id);
+      }
+    } else if (/edgar/.test(check.check_id)) {
+      const entities = Array.isArray(data["filing_entities"])
+        ? (data["filing_entities"] as Record<string, unknown>[])
+        : [];
+      for (const e of entities) {
+        if (str(e["confidence"]) === "exact") add(str(e["name"]), "edgar");
+      }
+    } else if (/^sam(_entity)?$/.test(check.check_id) && check.confidence === "exact") {
+      add(str(data["legal_business_name"]), "sam");
+    }
+  }
+  return keys;
+}
+
+/* Guard facts for one check, from the census and the corpus. */
+export function guardFor(
+  check: RegistryCheck,
+  facts: RecordTieFacts,
+  corpus: VendorTieCorpus,
+  census: Map<string, Set<string>>,
+): AttributionGuard {
+  const symmetric = SYMMETRIC_FAMILY.test(check.check_id);
+  const rootCovered = corpus.submittedDomainRoot
+    ? domainRootCoversName(corpus.submittedDomainRoot, facts.legal_name)
+    : null;
+  const bridged = Boolean(((check.data ?? {}) as { name_bridge?: unknown }).name_bridge);
+  const key = normalizeUnstripped(facts.legal_name);
+  const support = census.get(key)?.size ?? 0;
+  const competitors = [...census.entries()].filter(([k]) => k !== key);
+  const anchor =
+    competitors.length === 0 || competitors.every(([, lanes]) => lanes.size < support);
+  return { symmetric, rootCovered, bridged, anchor };
 }
 
 /* Write tie evidence and the attribution verdict onto every adjudicable
@@ -686,12 +932,58 @@ export function adjudicateChecks(
   checks: RegistryCheck[],
   corpus: VendorTieCorpus,
 ): void {
+  const census = exactLiveKeys(checks);
   for (const check of checks) {
     const facts = tieFactsForCheck(check);
     if (!facts) continue;
     check.tie = computeTies(facts, corpus);
-    check.attribution = attributionFor(facts, check.tie);
+    check.attribution = attributionFor(facts, check.tie, guardFor(check, facts, corpus, census));
   }
+}
+
+/* A compact, record-free trace of every adjudication for the stored row:
+   RegistryCheck.data is not persisted on standard runs, so this is how a
+   probe reads why a record was or was not credited. No addresses, no
+   officers, no raw record payloads. */
+export function attributionTrace(checks: RegistryCheck[]): {
+  check_id: string;
+  confidence: string | null;
+  attribution: "attributed" | "candidate" | null;
+  legal_name: string | null;
+  formation_year: number | null;
+  tie: {
+    tied: boolean;
+    strong: boolean;
+    age_contradicted: boolean;
+    signals: { kind: string; strength: string; vendor_source: string }[];
+  } | null;
+}[] {
+  const out = [];
+  for (const check of checks) {
+    if (check.status !== "hit") continue;
+    const facts = tieFactsForCheck(check);
+    if (!facts) continue;
+    out.push({
+      check_id: check.check_id,
+      confidence: check.confidence ?? null,
+      attribution: check.attribution ?? null,
+      legal_name: facts.legal_name.slice(0, 160),
+      formation_year: facts.formation_year ?? null,
+      tie: check.tie
+        ? {
+            tied: check.tie.tied,
+            strong: check.tie.strong,
+            age_contradicted: check.tie.age_contradicted === true,
+            signals: check.tie.signals.map((s) => ({
+              kind: s.kind,
+              strength: s.strength,
+              vendor_source: s.vendor_source,
+            })),
+          }
+        : null,
+    });
+  }
+  return out;
 }
 
 /* ------------------------------------------------- S3 -> S2 name bridge */

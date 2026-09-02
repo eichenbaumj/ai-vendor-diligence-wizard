@@ -45,8 +45,10 @@ import { inferPrimaryDomain } from "./domain-inference.ts";
 import { reconcileLateFoundSite } from "./site-degradation.ts";
 import {
   adjudicateChecks,
+  attributionTrace,
   buildTieCorpus,
   discoverBridgeNames,
+  domainRegistrationYear,
   tieFactsForCheck,
 } from "./identity-ties.ts";
 import { splitNameCandidates } from "./text-match.ts";
@@ -55,7 +57,7 @@ import { STATE_ITEMS } from "./state-items.ts";
 import type { S5UserInput } from "./prompts/s5-structure.ts";
 import * as registry from "./registry/index.ts";
 
-export const METHODOLOGY_VERSION = "1.6";
+export const METHODOLOGY_VERSION = "1.7";
 
 const TAIL_TIMEOUTS = {
   registryPerEndpoint: 8_000,
@@ -106,6 +108,11 @@ export interface TailState {
   senderDomain: string | null;
   pitchPersonCount: number;
   pitchCustomerCount: number;
+  /* The domain the BUYER submitted (url tab host, or the website typed
+     beside a vendor name); null on bare-name, paste, and pdf runs and for
+     discovered or inferred domains. Feeds the D1.1 root check only.
+     Optional: callers and checkpoints predating 1.7 omit it. */
+  submittedDomain?: string | null;
   /* Optional: callers predating the tying-signal build omit them. */
   pitchAddressCount?: number;
   productNames?: string[];
@@ -228,6 +235,9 @@ export async function runPipelineTail(
     citations,
     siteState: state.siteStateMentioned ?? null,
     siteStates: state.siteStatesFound ?? [],
+    submittedDomain: state.submittedDomain ?? null,
+    foundingYear: state.foundingYear,
+    domainYear: domainRegistrationYear(checks),
   });
   adjudicateChecks(checks, tieCorpus);
 
@@ -812,6 +822,9 @@ export async function runPipelineTail(
         total: deps.usageBox.value,
         stages: deps.stageUsage,
         stages_ms: deps.stageMs,
+        /* Why each registry record was or was not credited: readable
+           post hoc even though RegistryCheck.data is not persisted here. */
+        attribution_trace: attributionTrace(checks),
         ...(state.deep ? { deep: true } : {}),
         ...(state.deepHandoffFailed
           ? { deep_requested: true, deep_handoff_failed: true }

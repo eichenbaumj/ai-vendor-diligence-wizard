@@ -18,11 +18,17 @@ import type {
   RegistryCheck,
 } from "../../../supabase/functions/_shared/schemas.ts";
 import {
+  AGE_VETO_YEARS,
   adjudicateChecks,
   attributionFor,
+  attributionTrace,
   buildTieCorpus,
   computeTies,
   discoverBridgeNames,
+  domainRegistrationYear,
+  domainRootCoversName,
+  domainRootOf,
+  exactLiveKeys,
   isDegenerateBrandName,
   stateCodeOf,
   streetFragment,
@@ -70,6 +76,9 @@ function corpusWith(args: {
   primaryDomain?: string | null;
   productNames?: string[];
   citations?: Citation[];
+  submittedDomain?: string | null;
+  foundingYear?: number | null;
+  domainYear?: number | null;
 }): VendorTieCorpus {
   const extract = extractWith(args.extract ?? {});
   return buildTieCorpus({
@@ -79,6 +88,9 @@ function corpusWith(args: {
     primaryDomain: args.primaryDomain ?? null,
     productNames: args.productNames ?? [],
     citations: args.citations ?? [],
+    submittedDomain: args.submittedDomain ?? null,
+    foundingYear: args.foundingYear ?? null,
+    domainYear: args.domainYear ?? null,
   });
 }
 
@@ -388,12 +400,15 @@ describe("attributionFor: the verdict table", () => {
     expect(attributionFor(rec, untied)).toBe("candidate");
   });
 
-  it("distinctive exact LIVE records attribute, tied or untied", () => {
+  it("distinctive exact LIVE records attribute, tied or untied, when nothing competes (the direct-call default)", () => {
     /* Real early-stage registrations carry facts nothing public relates
        to them anymore (Polco's true Texas record lists the founder's old
-       apartment); an exact distinctive name on a live record stands. The
-       dissolved variant below keeps its strong-tie requirement — that is
-       where the namesake harm lived. */
+       apartment); an exact distinctive name on a live record stands WHEN
+       no other live exact-name record competes and no veto applies. The
+       symmetric rules (methodology 1.7) live in the guard: the census
+       verdict, the age veto, and the submitted-root check. Direct calls
+       without a guard keep the pre-1.7 verdict. The dissolved variant
+       below keeps its strong-tie requirement. */
     const tiedRec: RecordTieFacts = {
       legal_name: "POLIMORPHIC, INC.",
       addr_state: "NY",
@@ -448,6 +463,306 @@ describe("attributionFor: the verdict table", () => {
     /* And a dissolved record with no checkable facts never rides the
        EDGAR-class fallback. */
     expect(attributionFor(rec, untied)).toBe("candidate");
+  });
+});
+
+describe("attributionFor: the symmetric guard (methodology 1.7)", () => {
+  const weak = { tied: true, strong: false, checkable: true, signals: [] };
+  const strong = { tied: true, strong: true, checkable: true, signals: [] };
+  const untied = { tied: false, strong: false, checkable: true, signals: [] };
+  const exact: RecordTieFacts = { legal_name: "ACME GOV, INC.", match_confidence: "exact" };
+
+  it("an untied exact record attributes only when it is the anchor of the census", () => {
+    expect(attributionFor(exact, untied, { anchor: true })).toBe("attributed");
+    expect(attributionFor(exact, untied, { anchor: false })).toBe("candidate");
+    expect(attributionFor(exact, untied, { anchor: null })).toBe("attributed");
+  });
+
+  it("any tie beats a lost census; a strong tie beats every veto", () => {
+    expect(attributionFor(exact, weak, { anchor: false })).toBe("attributed");
+    expect(attributionFor(exact, strong, { anchor: false, rootCovered: false })).toBe("attributed");
+    expect(attributionFor(exact, { ...strong, age_contradicted: true }, { anchor: false })).toBe("attributed");
+  });
+
+  it("the age veto demotes a weak-tied or untied exact record (the 1996 namesake class)", () => {
+    expect(attributionFor(exact, { ...weak, age_contradicted: true }, { anchor: true })).toBe("candidate");
+    expect(attributionFor(exact, { ...untied, age_contradicted: true }, { anchor: true })).toBe("candidate");
+  });
+
+  it("the submitted-root check demotes an uncovered exact record unless it came through the bridge", () => {
+    expect(attributionFor(exact, weak, { rootCovered: false })).toBe("candidate");
+    expect(attributionFor(exact, untied, { rootCovered: false, anchor: true })).toBe("candidate");
+    expect(attributionFor(exact, untied, { rootCovered: false, bridged: true, anchor: true })).toBe("attributed");
+    expect(attributionFor(exact, weak, { rootCovered: true })).toBe("attributed");
+    expect(attributionFor(exact, untied, { rootCovered: null, anchor: true })).toBe("attributed");
+  });
+
+  it("containment promotions take the same vetoes; the namesake direction is unchanged", () => {
+    const promotable: RecordTieFacts = {
+      legal_name: "ACME GOV TECHNOLOGIES US, INC.",
+      match_confidence: "name_similarity",
+      containment: "query_in_record",
+    };
+    expect(attributionFor(promotable, weak, { rootCovered: false })).toBe("candidate");
+    expect(attributionFor(promotable, { ...weak, age_contradicted: true })).toBe("candidate");
+    expect(attributionFor(promotable, weak, { rootCovered: true })).toBe("attributed");
+    expect(attributionFor(promotable, strong, { rootCovered: false })).toBe("attributed");
+    const namesake: RecordTieFacts = {
+      legal_name: "ACME INC.",
+      match_confidence: "name_similarity",
+      containment: "record_in_query",
+    };
+    expect(attributionFor(namesake, weak, { rootCovered: true, anchor: true })).toBe("candidate");
+    expect(attributionFor(namesake, strong)).toBe("attributed");
+  });
+
+  it("compliance feeds keep the plain exact verdict (feedCredited owns their credit)", () => {
+    expect(attributionFor(exact, untied, { symmetric: false, anchor: false, rootCovered: false })).toBe("attributed");
+  });
+
+  it("dissolved and degenerate gates still come first", () => {
+    const dissolved: RecordTieFacts = { ...exact, dissolved: true };
+    expect(attributionFor(dissolved, weak, { anchor: true })).toBe("candidate");
+    const short: RecordTieFacts = { legal_name: "ZIP, LLC", match_confidence: "exact" };
+    expect(attributionFor(short, weak, { anchor: true, rootCovered: true })).toBe("candidate");
+  });
+});
+
+describe("domainRootCoversName and domainRootOf", () => {
+  it("derives the root label from a host", () => {
+    expect(domainRootOf("www.ConductorAI.com")).toBe("conductorai");
+    expect(domainRootOf("promise-pay.com")).toBe("promisepay");
+    expect(domainRootOf("polco.us")).toBe("polco");
+    expect(domainRootOf("app.vendor.co.uk")).toBe("vendor");
+  });
+
+  it("checks the record's distinctive tokens against the root, never the reverse", () => {
+    const table: [string, string, boolean][] = [
+      ["conductorai", "CONDUIT, LLC", false],
+      ["conductorai", "COASTAL CONDUIT & DITCHING, INC.", false],
+      ["conductorai", "CONDUCTORAI INC", true],
+      ["polco", "POLCO, INC.", true],
+      ["tylertech", "TYLER TECHNOLOGIES, INC.", true],
+      ["zencity", "ZENCITY TECHNOLOGIES US, INC.", true],
+      ["withforerunner", "FORERUNNER CORPORATION", true],
+      ["group17a", "GROUP CONDUIT LLC", false],
+      ["promisepay", "PROMISE NETWORK, INC.", true],
+      ["ironcladapp", "IRONCLAD, INC.", true],
+      ["ironcladapp", "IRONCLAD CONSTRUCTION GROUP LLC", true],
+      ["zipsec", "ZIP, LLC", true],
+      ["acmegov", "THE GROUP HOLDINGS LLC", false],
+      ["", "ACME INC", false],
+    ];
+    for (const [root, name, expected] of table) {
+      expect(domainRootCoversName(root, name), `${root} vs ${name}`).toBe(expected);
+    }
+  });
+});
+
+describe("domainRegistrationYear reads the RDAP lane under the identity provenance rule", () => {
+  const rdap = (data: Record<string, unknown>, status: "hit" | "error" = "hit"): RegistryCheck => ({
+    check_id: "rdap_domain_age",
+    source: "Domain registration records (RDAP)",
+    status,
+    summary: "",
+    evidence_url: null,
+    confidence: "exact",
+    retrieved_at: "2026-09-01T00:00:00.000Z",
+    data,
+  });
+  it("returns the year for a pitch-stated or submitted domain", () => {
+    expect(domainRegistrationYear([rdap({ registered_year: 2019 })])).toBe(2019);
+  });
+  it("returns the year for a discovered domain only when the site confirmed the name", () => {
+    expect(domainRegistrationYear([rdap({ registered_year: 2017, discovered_domain: true, confirmed_name_match: true })])).toBe(2017);
+    expect(domainRegistrationYear([rdap({ registered_year: 2017, discovered_domain: true })])).toBeNull();
+  });
+  it("returns null on misses, errors, and unknown dates", () => {
+    expect(domainRegistrationYear([rdap({ registered_year: null })])).toBeNull();
+    expect(domainRegistrationYear([rdap({}, "error")])).toBeNull();
+    expect(domainRegistrationYear([])).toBeNull();
+  });
+});
+
+describe("the live exact-name census and the four round-2 shapes (adjudicateChecks end to end)", () => {
+  const AT = "2026-09-01T00:00:00.000Z";
+  const sos = (
+    id: string,
+    source: string,
+    matches: Record<string, unknown>[],
+    extra: Record<string, unknown> = {},
+  ): RegistryCheck => ({
+    check_id: id,
+    source,
+    status: "hit",
+    summary: "",
+    evidence_url: null,
+    confidence: matches.some((m) => m.confidence === "exact") ? "exact" : "name_similarity",
+    retrieved_at: AT,
+    data: { matches, ...extra },
+  });
+  const edgar = (entities: Record<string, unknown>[]): RegistryCheck => ({
+    check_id: "edgar_fts",
+    source: "SEC EDGAR full-text search",
+    status: "hit",
+    summary: "",
+    evidence_url: null,
+    confidence: "exact",
+    retrieved_at: AT,
+    data: { filing_entities: entities },
+  });
+  const byId = (checks: RegistryCheck[]) =>
+    Object.fromEntries(checks.map((c) => [c.check_id, c])) as Record<string, RegistryCheck>;
+
+  it("counts every live exact match across lanes, keyed by unstripped name, and skips dissolved ones", () => {
+    const keys = exactLiveKeys([
+      sos("sos_tx", "Texas", [{ name: "IRONCLAD, INC.", confidence: "exact", status: "ACTIVE" }]),
+      sos("sos_ct", "Connecticut", [{ name: "IRONCLAD LLC", confidence: "exact", status: "Active" }]),
+      sos("sos_co", "Colorado", [{ name: "ironclad LLC", confidence: "exact", status: "Voluntarily Dissolved" }]),
+      sos("sos_ny", "New York", [{ name: "IRONCLAD 123 INC.", confidence: "name_similarity", status: "Active" }]),
+      edgar([{ name: "Ironclad, Inc.", cik: "1", inc_state: "DE", confidence: "exact" }]),
+    ]);
+    expect([...keys.keys()].sort()).toEqual(["IRONCLAD INC", "IRONCLAD LLC"]);
+    expect([...keys.get("IRONCLAD INC")!].sort()).toEqual(["edgar", "sos_tx"]);
+    expect([...keys.get("IRONCLAD LLC")!]).toEqual(["sos_ct"]);
+  });
+
+  it("Polco shape: one live exact record and two dissolved namesakes still attributes (nothing competes)", () => {
+    const checks = [
+      sos("sos_tx", "Texas Comptroller", [
+        { name: "POLCO, INC.", confidence: "exact", status: "ACTIVE", date: "2018-03-01", street: "11815 VANCE JACKSON RD", city: "SAN ANTONIO", addr_state: "TX" },
+      ]),
+      sos("sos_ny", "New York", [{ name: "POLCO INC.", confidence: "exact", status: "Inactive" }], {
+        dissolved: { legal_name: "POLCO INC.", status: "Inactive" },
+      }),
+      sos("sos_co", "Colorado", [{ name: "POLCO, INC.", confidence: "name_similarity", status: "Dissolved" }], {
+        dissolved: { legal_name: "POLCO, INC.", status: "Dissolved" },
+      }),
+    ];
+    adjudicateChecks(checks, corpusWith({ extract: { vendor_name_candidates: ["Polco"] }, domainYear: 2017 }));
+    const c = byId(checks);
+    expect(c.sos_tx.attribution).toBe("attributed");
+    expect(c.sos_ny.attribution).toBe("candidate");
+    expect(c.sos_co.attribution).toBe("candidate");
+  });
+
+  it("Ironclad shape: two competing live exact names; the one backed by SEC and Texas wins, the Connecticut LLC is a candidate", () => {
+    const checks = [
+      sos("sos_ct", "Connecticut", [{ name: "IRONCLAD LLC", confidence: "exact", status: "Active", date: "2018-05-10", city: "MIDDLEFIELD", addr_state: "CT" }]),
+      sos("sos_tx", "Texas Comptroller", [
+        { name: "IRONCLAD CONSTRUCTION GROUP LLC", confidence: "name_similarity", containment: "query_in_record", status: "ACTIVE" },
+        { name: "IRONCLAD, INC.", confidence: "exact", status: "ACTIVE", date: "2016-01-01", city: "SAN FRANCISCO", addr_state: "CA" },
+      ]),
+      edgar([{ name: "Ironclad, Inc.", cik: "0001755112", inc_state: "DE", confidence: "exact" }]),
+    ];
+    adjudicateChecks(checks, corpusWith({ extract: { vendor_name_candidates: ["Ironclad"] }, submittedDomain: "ironcladapp.com", domainYear: 2014 }));
+    const c = byId(checks);
+    expect(c.sos_tx.attribution).toBe("attributed");
+    expect(c.edgar_fts.attribution).toBe("attributed");
+    expect(c.sos_ct.attribution).toBe("candidate");
+    /* The root covers both LLC and INC ("ironclad" is in "ironcladapp"), so
+       the census, not the root, is what tells them apart. */
+    expect(domainRootCoversName("ironcladapp", "IRONCLAD LLC")).toBe(true);
+  });
+
+  it("Forerunner shape: exact live namesakes decades older than the vendor's domain are vetoed by age", () => {
+    const checks = [
+      sos("sos_co", "Colorado", [
+        { name: "FORERUNNER CORPORATION", confidence: "exact", status: "Good Standing", date: "1996-06-06", city: "SAN FRANCISCO", addr_state: "CA", jurisdiction: "CO" },
+        { name: "FORERUNNER INDUSTRIES, INC.", confidence: "name_similarity", containment: "query_in_record", status: "Good Standing", date: "2025-12-18" },
+      ]),
+      sos("sos_tx", "Texas Comptroller", [{ name: "FORERUNNER CORPORATION", confidence: "exact", status: "ACTIVE", date: "2001-10-12", city: "LOS ANGELES", addr_state: "CA" }]),
+    ];
+    adjudicateChecks(checks, corpusWith({ extract: { vendor_name_candidates: ["Forerunner"] }, domainYear: 2019 }));
+    const c = byId(checks);
+    expect(c.sos_co.tie!.age_contradicted).toBe(true);
+    expect(c.sos_co.attribution).toBe("candidate");
+    expect(c.sos_tx.attribution).toBe("candidate");
+    /* Without a vendor year (site never found), the same records are the
+       run's sole exact name and still attribute: the documented residual. */
+    const again = [
+      sos("sos_co", "Colorado", [{ name: "FORERUNNER CORPORATION", confidence: "exact", status: "Good Standing", date: "1996-06-06" }]),
+    ];
+    adjudicateChecks(again, corpusWith({ extract: { vendor_name_candidates: ["Forerunner"] } }));
+    expect(again[0].attribution).toBe("attributed");
+  });
+
+  it("Conduit shape: a URL run whose root does not cover the exact record leaves it a candidate; the same run from conduit.com attributes", () => {
+    const make = () => [
+      sos("sos_tx", "Texas Comptroller", [
+        { name: "COASTAL CONDUIT & DITCHING, INC.", confidence: "name_similarity", containment: "query_in_record", status: "ACTIVE", city: "HOUSTON", addr_state: "TX" },
+        { name: "CONDUIT, LLC", confidence: "exact", status: "ACTIVE", date: "2020-03-01", city: "AUSTIN", addr_state: "TX" },
+      ]),
+      sos("sos_ny", "New York", [{ name: "CONDUIT INC.", confidence: "exact", status: "Inactive" }], {
+        dissolved: { legal_name: "CONDUIT INC.", status: "Inactive" },
+      }),
+    ];
+    const url = make();
+    adjudicateChecks(url, corpusWith({ extract: { vendor_name_candidates: ["Conduit"], state_mentioned: "TX" }, submittedDomain: "www.conductorai.com", domainYear: 2023 }));
+    expect(byId(url).sos_tx.attribution).toBe("candidate");
+    expect(byId(url).sos_tx.tie!.tied).toBe(true); // the TX state tie exists and is not enough
+    const own = make();
+    adjudicateChecks(own, corpusWith({ extract: { vendor_name_candidates: ["Conduit"], state_mentioned: "TX" }, submittedDomain: "conduit.com", domainYear: 2023 }));
+    expect(byId(own).sos_tx.attribution).toBe("attributed");
+    /* The bare-name residual, documented in the methodology's known limits:
+       no root, no vendor year, sole live exact name -> attributed. */
+    const bare = make();
+    adjudicateChecks(bare, corpusWith({ extract: { vendor_name_candidates: ["Conduit"] } }));
+    expect(byId(bare).sos_tx.attribution).toBe("attributed");
+  });
+
+  it("a planted state in the pitch cannot mint an exact record the submitted root does not cover (favorable twin)", () => {
+    const check = () =>
+      sos("sos_tx", "Texas Comptroller", [{ name: "CONDUIT, LLC", confidence: "exact", status: "ACTIVE", date: "2020-03-01", addr_state: "TX" }]);
+    const clean = [check()];
+    adjudicateChecks(clean, corpusWith({ extract: { vendor_name_candidates: ["Conduit"] }, submittedDomain: "conductorai.com" }));
+    const planted = [check()];
+    adjudicateChecks(planted, corpusWith({ extract: { vendor_name_candidates: ["Conduit"], state_mentioned: "TX" }, submittedDomain: "conductorai.com" }));
+    expect(clean[0].attribution).toBe("candidate");
+    expect(planted[0].attribution).toBe("candidate");
+  });
+
+  it("coverage state names count only when the citation also mentions the vendor (methodology 1.7)", () => {
+    const stateOnly = corpusWith({
+      extract: { vendor_name_candidates: ["Accela"] },
+      citations: [cite({ title: "A Texas county buys new permitting software", cited_text: "The county in Texas signed the deal.", domain_class: 2 })],
+    });
+    expect(stateOnly.states.some((s) => s.code === "TX")).toBe(false);
+    const withVendor = corpusWith({
+      extract: { vendor_name_candidates: ["Accela"] },
+      citations: [cite({ title: "Accela signs a Texas county", cited_text: "Accela's permitting software heads to Texas.", domain_class: 2 })],
+    });
+    expect(withVendor.states.some((s) => s.code === "TX" && s.source === "coverage")).toBe(true);
+  });
+
+  it("the corpus records the submitted root and the earliest vendor year", () => {
+    const c = corpusWith({ submittedDomain: "www.Promise-Pay.com", foundingYear: 2018, domainYear: 2019 });
+    expect(c.submittedDomainRoot).toBe("promisepay");
+    expect(c.vendorYear).toBe(2018);
+    const none = corpusWith({});
+    expect(none.submittedDomainRoot).toBeNull();
+    expect(none.vendorYear).toBeNull();
+    expect(AGE_VETO_YEARS).toBe(5);
+  });
+
+  it("tieFactsForCheck parses the lane date into a formation year", () => {
+    const facts = tieFactsForCheck(
+      sos("sos_co", "Colorado", [{ name: "ACME INC", confidence: "exact", date: "1996-06-06" }]),
+    );
+    expect(facts!.formation_year).toBe(1996);
+    const noDate = tieFactsForCheck(sos("sos_co", "Colorado", [{ name: "ACME INC", confidence: "exact" }]));
+    expect(noDate!.formation_year).toBeNull();
+  });
+
+  it("attributionTrace carries the verdict and tie shape without record payloads", () => {
+    const checks = [
+      sos("sos_tx", "Texas Comptroller", [{ name: "POLCO, INC.", confidence: "exact", status: "ACTIVE", date: "2018-03-01", street: "11815 VANCE JACKSON RD" }]),
+    ];
+    adjudicateChecks(checks, corpusWith({ extract: { vendor_name_candidates: ["Polco"] } }));
+    const trace = attributionTrace(checks);
+    expect(trace).toHaveLength(1);
+    expect(trace[0]).toMatchObject({ check_id: "sos_tx", attribution: "attributed", legal_name: "POLCO, INC.", formation_year: 2018 });
+    expect(JSON.stringify(trace)).not.toContain("VANCE JACKSON");
   });
 });
 

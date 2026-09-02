@@ -66,6 +66,7 @@ import { isDegenerateExtract, mergeExtracts } from "../_shared/extract-merge.ts"
 import {
   adjudicateChecks,
   buildTieCorpus,
+  domainRegistrationYear,
   siteStatesFromText,
 } from "../_shared/identity-ties.ts";
 import { discoverVendorSite } from "../_shared/discovery.ts";
@@ -708,6 +709,11 @@ async function runPipeline(
     }
   }
   const primaryDomain = extract.domains[0] ?? null;
+  /* The domain the BUYER put in front of the tool. On a url run that is
+     the submitted host; pitch-stated, discovered, and inferred domains
+     never qualify. It gates registry credit through the D1.1 root check
+     (identity-ties.ts) and nothing else. */
+  const submittedDomain = inputKind === "url" ? primaryDomain : null;
   const vendorKey = primaryDomain ?? vendorKeyFromName(vendorName || "unknown");
   await supabase.from("evaluations").update({ vendor_key: vendorKey }).eq("id", evaluationId);
   await emit({
@@ -1181,6 +1187,9 @@ async function runPipeline(
       citations: [],
       siteState: siteStateMentioned,
       siteStates: siteStatesFound,
+      submittedDomain,
+      foundingYear,
+      domainYear: domainRegistrationYear(checks),
     }),
   );
   const identity = registry.resolveIdentity(checks);
@@ -1212,6 +1221,7 @@ async function runPipeline(
           adv,
           primaryDomain,
           discoveredDomain,
+          submittedDomain,
           feedNames,
           foundingYear,
           senderDomain,
@@ -1349,6 +1359,7 @@ async function runPipeline(
       researchPartial: research.partial,
       primaryDomain,
       discoveredDomain,
+      submittedDomain,
       feedNames,
       foundingYear,
       senderDomain,

@@ -50,6 +50,8 @@ interface Checkpoint {
   adv: AdvFinding[];
   primaryDomain: string | null;
   discoveredDomain: string | null;
+  /* Optional: checkpoints written before 1.7 lack it (null = no root check). */
+  submittedDomain?: string | null;
   feedNames: string[];
   foundingYear: number | null;
   senderDomain: string | null;
@@ -261,6 +263,7 @@ async function runDeep(
       researchPartial: !anyComplete,
       primaryDomain: cp.primaryDomain,
       discoveredDomain: cp.discoveredDomain,
+      submittedDomain: cp.submittedDomain ?? null,
       feedNames: cp.feedNames,
       foundingYear: cp.foundingYear,
       senderDomain: cp.senderDomain,

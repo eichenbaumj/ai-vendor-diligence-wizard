@@ -598,14 +598,26 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
      run collected 17A WASHINGTON STREET, LLC's awards (2026-08-29). No
      recipient-side tie facts exist for this lane yet, so degenerate names
      always stay candidates here. */
-  const usaspCredit =
+  /* Methodology 1.7: credit also requires at least one award in the
+     record. The lane reports a hit for a recipient ENTRY with zero awards
+     ("did not find contract awards in the last five years"), and both
+     Forerunner and Ironclad earned a VERIFIED row and a federal
+     track-record green flag from such entries (round 2, R2-F2 and R2-F11).
+     The row note is the lane's own summary, which carries the "same
+     company" caution; it is no longer left for the model to phrase. */
+  const usaspAwards = (() => {
+    const n = ((usasp?.data ?? {}) as { award_count?: unknown }).award_count;
+    return typeof n === "number" && Number.isFinite(n) ? n : 0;
+  })();
+  const usaspExactDistinctive =
     usasp?.status === "hit" &&
     usasp.confidence === "exact" &&
     !isDegenerateBrandName(usaspRecipient ?? vendorName);
+  const usaspCredit = usaspExactDistinctive && usaspAwards > 0;
   if (usaspCredit && usasp) {
     greenDims.add("D2");
     greenFlagFacts.push({
-      fact: `Federal payment records show awards to ${vendorName}`,
+      fact: `Federal payment records show ${usaspAwards} federal award${usaspAwards === 1 ? "" : "s"} to a recipient named ${usaspRecipient ?? vendorName}. Confirm with the vendor that this recipient is the same company`,
       source_name: usasp.source,
       date: dateOf(usasp),
     });
@@ -618,7 +630,7 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
       evidence_tier: "T1",
       severity: null,
       sources: src(usasp),
-      note: "",
+      note: usasp.summary.slice(0, 700),
       methodology_ref: "d2-1",
       match_confidence: "exact",
       attribution: "attributed",
@@ -626,8 +638,10 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
   } else if (usasp?.status === "hit") {
     /* A candidate recipient record, never favorable credit. The row stays
        visible, labeled, and neutral; the note is code-templated so no
-       model can upgrade it to credit. */
-    const degenerateExact = usasp.confidence === "exact";
+       model can upgrade it to credit. An exact distinctive recipient with
+       zero awards keeps the lane's own hedged summary. */
+    const degenerateExact =
+      usasp.confidence === "exact" && isDegenerateBrandName(usaspRecipient ?? vendorName);
     ledger.push({
       id: uniqueRowId("usaspending"),
       dimension: "D2",

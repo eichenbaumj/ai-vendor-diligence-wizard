@@ -4,6 +4,45 @@ Every change to checks, weights, tier criteria, or language rules lands here
 with its date and its expected effect on verdicts. The methodology document
 states the current rules; this file records how they got there.
 
+## Version 1.7 (September 2026)
+
+**What changed in this version, in short.** The verdict tiers and their rules
+did not change. What changed is which registry records may count for a
+vendor, what the report may say about them, and how repeatable the pitch
+reader is. A name-only check can now carry the vendor's web address, and a
+name-only report says when the name collides with other registered
+companies. Each change is described below with its expected effect on
+verdicts.
+
+**The pitch reader runs at its most repeatable setting.** The step that
+turns a pitch or a vendor web page into typed claims is a language model.
+The same PDF could yield a claim on one run and drop it on the next, about
+one run in five in our test panel. The reader now runs with randomness
+turned off. Nothing else about the step changed. Expected effect on
+verdicts: none by rule. The effect is fewer runs that differ from each other
+on the same input.
+
+**Registry records now need the same proof in both directions.** Since
+version 1.5 a record that would hurt a vendor counted only when a second
+detail tied it to the vendor. A live record with exactly the vendor's name
+still counted in the vendor's favor with no tie at all. Two live checks
+showed the gap. A decades-old corporation was credited as a young startup's
+identity. A product name on a vendor's own page matched an unrelated
+company's registration. A live record with exactly the vendor's name and no
+tie is now credited only when it is the only live record under that name,
+when its age fits the vendor, and, on a check run from a web address, when
+that address's root name covers the record's name. When two different names
+compete, the name backed by more registries is credited and the rest are
+shown as candidate records. Candidate records are visible and linked, earn
+nothing, and drive no warning. Federal payment records earn credit only when
+at least one award exists, and the row keeps the lookup's own caution that
+the recipient must be the same company. State names in press coverage now
+tie a record only when the same page also names the vendor. Expected
+effect: a name-only check whose only same-name record belongs to a much
+older company can drop to "not enough to evaluate" and ask for the web
+address. Checks run with the web address stop crediting namesakes. Real
+single-record vendors are unchanged.
+
 ## Version 1.6 (September 2026)
 
 **Name-only checks get a steadier website step, and the report says so

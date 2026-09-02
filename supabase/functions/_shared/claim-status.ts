@@ -58,3 +58,55 @@ export function affirmsProgram(
   if (about.some((c) => PENDING_RE.test(c.quote))) return false;
   return about.some((c) => program.affirm.test(c.quote));
 }
+
+/* Sentences of a pitch, whitespace-collapsed, split on terminal
+   punctuation and on bullet starts. Verbatim spans of the source text
+   after whitespace normalization, so a synthesized quote passes the
+   caller's loose verbatim guard. */
+export function pitchSentences(pitchText: string): string[] {
+  return pitchText
+    .replace(/\r/g, "")
+    .split(/\n\s*\n|\n\s*[-*•]\s+|(?<=[.!?])\s+/)
+    .map((s) => s.replace(/\s+/g, " ").trim())
+    .filter((s) => s.length >= 8);
+}
+
+export interface BackstopClaim {
+  id: string;
+  type: "compliance";
+  quote: string;
+  subject: string | null;
+}
+
+/* Code-side backstop for the program claims that drive registry
+   contradictions (methodology 1.7). The pitch reader omits a claim about
+   one run in several even at temperature 0 (the qa-pdf twins since 1.3;
+   a pasted control on 2026-09-01 lost its Sourcewell line and fell from
+   tier 1 to tier 0). When the extracted claims do not affirm a program
+   but a sentence of the pitch itself does, under exactly the rules
+   affirmsProgram applies (designation wording present, pending wording
+   absent), that sentence becomes a compliance claim quoted verbatim.
+   Under-arming stays the safe direction: a pending sentence anywhere in
+   the pitch about the program blocks the backstop for that program. */
+export function programClaimBackstop(
+  pitchText: string,
+  claims: { quote: string }[],
+): BackstopClaim[] {
+  const sentences = pitchSentences(pitchText);
+  const out: BackstopClaim[] = [];
+  for (const [key, program] of Object.entries(PROGRAMS)) {
+    if (affirmsProgram(claims, program)) continue;
+    const about = sentences.filter((s) => program.name.test(s));
+    if (about.length === 0) continue;
+    if (about.some((s) => PENDING_RE.test(s))) continue;
+    const hit = about.find((s) => program.affirm.test(s));
+    if (!hit) continue;
+    out.push({
+      id: `clm-program-${key}`,
+      type: "compliance",
+      quote: hit.slice(0, 400),
+      subject: null,
+    });
+  }
+  return out;
+}

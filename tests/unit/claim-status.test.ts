@@ -7,7 +7,58 @@
   because the armed path ends in a CRITICAL contradiction.
 */
 import { describe, expect, it } from "vitest";
-import { PROGRAMS, affirmsProgram } from "@shared/claim-status.ts";
+import { PROGRAMS, affirmsProgram, pitchSentences, programClaimBackstop } from "@shared/claim-status.ts";
+
+const CIVREPLY = `Subject: AI-powered resident service platform for the City of Riverbend
+
+A few facts about us:
+
+- Founded in 2016, headquartered in Columbus, Ohio.
+- StateRAMP Authorized at the Moderate impact level.
+- On a Sourcewell cooperative contract, so your procurement team can
+  buy without a new RFP.
+- 63 full-time employees.
+
+Could we set up a 30-minute call next week?`;
+
+describe("programClaimBackstop (methodology 1.7): code re-reads the pitch for program claims the reader left out", () => {
+  it("splits bullets and sentences into verbatim spans", () => {
+    const s = pitchSentences(CIVREPLY);
+    expect(s).toContain("StateRAMP Authorized at the Moderate impact level.");
+    expect(s).toContain("On a Sourcewell cooperative contract, so your procurement team can buy without a new RFP.");
+  });
+
+  it("adds the omitted Sourcewell and StateRAMP claims, quoted verbatim, and nothing for programs the pitch never names", () => {
+    const added = programClaimBackstop(CIVREPLY, [{ quote: "Founded in 2016, headquartered in Columbus, Ohio." }]);
+    const ids = added.map((c) => c.id).sort();
+    expect(ids).toEqual(["clm-program-govramp", "clm-program-sourcewell"]);
+    const sw = added.find((c) => c.id === "clm-program-sourcewell")!;
+    expect(sw.type).toBe("compliance");
+    expect(sw.quote).toBe("On a Sourcewell cooperative contract, so your procurement team can buy without a new RFP.");
+    expect(affirmsProgram([sw], PROGRAMS.sourcewell)).toBe(true);
+  });
+
+  it("adds nothing when the extracted claims already affirm the program", () => {
+    const added = programClaimBackstop(CIVREPLY, [
+      { quote: "StateRAMP Authorized at the Moderate impact level." },
+      { quote: "On a Sourcewell cooperative contract, so your procurement team can buy without a new RFP." },
+    ]);
+    expect(added).toEqual([]);
+  });
+
+  it("never arms on pending wording anywhere in the pitch about that program", () => {
+    const pitch = "We are FedRAMP Authorized. Our FedRAMP authorization is pending final approval this quarter.";
+    expect(programClaimBackstop(pitch, [])).toEqual([]);
+    const vague = "Our platform is FedRAMP compliant and follows FedRAMP standards.";
+    expect(programClaimBackstop(vague, [])).toEqual([]);
+  });
+
+  it("caps the quote at the schema limit", () => {
+    const long = "We hold a Sourcewell cooperative contract " + "and serve many cities ".repeat(40) + "today.";
+    const [c] = programClaimBackstop(long, []);
+    expect(c.quote.length).toBeLessThanOrEqual(400);
+  });
+});
 
 const claims = (...quotes: string[]) => quotes.map((quote) => ({ quote }));
 

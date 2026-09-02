@@ -81,7 +81,7 @@ import {
   siteDiscoveryFailureCheck,
 } from "../_shared/site-degradation.ts";
 import { isNamedOrganization, splitNameCandidates } from "../_shared/text-match.ts";
-import { PROGRAMS, affirmsProgram } from "../_shared/claim-status.ts";
+import { PROGRAMS, affirmsProgram, programClaimBackstop } from "../_shared/claim-status.ts";
 import {
   METHODOLOGY_VERSION,
   finishInsufficient,
@@ -731,6 +731,24 @@ async function runPipeline(
     extract.addresses = extract.addresses.filter((a) =>
       pitchLoose.includes(looseText(a)),
     );
+    /* Program-claim backstop (methodology 1.7): the reader omits a claim
+       about one run in several even at temperature 0, and a missed
+       FedRAMP / GovRAMP / TX-RAMP / Sourcewell claim hides a registry
+       contradiction (a pasted control lost its Sourcewell line and fell
+       from tier 1 to tier 0, sweep 3, 2026-09-01). Code re-reads the pitch
+       text for the program designations under the same arming rules and
+       adds the sentence, verbatim, when the model left it out. */
+    const backstop = programClaimBackstop(pitchText, extract.claims).filter(
+      (b) => looseQuoteInSource(pitchLoose, b.quote),
+    );
+    if (backstop.length > 0) {
+      extract.claims = [...extract.claims, ...backstop].slice(0, 30);
+      await emit({
+        stage: "parse",
+        kind: "micro_finding",
+        label: `Code found ${backstop.length} program claim${backstop.length === 1 ? "" : "s"} in the pitch text that the reader left out; added verbatim.`,
+      });
+    }
   }
 
   const vendorName = extract.vendor_name_candidates[0] ?? pitchText.slice(0, 60);

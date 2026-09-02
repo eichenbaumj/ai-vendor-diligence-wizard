@@ -172,6 +172,89 @@ describe("USAspending favorable credit requires an exact match", () => {
   });
 });
 
+describe("identity VERIFIED row: code-templated note from the credited record (methodology 1.7)", () => {
+  it("names the exact-first attributed record, its status, and the second identifier; never a similarity namesake listed first", () => {
+    const sosTx = check({
+      check_id: "sos_tx",
+      source: "Texas Comptroller Active Franchise Taxpayers (data.texas.gov)",
+      confidence: "exact",
+      data: {
+        matches: [
+          { name: "IRONCLAD CONSTRUCTION GROUP LLC", confidence: "name_similarity", containment: "query_in_record", status: "ACTIVE" },
+          { name: "IRONCLAD, INC.", confidence: "exact", status: "ACTIVE", date: "2016-01-01" },
+        ],
+      },
+    });
+    sosTx.attribution = "attributed";
+    const out = assemble(
+      input({
+        extract: baseExtract({ vendor_name_candidates: ["Ironclad"] }),
+        checks: [sosTx],
+        identity: {
+          identity_resolved: true,
+          identifiers_found: ["Texas Comptroller Active Franchise Taxpayers (data.texas.gov): registration record", "SEC EDGAR filing"],
+        },
+      }),
+    );
+    const row = out.ledger.find((r) => r.id === "identity");
+    expect(row!.result).toBe("VERIFIED");
+    expect(row!.note).toContain("lists IRONCLAD, INC.");
+    expect(row!.note).toContain('with status "ACTIVE"');
+    expect(row!.note).toContain("registered 2016-01-01");
+    expect(row!.note).toContain("SEC EDGAR filing");
+    expect(row!.note).not.toContain("CONSTRUCTION");
+    expect(row!.note.length).toBeLessThanOrEqual(700);
+    expect(lintText(row!.note).filter((v) => v.kind === "banned")).toHaveLength(0);
+    /* The brand and the legal name normalize alike ("Ironclad" vs
+       "IRONCLAD, INC."), so the flag names the brand; it must never carry
+       the similarity namesake that sat first in the lane's list. */
+    const flag = out.greenFlagFacts.find((f) => /registered legal entity/i.test(f.fact));
+    expect(flag!.fact).toContain("Ironclad");
+    expect(flag!.fact).not.toContain("CONSTRUCTION");
+  });
+
+  it("names the legal name on the flag when it differs from the brand, from the exact-first record", () => {
+    const sosTx = check({
+      check_id: "sos_tx",
+      source: "Texas Comptroller Active Franchise Taxpayers (data.texas.gov)",
+      confidence: "exact",
+      data: {
+        matches: [
+          { name: "GOVRA HOLDINGS LLC", confidence: "name_similarity", containment: "query_in_record", status: "ACTIVE" },
+          { name: "GOVRA, INC.", confidence: "exact", status: "ACTIVE" },
+        ],
+      },
+    });
+    sosTx.attribution = "attributed";
+    const out = assemble(
+      input({
+        extract: baseExtract({ vendor_name_candidates: ["TrueTax by Govra"] }),
+        checks: [sosTx],
+        identity: { identity_resolved: true, identifiers_found: ["x", "y"] },
+      }),
+    );
+    const flag = out.greenFlagFacts.find((f) => /registered legal entity/i.test(f.fact));
+    expect(flag!.fact).toContain("under the legal name GOVRA, INC.");
+    expect(flag!.fact).not.toContain("HOLDINGS");
+  });
+
+  it("with no attributed anchor, the note names identifier labels only", () => {
+    const out = assemble(
+      input({
+        checks: [],
+        identity: {
+          identity_resolved: true,
+          identifiers_found: ["SEC EDGAR filing", "Domain registration record (RDAP)"],
+        },
+      }),
+    );
+    const row = out.ledger.find((r) => r.id === "identity");
+    expect(row!.note).toContain("Two independent identifiers converge");
+    expect(row!.note).toContain("SEC EDGAR filing");
+    expect(lintText(row!.note).filter((v) => v.kind === "banned")).toHaveLength(0);
+  });
+});
+
 describe("identity surfaces name entities only from exact records", () => {
   it("a similarity SoS hit never puts a legal name on the green flag", () => {
     const sosSimilarity = check({

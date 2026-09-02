@@ -18,6 +18,12 @@ const BANNED_PATTERNS: { pattern: RegExp; label: string }[] = [
   { pattern: /\bfake(s|d|ry)?\b/i, label: "fake" },
   { pattern: /\bsham\b/i, label: "sham" },
   { pattern: /\bshell\s+compan(y|ies)\b/i, label: "shell company" },
+  /* The same accusation by other nouns and by word order: a live green
+     flag ended "you do not have to assume the company is a shell"
+     (2026-09-01), dodging the pattern above. */
+  { pattern: /\bshell\s+(corporation|entit(y|ies)|firm|operation)s?\b/i, label: "shell company" },
+  { pattern: /\b(is|are|was|were|be|been|as)\s+(?:(?:a|an|another|just|only|merely)\s+)?shells?\b(?!\s*-?\s*(?:script|command|prompt|access|environment))/i, label: "shell company" },
+  { pattern: /\bfront\s+compan(y|ies)\b/i, label: "front company" },
   { pattern: /\bl(ying|iar|ies)\b/i, label: "lying/liar" },
   { pattern: /\bdeceptive\b/i, label: "deceptive" },
   { pattern: /\bdecei(t|ve|ving)\b/i, label: "deceit" },

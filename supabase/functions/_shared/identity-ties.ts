@@ -112,6 +112,8 @@ const STATE_NAME_TO_CODE: Record<string, string> = {
 };
 
 const STATE_CODES = new Set(Object.values(STATE_NAME_TO_CODE));
+/* Full state names, uppercase, for prose screens (synthesis-guard.ts). */
+export const STATE_NAMES: readonly string[] = Object.keys(STATE_NAME_TO_CODE);
 
 /* Normalize a state expression to a two-letter code, or null: accepts a
    bare code ("NY"), a full name ("New York"), or a jurisdiction string

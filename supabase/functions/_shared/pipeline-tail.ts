@@ -14,6 +14,7 @@ import {
   type AdvFinding,
   type Citation,
   DecisionImpact,
+  type LedgerRow,
   PitchExtract,
   type RegistryCheck,
   Report,
@@ -27,6 +28,12 @@ import {
 import { computeTier } from "./tier.ts";
 import { assemble, IDENTITY_WHAT_CHECKED } from "./assemble.ts";
 import { lintImplication, lintObject, lintText, tidyProse } from "./lint.ts";
+import {
+  buildSynthesisGuard,
+  guardClean,
+  guardProse,
+  type SynthesisGuard,
+} from "./synthesis-guard.ts";
 import { NO_BASIS_IMPLICATION } from "./plausibility.ts";
 import {
   MODELS,
@@ -568,118 +575,40 @@ export async function runPipelineTail(
     research_partial: state.researchPartial,
   };
 
-  const narrative = await runStructurePass(deps.anthropicKey, s5Input);
+  /* Names the run credited, for the synthesis guard: the vendor's own
+     names and the legal names of records tied to it. Everything else the
+     run retrieved is denied in model prose. */
+  const guard = buildSynthesisGuard({
+    checks,
+    extract,
+    vendorName,
+    greenFlagFacts: skeleton.greenFlagFacts,
+    ranStates: Object.entries(SOS_STATE_NAMES)
+      .filter(([id]) => checks.some((c) => c.check_id === id && (c.status === "hit" || c.status === "definitive_miss")))
+      .map(([, name]) => name),
+  });
+
+  const narrative = await runStructurePass(deps.anthropicKey, s5Input, guard);
   deps.usageBox.value = addUsage(deps.usageBox.value, narrative.usage);
   deps.stageUsage.s5 = narrative.usage;
   markStage("s5_structure");
 
-  /* Compose the report. */
-  const ledger = skeleton.ledger.map((r) => {
-    /* The identity miss-row explains the tool's own registry coverage, and
-       model phrasing has inverted that fact live ("these six states do not
-       offer free automated searches" about exactly the states that do).
-       Both miss variants are templated in code; the second-identifier
-       variant keeps model phrasing for its nuance. */
-    if (
-      r.id === "identity" &&
-      r.result === "COULD_NOT_VERIFY" &&
-      r.what_checked === IDENTITY_WHAT_CHECKED
-    ) {
-      /* EDGAR ran exactly when assemble put an EDGAR check in the row's
-         sources; the note's EDGAR clause must match that. */
-      const searchedEdgar = r.sources.some((s) => /edgar/i.test(s.title ?? ""));
-      return {
-        ...r,
-        note: identityMissNote(r.sources[0]?.retrieved_at ?? generatedAt, searchedEdgar),
-      };
-    }
-    if (
-      r.id === "identity" &&
-      r.result === "COVERAGE_LIMITED" &&
-      r.what_checked === IDENTITY_WHAT_CHECKED
-    ) {
-      /* The coverage-limited variant enumerates which registries actually
-         ran: model phrasing claimed searches of exactly the lanes that were
-         could_not_check (Florida, 2026-08-29), the inverted-coverage class
-         this template family exists to prevent. */
-      const searchedEdgar = r.sources.some((s) => /edgar/i.test(s.title ?? ""));
-      return {
-        ...r,
-        note: identityCoverageLimitedNote(
-          checks,
-          searchedEdgar,
-          r.sources[0]?.retrieved_at ?? generatedAt,
-        ),
-      };
-    }
-    /* Rows assemble already templated in code (registry statuses, the
-       dissolution surface, role-change conflicts, domain age, similarity
-       candidates) keep their notes: load-bearing self-descriptions are
-       never model-phrased. */
-    if (r.note !== "") return r;
-    const modelNote = narrative.value?.row_notes.find((n) => n.id === r.id)?.note;
-    return {
-      ...r,
-      note: modelNote
-        ? tidyProse(modelNote, 700)
-        : fallbackNote(r.result, r.what_checked, r.sources[0]?.title ?? null),
-    };
-  });
-
-  const allowedUrls = new Set<string>([
-    ...checks.flatMap((c) => (c.evidence_url ? [c.evidence_url] : [])),
-    ...citations.map((c) => c.url),
-    "https://www.hhs.gov/hipaa/for-professionals/faq/2003/are-we-required-to-certify-our-organizations-compliance-with-the-standards/index.html",
-    "https://tineye.com",
-  ]);
-  const firewallSources = (srcs: { url: string; title: string | null; retrieved_at: string }[]) =>
-    srcs.filter((s) => allowedUrls.has(s.url));
-
-  const report: Report = {
-    verdict: {
-      tier: decision.tier,
-      label: decision.label,
-      summary:
-        tidyProse(narrative.value?.verdict_summary ?? "", 600) ||
-        defaultSummary(decision.tier),
-      checks_met: decision.checks_met,
-      rationale: decision.rationale.slice(0, 8).map((r) => r.slice(0, 400)),
-    },
-    ledger: ledger.map((r) => ({ ...r, sources: firewallSources(r.sources) })),
-    green_flags: enforceRegistryStatusFlags(
-      narrative.value?.green_flags ??
-        skeleton.greenFlagFacts.map(
-          (g) => `${g.fact} (${g.source_name}, checked ${g.date})`,
-        ),
-      skeleton.greenFlagFacts,
-    )
-      .slice(0, 15)
-      .map((g) => tidyProse(g, 400)),
-    adv_findings: adv.slice(0, 6),
-    honesty_panel: skeleton.honesty,
-    questions: skeleton.questions,
-    manual_checks: skeleton.manualChecks,
-    leads: skeleton.leads,
-    unassessed_sources: firewallSources(skeleton.unassessedSources),
-    next_steps: (narrative.value?.next_steps ?? defaultNextSteps(decision.tier))
-      .slice(0, 8)
-      .map((s) => tidyProse(s, 500)),
+  const report: Report = composeReport({
+    skeleton,
+    decision,
+    narrative: narrative.value,
+    guard,
+    checks,
+    citations,
+    adv,
     sector,
-    sources: firewallSources(
-      citations.map((c) => ({ url: c.url, title: c.title, retrieved_at: c.retrieved_at })),
-    ),
-    review: null,
-    meta: {
-      generated_at: generatedAt,
-      expires_at: new Date(Date.now() + 90 * 86_400_000).toISOString(),
-      methodology_version: METHODOLOGY_VERSION,
-      pack_release: PACK_RELEASE,
-      vendor_key: vendorKey,
-      vendor_display_name: vendorName,
-      research_partial: state.researchPartial,
-      input_kind: inputKind,
-    },
-  };
+    vendorName,
+    vendorKey,
+    inputKind,
+    generatedAt,
+    researchPartial: state.researchPartial,
+  });
+  const ledger = report.ledger;
 
   if (state.deepHandoffFailed) {
     report.honesty_panel.push({
@@ -719,29 +648,7 @@ export async function runPipelineTail(
           verdict_summary_rewrite: string | null;
         }>(res)
       : null;
-    if (review) {
-      const adjustments: string[] = [];
-      for (const issue of review.issues.slice(0, 10)) {
-        if (issue.target_row_id && issue.replacement_note === null && issue.kind === "misread_evidence") {
-          report.ledger = report.ledger.filter((r) => r.id !== issue.target_row_id);
-          adjustments.push(`Removed an unsupported item (${issue.explanation.slice(0, 120)})`);
-        } else if (issue.target_row_id && issue.replacement_note) {
-          const row = report.ledger.find((r) => r.id === issue.target_row_id);
-          if (row && lintText(issue.replacement_note).filter((v) => v.kind === "banned").length === 0) {
-            row.note = tidyProse(issue.replacement_note, 700);
-            adjustments.push(`Tightened language (${issue.kind}): ${issue.explanation.slice(0, 120)}`);
-          }
-        }
-      }
-      if (
-        review.verdict_summary_rewrite &&
-        lintText(review.verdict_summary_rewrite).filter((v) => v.kind === "banned").length === 0
-      ) {
-        report.verdict.summary = tidyProse(review.verdict_summary_rewrite, 600);
-        adjustments.push("Rewrote the summary for accuracy");
-      }
-      report.review = { reviewed: true, model: MODELS.review, adjustments: adjustments.slice(0, 10) };
-    }
+    if (review) applyReview(report, review, guard);
   }
 
   /* Final lint: banned-vocabulary violations anywhere fall back to templates. */
@@ -949,48 +856,26 @@ export function identityCoverageLimitedNote(
   return `We searched the state business registries we could reach (${ran.join(", ")}) on ${date} and did not find a registered entity under any name the pitch uses. ${unavailablePart}We could not reach SEC EDGAR, the federal filing database, for this report; the honesty panel says so. ${closing}`.slice(0, 700);
 }
 
-/* Registry-status legibility for green flags: a model-phrased flag about a
-   program listing is replaced by the code-templated fact, which carries the
-   exact status level ("Progressing" is not "Authorized"; "Provisional" is
-   not "Level 2"). A program flag with no underlying fact is dropped. */
-const PROGRAM_FLAG_PATTERNS: RegExp[] = [
-  /fedramp/i,
-  /govramp|stateramp/i,
-  /tx-?ramp/i,
-  /sourcewell/i,
-];
+/* Green flags are code templates over assemble's greenFlagFacts
+   (methodology 1.7): the fact, its source, and the check date. The model
+   has no field to write one into (STRUCTURE_SCHEMA). The trailing period
+   keeps tidyProse from trimming the parenthetical as a fragment. */
+export function renderGreenFlag(f: { fact: string; source_name: string; date: string }): string {
+  return tidyProse(`${f.fact} (${f.source_name}, checked ${f.date}).`, 400);
+}
 
-export function enforceRegistryStatusFlags(
-  flags: string[],
-  facts: { fact: string; source_name: string; date: string }[],
-): string[] {
-  let out = [...flags];
-  for (const re of PROGRAM_FLAG_PATTERNS) {
-    const fact = facts.find((f) => re.test(f.fact));
-    const templated = fact
-      ? `${fact.fact} (${fact.source_name}, checked ${fact.date})`
-      : null;
-    let replaced = false;
-    out = out.flatMap((f) => {
-      if (!re.test(f)) return [f];
-      if (!templated || replaced) return [];
-      replaced = true;
-      return [templated];
-    });
-  }
-  return out;
+export interface Narrative {
+  verdict_summary: string;
+  row_notes: { id: string; note: string }[];
+  next_steps: string[];
 }
 
 async function runStructurePass(
   anthropicKey: string,
   input: S5UserInput,
+  guard: SynthesisGuard,
 ): Promise<{
-  value: {
-    verdict_summary: string;
-    row_notes: { id: string; note: string }[];
-    green_flags: string[];
-    next_steps: string[];
-  } | null;
+  value: Narrative | null;
   usage: Usage;
 }> {
   let usage: Usage = {
@@ -1007,18 +892,201 @@ async function runStructurePass(
     });
     usage = addUsage(usage, res.usage);
     if (!res.ok) break;
-    const parsed = parseStructured<{
-      verdict_summary: string;
-      row_notes: { id: string; note: string }[];
-      green_flags: string[];
-      next_steps: string[];
-    }>(res);
+    const parsed = parseStructured<Narrative>(res);
     if (!parsed) continue;
     const banned = lintObject(parsed).filter((v) => v.kind === "banned");
-    if (banned.length === 0) return { value: parsed, usage };
-    console.warn(`s5 lint retry: ${banned.map((b) => b.label).join(", ")}`);
+    /* A sentence naming a company the run did not credit counts like a
+       banned word for the one retry; composeReport drops whatever the
+       retry still gets wrong. */
+    const namesClean =
+      guardClean(parsed.verdict_summary, guard, { summary: true }) &&
+      parsed.row_notes.every((n) => guardClean(n.note, guard)) &&
+      parsed.next_steps.every((n) => guardClean(n, guard));
+    if (banned.length === 0 && namesClean) return { value: parsed, usage };
+    console.warn(
+      `s5 retry: ${banned.map((b) => b.label).join(", ")}${namesClean ? "" : " uncredited company name"}`,
+    );
   }
   return { value: null, usage };
+}
+
+export interface ReviewOutput {
+  approved: boolean;
+  issues: {
+    kind: string;
+    target_row_id: string | null;
+    explanation: string;
+    replacement_note: string | null;
+  }[];
+  verdict_summary_rewrite: string | null;
+}
+
+/* Rows the wording review may never remove: anything adverse, anything
+   contradicted or resting on an official record, and the identity row.
+   One-directionality (the review can only tighten) was prompt text
+   before 1.7; this is the code that makes it true. */
+function reviewMayRemove(row: LedgerRow): boolean {
+  if (row.severity === "HIGH" || row.severity === "CRITICAL") return false;
+  if (row.result === "OFFICIAL_RECORD_FOUND" || row.result === "CONTRADICTED") return false;
+  if (row.id === "identity") return false;
+  return true;
+}
+
+/* Apply the S5.5 review to a composed report, in place. Pure. Replacement
+   text is accepted whole or not at all: it must pass the banned-word lint
+   and the synthesis guard. Adjustment labels are fixed strings; no model
+   explanation text is stored. */
+export function applyReview(report: Report, review: ReviewOutput, guard: SynthesisGuard): void {
+  const adjustments: string[] = [];
+  for (const issue of review.issues.slice(0, 10)) {
+    if (!issue.target_row_id) continue;
+    const row = report.ledger.find((r) => r.id === issue.target_row_id);
+    if (!row) continue;
+    if (issue.replacement_note === null && issue.kind === "misread_evidence") {
+      if (!reviewMayRemove(row)) continue;
+      report.ledger = report.ledger.filter((r) => r.id !== issue.target_row_id);
+      adjustments.push("Removed an item the reviewer found unsupported");
+    } else if (issue.replacement_note) {
+      const clean =
+        lintText(issue.replacement_note).filter((v) => v.kind === "banned").length === 0 &&
+        guardClean(issue.replacement_note, guard);
+      if (!clean) continue;
+      row.note = tidyProse(issue.replacement_note, 700);
+      adjustments.push("Tightened the wording of one item");
+    }
+  }
+  if (
+    review.verdict_summary_rewrite &&
+    lintText(review.verdict_summary_rewrite).filter((v) => v.kind === "banned").length === 0 &&
+    guardClean(review.verdict_summary_rewrite, guard, { summary: true })
+  ) {
+    report.verdict.summary = tidyProse(review.verdict_summary_rewrite, 600);
+    adjustments.push("Rewrote the summary for accuracy");
+  }
+  report.review = { reviewed: true, model: MODELS.review, adjustments: adjustments.slice(0, 10) };
+}
+
+export interface ComposeArgs {
+  skeleton: ReturnType<typeof assemble>;
+  decision: ReturnType<typeof computeTier>;
+  narrative: Narrative | null;
+  guard: SynthesisGuard;
+  checks: RegistryCheck[];
+  citations: Citation[];
+  adv: AdvFinding[];
+  sector: SectorContext;
+  vendorName: string;
+  vendorKey: string;
+  inputKind: "paste" | "name" | "pdf" | "url";
+  generatedAt: string;
+  researchPartial: boolean;
+}
+
+/* Compose the Report from the decided skeleton and the (guarded) model
+   narrative. Pure: no I/O, no clock beyond generatedAt, so the byte-lock
+   tests can pin it. Every load-bearing self-description is a code
+   template; every model sentence passes the synthesis guard. */
+export function composeReport(args: ComposeArgs): Report {
+  const { skeleton, decision, narrative, guard, checks, citations, adv, sector } = args;
+  const generatedAt = args.generatedAt;
+  const ledger = skeleton.ledger.map((r) => {
+    /* The identity miss-row explains the tool's own registry coverage, and
+       model phrasing has inverted that fact live ("these six states do not
+       offer free automated searches" about exactly the states that do).
+       Both miss variants are templated in code. */
+    if (
+      r.id === "identity" &&
+      r.result === "COULD_NOT_VERIFY" &&
+      r.what_checked === IDENTITY_WHAT_CHECKED
+    ) {
+      const searchedEdgar = r.sources.some((s) => /edgar/i.test(s.title ?? ""));
+      return {
+        ...r,
+        note: identityMissNote(r.sources[0]?.retrieved_at ?? generatedAt, searchedEdgar),
+      };
+    }
+    if (
+      r.id === "identity" &&
+      r.result === "COVERAGE_LIMITED" &&
+      r.what_checked === IDENTITY_WHAT_CHECKED
+    ) {
+      const searchedEdgar = r.sources.some((s) => /edgar/i.test(s.title ?? ""));
+      return {
+        ...r,
+        note: identityCoverageLimitedNote(
+          checks,
+          searchedEdgar,
+          r.sources[0]?.retrieved_at ?? generatedAt,
+        ),
+      };
+    }
+    /* Rows assemble already templated in code (registry statuses, the
+       identity sentence, the dissolution surface, role-change conflicts,
+       domain age, similarity candidates) keep their notes: load-bearing
+       self-descriptions are never model-phrased. */
+    if (r.note !== "") return r;
+    const modelNote = narrative?.row_notes.find((n) => n.id === r.id)?.note;
+    const guarded = modelNote ? guardProse(tidyProse(modelNote, 700), guard) : null;
+    return {
+      ...r,
+      note: guarded ?? fallbackNote(r.result, r.what_checked, r.sources[0]?.title ?? null),
+    };
+  });
+
+  const allowedUrls = new Set<string>([
+    ...checks.flatMap((c) => (c.evidence_url ? [c.evidence_url] : [])),
+    ...citations.map((c) => c.url),
+    "https://www.hhs.gov/hipaa/for-professionals/faq/2003/are-we-required-to-certify-our-organizations-compliance-with-the-standards/index.html",
+    "https://tineye.com",
+  ]);
+  const firewallSources = (srcs: { url: string; title: string | null; retrieved_at: string }[]) =>
+    srcs.filter((s) => allowedUrls.has(s.url));
+
+  const summaryDraft = narrative ? tidyProse(narrative.verdict_summary, 600) : "";
+  const summary =
+    (summaryDraft ? guardProse(summaryDraft, guard, { summary: true }) : null) ??
+    defaultSummary(decision.tier);
+  const stepsDraft = (narrative?.next_steps ?? [])
+    .map((s) => tidyProse(s, 500))
+    .flatMap((s) => {
+      const g = guardProse(s, guard);
+      return g ? [g] : [];
+    });
+  const nextSteps = (stepsDraft.length > 0 ? stepsDraft : defaultNextSteps(decision.tier)).slice(0, 8);
+
+  return {
+    verdict: {
+      tier: decision.tier,
+      label: decision.label,
+      summary,
+      checks_met: decision.checks_met,
+      rationale: decision.rationale.slice(0, 8).map((r) => r.slice(0, 400)),
+    },
+    ledger: ledger.map((r) => ({ ...r, sources: firewallSources(r.sources) })),
+    green_flags: skeleton.greenFlagFacts.slice(0, 15).map(renderGreenFlag),
+    adv_findings: adv.slice(0, 6),
+    honesty_panel: skeleton.honesty,
+    questions: skeleton.questions,
+    manual_checks: skeleton.manualChecks,
+    leads: skeleton.leads,
+    unassessed_sources: firewallSources(skeleton.unassessedSources),
+    next_steps: nextSteps,
+    sector,
+    sources: firewallSources(
+      citations.map((c) => ({ url: c.url, title: c.title, retrieved_at: c.retrieved_at })),
+    ),
+    review: null,
+    meta: {
+      generated_at: generatedAt,
+      expires_at: new Date(new Date(generatedAt).getTime() + 90 * 86_400_000).toISOString(),
+      methodology_version: METHODOLOGY_VERSION,
+      pack_release: PACK_RELEASE,
+      vendor_key: args.vendorKey,
+      vendor_display_name: args.vendorName,
+      research_partial: args.researchPartial,
+      input_kind: args.inputKind,
+    },
+  };
 }
 
 export async function finishInsufficient(

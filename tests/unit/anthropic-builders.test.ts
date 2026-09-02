@@ -9,6 +9,7 @@
 import { describe, expect, it } from "vitest";
 import {
   MODELS,
+  STRUCTURE_SCHEMA,
   buildClassifyRequest,
   buildDiscoveryRequest,
   buildExtractRequest,
@@ -36,6 +37,14 @@ describe("buildExtractRequest (S1 pitch extract and S1b site extract)", () => {
     const body = JSON.parse(req.messages[0].content as string) as { source: string; pitch_text: string };
     expect(body.source).toBe("label-x");
     expect(body.pitch_text).toBe("verbatim pitch body");
+  });
+});
+
+describe("STRUCTURE_SCHEMA (methodology 1.7)", () => {
+  it("has no green_flags field: green flags are code templates over assemble's facts", () => {
+    expect(Object.keys(STRUCTURE_SCHEMA.properties)).toEqual(["verdict_summary", "row_notes", "next_steps"]);
+    expect((STRUCTURE_SCHEMA.required as readonly string[]).includes("green_flags")).toBe(false);
+    expect(STRUCTURE_SCHEMA.additionalProperties).toBe(false);
   });
 });
 

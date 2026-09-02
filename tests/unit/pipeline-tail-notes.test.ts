@@ -52,10 +52,7 @@ describe("identityMissNote with EDGAR unreachable", () => {
 
 /* ------------------------ coverage-limited identity note (v1.4) */
 
-import {
-  enforceRegistryStatusFlags,
-  identityCoverageLimitedNote,
-} from "../../supabase/functions/_shared/pipeline-tail.ts";
+import { identityCoverageLimitedNote } from "../../supabase/functions/_shared/pipeline-tail.ts";
 import type { RegistryCheck } from "../../supabase/functions/_shared/schemas.ts";
 
 function sosCheck(id: string, status: RegistryCheck["status"]): RegistryCheck {
@@ -103,51 +100,5 @@ describe("identityCoverageLimitedNote", () => {
     const note = identityCoverageLimitedNote(allDown, false, "2026-08-30T00:00:00.000Z");
     expect(note).toContain("could not reach the state business registries");
     expect(note).not.toContain("did not find a registered entity");
-  });
-});
-
-describe("enforceRegistryStatusFlags", () => {
-  const facts = [
-    {
-      fact: 'Tyler Technologies appears on the GovRAMP program participant list with status "Progressing"',
-      source_name: "GovRAMP",
-      date: "2026-08-30",
-    },
-    {
-      fact: "A registered legal entity was found for Tyler Technologies (SEC EDGAR filing; SoS record)",
-      source_name: "SEC EDGAR",
-      date: "2026-08-30",
-    },
-  ];
-
-  it("replaces a model-phrased program flag with the templated status fact", () => {
-    const out = enforceRegistryStatusFlags(
-      ["Tyler has completed a federal cloud security review through GovRAMP"],
-      facts,
-    );
-    expect(out).toHaveLength(1);
-    expect(out[0]).toContain('with status "Progressing"');
-    expect(out[0]).toContain("(GovRAMP, checked 2026-08-30)");
-  });
-
-  it("drops a program flag that has no underlying fact", () => {
-    const out = enforceRegistryStatusFlags(
-      ["Tyler is FedRAMP authorized so you can skip that step"],
-      facts,
-    );
-    expect(out).toHaveLength(0);
-  });
-
-  it("collapses duplicate program flags into one templated line", () => {
-    const out = enforceRegistryStatusFlags(
-      ["GovRAMP member Tyler", "Tyler participates in GovRAMP today"],
-      facts,
-    );
-    expect(out).toHaveLength(1);
-  });
-
-  it("leaves non-program flags untouched", () => {
-    const flags = ["Nate Levine, described in the pitch as President, appears in Forbes"];
-    expect(enforceRegistryStatusFlags(flags, facts)).toEqual(flags);
   });
 });

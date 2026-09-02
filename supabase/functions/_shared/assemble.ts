@@ -25,7 +25,7 @@ import type {
   SectorContext,
 } from "./schemas.ts";
 import { lintText } from "./lint.ts";
-import { isDegenerateBrandName } from "./identity-ties.ts";
+import { isDegenerateBrandName, tieFactsForCheck } from "./identity-ties.ts";
 import { normalizeCompanyName } from "./registry/sam.ts";
 import { computeImplication } from "./plausibility.ts";
 import { PROGRAMS } from "./claim-status.ts";
@@ -95,6 +95,35 @@ function find(checks: RegistryCheck[], id: string): RegistryCheck | undefined {
 
 function dateOf(c: RegistryCheck): string {
   return c.retrieved_at.slice(0, 10);
+}
+
+/* The identity VERIFIED row's sentence, written by code from the credited
+   record (methodology 1.7). Names only the credited record's legal name;
+   the anchor-less variant names identifier labels only. Capped at the
+   row's 700-character note limit by construction. */
+export function identityVerifiedNote(args: {
+  source: string | null;
+  legalName: string | null;
+  status: string | null;
+  registered: string | null;
+  checked: string;
+  secondIdentifier: string | null;
+  bridgeHost: string | null;
+  identifiers?: string[];
+}): string {
+  if (args.source && args.legalName) {
+    const status = args.status ? ` with status "${args.status.slice(0, 40)}"` : "";
+    const registered = args.registered && /^\d{4}/.test(args.registered) ? `, registered ${args.registered.slice(0, 10)}` : "";
+    const second = args.secondIdentifier
+      ? ` A second independent identifier corroborates it: ${args.secondIdentifier}.`
+      : "";
+    const bridge = args.bridgeHost
+      ? ` That name surfaced on ${args.bridgeHost} during research, so confirm it is the same company.`
+      : "";
+    return `${args.source} lists ${args.legalName}${status}${registered} (checked ${args.checked}).${second}${bridge}`.slice(0, 700);
+  }
+  const ids = (args.identifiers ?? []).slice(0, 2);
+  return `Two independent identifiers converge on a registered legal entity: ${ids.join("; ")} (checked ${args.checked}).`.slice(0, 700);
 }
 
 function src(c: RegistryCheck) {
@@ -236,30 +265,53 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
           ? src(edgar)
           : []),
       ].slice(0, 4),
-      note: "", // phrased by S5
+      /* Methodology 1.7: the identity sentence is a code template over the
+         credited record (identityVerifiedNote below). The structure model
+         substituted a namesake's legal name into this one sentence against
+         its own retrieval (round 2, R2-F9); a non-empty note never reaches
+         the model. */
+      note: "",
       methodology_ref: "d1-1",
       ...(anchor?.confidence ? { match_confidence: anchor.confidence } : {}),
       ...(anchor ? { attribution: "attributed" as const } : {}),
     });
+    /* The credited record's own facts. tieFactsForCheck picks the
+       exact-first best match, the same record attribution judged; reading
+       matches[0] named a similarity namesake on the green flag when the
+       lane listed it first (granicus and accela, promoted baseline). */
+    const anchorFacts = anchor ? tieFactsForCheck(anchor) : null;
+    const anchorMatch = anchor
+      ? (((anchor.data ?? {}) as { matches?: { name?: string; status?: string; date?: string; confidence?: string }[] }).matches ?? []).find(
+          (m) => anchorFacts && m.name === anchorFacts.legal_name,
+        ) ?? null
+      : null;
     if (anchor) {
       /* When the record's legal name differs from the pitch's display name
          (compound names like "TrueTax by Govra" resolving to GOVRA, INC.),
-         say so — the D1 row must not conflate product and company. When the
+         say so: the D1 row must not conflate product and company. When the
          record was found through the research-to-registry name bridge, the
          report must disclose the discovered name's source and flag it for
          the buyer to confirm. */
       const bestData = (anchor.data ?? {}) as {
-        matches?: { name?: string }[];
         legal_business_name?: string;
         name_bridge?: { discovered_name?: string; source_host?: string };
       };
-      const legalName =
-        bestData.matches?.[0]?.name ?? bestData.legal_business_name ?? null;
+      const legalName = anchorFacts?.legal_name ?? bestData.legal_business_name ?? null;
       const differs =
         legalName && norm(legalName) !== norm(vendorName) ? legalName : null;
       const bridgePart = bestData.name_bridge?.source_host
         ? `; that name surfaced on ${bestData.name_bridge.source_host} during research, so confirm it is the same company`
         : "";
+      const identityRow = ledger[ledger.length - 1];
+      identityRow.note = identityVerifiedNote({
+        source: anchor.source,
+        legalName,
+        status: anchorMatch?.status ?? null,
+        registered: anchorMatch?.date ?? null,
+        checked: dateOf(anchor),
+        secondIdentifier: identity.identifiers_found.find((i) => i !== identity.identifiers_found[0]) ?? null,
+        bridgeHost: bestData.name_bridge?.source_host ?? null,
+      });
       greenFlagFacts.push({
         fact: differs
           ? `A registered legal entity was found for ${vendorName} under the legal name ${differs} (${basis})${bridgePart}`
@@ -267,12 +319,25 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
         source_name: anchor.source,
         date: dateOf(anchor),
       });
-    } else if (sourceCheck) {
-      greenFlagFacts.push({
-        fact: `A registered legal entity was found for ${vendorName} (${basis})`,
-        source_name: sourceCheck.source,
-        date: dateOf(sourceCheck),
+    } else {
+      const identityRow = ledger[ledger.length - 1];
+      identityRow.note = identityVerifiedNote({
+        source: null,
+        legalName: null,
+        status: null,
+        registered: null,
+        checked: sourceCheck ? dateOf(sourceCheck) : input.generated_at.slice(0, 10),
+        secondIdentifier: null,
+        bridgeHost: null,
+        identifiers: identity.identifiers_found,
       });
+      if (sourceCheck) {
+        greenFlagFacts.push({
+          fact: `A registered legal entity was found for ${vendorName} (${basis})`,
+          source_name: sourceCheck.source,
+          date: dateOf(sourceCheck),
+        });
+      }
     }
   } else {
     const allDefinitiveMiss =

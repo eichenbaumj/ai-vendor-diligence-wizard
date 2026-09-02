@@ -157,10 +157,13 @@ export const CLASSIFY_SCHEMA = {
   },
 } as const;
 
+/* Methodology 1.7: the model no longer has a field for green flags. They
+   are code templates over assemble's greenFlagFacts (pipeline-tail.ts
+   renderGreenFlag); additionalProperties:false makes emission impossible. */
 export const STRUCTURE_SCHEMA = {
   type: "object",
   additionalProperties: false,
-  required: ["verdict_summary", "row_notes", "green_flags", "next_steps"],
+  required: ["verdict_summary", "row_notes", "next_steps"],
   properties: {
     verdict_summary: { type: "string" },
     row_notes: {
@@ -172,7 +175,6 @@ export const STRUCTURE_SCHEMA = {
         properties: { id: { type: "string" }, note: { type: "string" } },
       },
     },
-    green_flags: { type: "array", items: { type: "string" } },
     next_steps: { type: "array", items: { type: "string" } },
   },
 } as const;

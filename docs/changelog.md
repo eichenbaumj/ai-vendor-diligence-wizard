@@ -43,6 +43,21 @@ older company can drop to "not enough to evaluate" and ask for the web
 address. Checks run with the web address stop crediting namesakes. Real
 single-record vendors are unchanged.
 
+**Green flags and company names are written from records, not by the AI.**
+Every line under "What checked out" is now a fixed template over the
+checked record: the fact, the source, and the check date. The writing model
+no longer has a place to put a green flag. The identity row's sentence is
+a template over the record the run credited. Every other sentence the
+model writes is screened against the names the run credited: the vendor's
+own names and the legal names of records tied to it. A sentence naming any
+other company is dropped, and a surface with nothing left falls back to a
+template. A summary sentence that says a state was searched must name a
+state whose registry lane ran. The second model's wording review passes
+the same screen, can no longer remove a serious row, and stores no model
+text in its log. The banned-word list gained phrasings that dodged it by
+word order. Expected effect on verdicts: none. Some summaries read plainer
+where a sentence was dropped.
+
 ## Version 1.6 (September 2026)
 
 **Name-only checks get a steadier website step, and the report says so

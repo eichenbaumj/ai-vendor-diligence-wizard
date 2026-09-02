@@ -16,6 +16,8 @@ import {
   composeReport,
   defaultSummary,
   renderGreenFlag,
+  reviewInputOf,
+  reviewTimeoutMs,
   type Narrative,
 } from "@shared/pipeline-tail.ts";
 import type { PitchExtract, RegistryCheck, Report } from "@shared/schemas.ts";
@@ -182,6 +184,32 @@ describe("composeReport", () => {
     expect(lintObject(report).filter((v) => v.kind === "banned")).toEqual([]);
     const { Report } = await import("@shared/schemas.ts");
     expect(Report.safeParse(report).success).toBe(true);
+  });
+});
+
+describe("the review's allowance and input (methodology 1.7)", () => {
+  it("gives the review up to 60s when the clock allows and never less than 20s", () => {
+    expect(reviewTimeoutMs({})).toBe(60_000);
+    expect(reviewTimeoutMs({ s1_extract: 20_000, s2_registry: 60_000, s3_research: 200_000, s5_structure: 15_000 })).toBe(60_000);
+    /* 340s spent: 400 - 12 - 340 = 48s. */
+    expect(reviewTimeoutMs({ a: 340_000 })).toBe(48_000);
+    /* Out of time: the floor. */
+    expect(reviewTimeoutMs({ a: 390_000 })).toBe(20_000);
+    expect(reviewTimeoutMs({ a: Number.NaN })).toBe(60_000);
+  });
+
+  it("hands the review the surfaces it may act on and drops the research lists", () => {
+    const { report } = build(cleanNarrative);
+    const input = reviewInputOf(report) as Record<string, unknown>;
+    expect(Object.keys(input).sort()).toEqual(
+      ["adv_findings", "green_flags", "honesty_panel", "input_kind", "ledger", "next_steps", "vendor_display_name", "verdict"].sort(),
+    );
+    expect("sources" in input).toBe(false);
+    expect("leads" in input).toBe(false);
+    expect("questions" in input).toBe(false);
+    const rows = input.ledger as { id: string; source_titles: string[] }[];
+    expect(rows.map((r) => r.id)).toEqual(report.ledger.map((r) => r.id));
+    expect(JSON.stringify(input).length).toBeLessThan(JSON.stringify(report).length);
   });
 });
 

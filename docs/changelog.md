@@ -58,6 +58,16 @@ text in its log. The banned-word list gained phrasings that dodged it by
 word order. Expected effect on verdicts: none. Some summaries read plainer
 where a sentence was dropped.
 
+**The wording review gets the time it needs and a smaller page to read.**
+Reports with adverse findings, contradictions, or adversarial-content
+findings get a second model's wording review before publication. In our
+test panel that review stopped at its 40-second allowance on every run,
+so it was changing nothing. It now reads only the surfaces it may act on
+(the verdict, the ledger rows, the green flags, the honesty panel, and the
+next steps) and gets up to 60 seconds when the run's clock allows. Expected
+effect on verdicts: none. The review can only tighten wording, and a
+review that does not finish still changes nothing.
+
 ## Version 1.6 (September 2026)
 
 **Name-only checks get a steadier website step, and the report says so

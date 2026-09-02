@@ -70,8 +70,60 @@ const TAIL_TIMEOUTS = {
   registryPerEndpoint: 8_000,
   classify: 12_000,
   structure: 50_000,
-  review: 40_000,
+  /* The wording review's allowance is budget-aware (reviewTimeoutMs): up
+     to reviewMax when the run's clock allows, never below reviewMin. At a
+     fixed 40s the Fable review stopped at the timeout on every triggered
+     cell in the promoted 1.6 baseline (24/24 review null), so the
+     reviewer of record for adverse reports was silently not running. */
+  reviewMin: 20_000,
+  reviewMax: 60_000,
 };
+
+/* The function's wall is 400s; leave headroom for assembly, the final
+   lint, and the database writes after the review. */
+const FUNCTION_WALL_MS = 400_000;
+const POST_REVIEW_HEADROOM_MS = 12_000;
+
+/* Review allowance from the time already spent in this function (the
+   per-stage durations markStage recorded). Pure. */
+export function reviewTimeoutMs(stageMs: Record<string, number>): number {
+  const elapsed = Object.values(stageMs).reduce((a, b) => a + (Number.isFinite(b) ? b : 0), 0);
+  const remaining = FUNCTION_WALL_MS - POST_REVIEW_HEADROOM_MS - elapsed;
+  return Math.max(TAIL_TIMEOUTS.reviewMin, Math.min(TAIL_TIMEOUTS.reviewMax, remaining));
+}
+
+/* What the wording review reads: the surfaces it may act on and the
+   context they rest on. Sources, leads, unassessed sources, questions, and
+   manual cards are dropped: the full report JSON on a research-heavy run
+   was the input the review never finished reading. */
+export function reviewInputOf(report: Report): Record<string, unknown> {
+  return {
+    verdict: report.verdict,
+    ledger: report.ledger.map((r) => ({
+      id: r.id,
+      dimension: r.dimension,
+      claim_quote: r.claim_quote,
+      what_checked: r.what_checked,
+      result: r.result,
+      evidence_tier: r.evidence_tier,
+      severity: r.severity,
+      note: r.note,
+      ...(r.match_confidence ? { match_confidence: r.match_confidence } : {}),
+      ...(r.attribution ? { attribution: r.attribution } : {}),
+      source_titles: r.sources.map((s) => s.title ?? s.url).slice(0, 4),
+    })),
+    green_flags: report.green_flags,
+    adv_findings: report.adv_findings,
+    honesty_panel: report.honesty_panel.map((h) => ({
+      label: h.label,
+      status: h.status,
+      reason: h.reason,
+    })),
+    next_steps: report.next_steps,
+    vendor_display_name: report.meta.vendor_display_name,
+    input_kind: report.meta.input_kind,
+  };
+}
 
 export interface TailEmitEvent {
   stage: "parse" | "registry" | "research" | "packs" | "synthesis" | "review";
@@ -629,9 +681,9 @@ export async function runPipelineTail(
   if (needsReview) {
     await setStatus("synthesis");
     await emit({ stage: "review", kind: "stage_start", label: "Reviewing the language before publication" });
-    const res = await callAnthropic(buildReviewRequest(JSON.stringify(report)), {
+    const res = await callAnthropic(buildReviewRequest(JSON.stringify(reviewInputOf(report))), {
       apiKey: deps.anthropicKey,
-      timeoutMs: TAIL_TIMEOUTS.review,
+      timeoutMs: reviewTimeoutMs(deps.stageMs),
     });
     deps.usageBox.value = addUsage(deps.usageBox.value, res.usage);
     deps.stageUsage.review = res.usage;

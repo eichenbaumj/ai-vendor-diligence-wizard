@@ -221,6 +221,10 @@ export interface AnthropicRequestBody {
   tools?: unknown[];
   output_config?: unknown;
   stream?: boolean;
+  /* Sampling temperature. Only the Haiku builders may set it: Sonnet 5 and
+     Fable 5 reject any sampling parameter with a 400 (claude-api reference,
+     2026-09). Keep it off buildResearchRequest and buildReviewRequest. */
+  temperature?: number;
 }
 
 export function buildExtractRequest(
@@ -236,6 +240,14 @@ export function buildExtractRequest(
        attempts. Output length is bounded by the schema's array caps;
        this only buys headroom past the cliff. */
     max_tokens: 8192,
+    /* Extraction determinism (methodology 1.7): the same PDF text layer
+       yielded a claim on one run and dropped it on the next about one run
+       in five (qa-pdf twins, 7 occurrences through 2026-09-01; text layer
+       and verbatim guard verified clean, so the omission was model-side).
+       Temperature 0 removes the sampling variance. It is a variance
+       reducer, not a determinism guarantee; the observation sweeps measure
+       the effect. Haiku 4.5 accepts the parameter; see the interface note. */
+    temperature: 0,
     system: S1_SYSTEM,
     messages: [
       { role: "user", content: buildS1UserMessage(source, pitchText) },

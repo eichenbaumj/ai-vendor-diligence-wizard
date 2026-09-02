@@ -14,6 +14,7 @@ import { buildSynthesisGuard } from "@shared/synthesis-guard.ts";
 import {
   applyReview,
   composeReport,
+  composeReportDetailed,
   defaultSummary,
   renderGreenFlag,
   reviewInputOf,
@@ -326,8 +327,9 @@ describe("applyReview", () => {
     expect(JSON.stringify(report.review)).not.toContain("secret model text");
   });
 
-  it("accepts replacement text only when it is lint-clean and names no uncredited company", () => {
+  it("accepts replacement text only on model-authored rows, and only when it is lint-clean and names no uncredited company", () => {
     const { report, guard } = reportWithRows();
+    const editable = { rowIds: new Set(["cust-example", "fedramp_marketplace"]), summary: true };
     applyReview(
       report,
       {
@@ -335,13 +337,43 @@ describe("applyReview", () => {
         issues: [
           { kind: "overclaim", target_row_id: "cust-example", explanation: "x", replacement_note: "We searched public sources on September 1, 2026 and did not find this customer. Not finding a record is not proof the claim is false." },
           { kind: "overclaim", target_row_id: "fedramp_marketplace", explanation: "x", replacement_note: "The listing belongs to IRONCLAD CONSTRUCTION GROUP LLC." },
+          { kind: "overclaim", target_row_id: "identity", explanation: "x", replacement_note: "Two records converge on a registered entity." },
         ],
         verdict_summary_rewrite: "IRONCLAD CONSTRUCTION GROUP LLC checked out.",
       },
       guard,
+      editable,
     );
     expect(report.ledger.find((r) => r.id === "cust-example")!.note).toContain("did not find this customer");
     expect(report.ledger.find((r) => r.id === "fedramp_marketplace")!.note).toBe("The feed does not list it.");
+    /* The identity sentence is a code template: never reworded. */
+    expect(report.ledger.find((r) => r.id === "identity")!.note).toContain("lists IRONCLAD, INC.");
     expect(report.verdict.summary).not.toContain("CONSTRUCTION");
+  });
+
+  it("composeReportDetailed reports which surfaces the model wrote; a template summary is never editable", () => {
+    const { report: r1 } = build(cleanNarrative);
+    expect(r1.verdict.summary).toContain("What remains is product diligence.");
+    const detailed = (() => {
+      const input: AssembleInput = {
+        extract: extractWith(), checks, identity: { identity_resolved: true, identifiers_found: ["a", "b"] },
+        citations: [], adv_findings: [], sector: { pack_ids: [], elevated: false, overlay_reason: null, state_items: [] },
+        packs: {}, resolvable: true, research_partial: false, generated_at: AT,
+      };
+      const skeleton = assemble(input);
+      const decision = computeTier(skeleton.tierInputs);
+      const guard = buildSynthesisGuard({ checks, extract: input.extract, vendorName: "Ironclad", greenFlagFacts: skeleton.greenFlagFacts, ranStates: [] });
+      const base = { skeleton, decision, guard, checks, citations: [], adv: [], sector: input.sector, vendorName: "Ironclad", vendorKey: "ironclad", inputKind: "name" as const, generatedAt: AT, researchPartial: false };
+      return {
+        model: composeReportDetailed({ ...base, narrative: cleanNarrative }),
+        template: composeReportDetailed({ ...base, narrative: { verdict_summary: "IRONCLAD CONSTRUCTION GROUP LLC is the vendor.", row_notes: [], next_steps: [] } }),
+        none: composeReportDetailed({ ...base, narrative: null }),
+      };
+    })();
+    expect(detailed.model.editable.summary).toBe(true);
+    expect(detailed.template.editable.summary).toBe(false);
+    expect(detailed.none.editable.summary).toBe(false);
+    /* The identity row is code-templated and never in the editable set. */
+    expect(detailed.model.editable.rowIds.has("identity")).toBe(false);
   });
 });

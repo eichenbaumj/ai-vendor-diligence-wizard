@@ -649,7 +649,7 @@ export async function runPipelineTail(
   deps.stageUsage.s5 = narrative.usage;
   markStage("s5_structure");
 
-  const report: Report = composeReport({
+  const composed = composeReportDetailed({
     skeleton,
     decision,
     narrative: narrative.value,
@@ -678,6 +678,7 @@ export async function runPipelineTail(
       namesakeRecords,
     }),
   });
+  const report: Report = composed.report;
   const ledger = report.ledger;
 
   if (state.deepHandoffFailed) {
@@ -718,7 +719,7 @@ export async function runPipelineTail(
           verdict_summary_rewrite: string | null;
         }>(res)
       : null;
-    if (review) applyReview(report, review, guard);
+    if (review) applyReview(report, review, guard, composed.editable);
   }
 
   /* Final lint: banned-vocabulary violations anywhere fall back to templates. */
@@ -1002,11 +1003,28 @@ function reviewMayRemove(row: LedgerRow): boolean {
   return true;
 }
 
+/* Which surfaces the review may reword: only the ones the narrative model
+   wrote. Code-templated notes (the identity sentence, registry statuses,
+   candidate records, the coverage explanations) and a template summary
+   are load-bearing self-descriptions and stay as written. The first
+   completed reviews (2026-09-01) rewrote the identity coverage note and
+   the identity sentence; this is the gate that stops it. */
+export interface ReviewEditable {
+  rowIds: Set<string>;
+  summary: boolean;
+}
+
 /* Apply the S5.5 review to a composed report, in place. Pure. Replacement
-   text is accepted whole or not at all: it must pass the banned-word lint
-   and the synthesis guard. Adjustment labels are fixed strings; no model
-   explanation text is stored. */
-export function applyReview(report: Report, review: ReviewOutput, guard: SynthesisGuard): void {
+   text is accepted whole or not at all: it must target a model-authored
+   surface and pass the banned-word lint and the synthesis guard.
+   Adjustment labels are fixed strings; no model explanation text is
+   stored. Without `editable`, nothing is reworded (removal still works). */
+export function applyReview(
+  report: Report,
+  review: ReviewOutput,
+  guard: SynthesisGuard,
+  editable: ReviewEditable = { rowIds: new Set(), summary: false },
+): void {
   const adjustments: string[] = [];
   for (const issue of review.issues.slice(0, 10)) {
     if (!issue.target_row_id) continue;
@@ -1017,6 +1035,7 @@ export function applyReview(report: Report, review: ReviewOutput, guard: Synthes
       report.ledger = report.ledger.filter((r) => r.id !== issue.target_row_id);
       adjustments.push("Removed an item the reviewer found unsupported");
     } else if (issue.replacement_note) {
+      if (!editable.rowIds.has(row.id)) continue;
       const clean =
         lintText(issue.replacement_note).filter((v) => v.kind === "banned").length === 0 &&
         guardClean(issue.replacement_note, guard);
@@ -1026,6 +1045,7 @@ export function applyReview(report: Report, review: ReviewOutput, guard: Synthes
     }
   }
   if (
+    editable.summary &&
     review.verdict_summary_rewrite &&
     lintText(review.verdict_summary_rewrite).filter((v) => v.kind === "banned").length === 0 &&
     guardClean(review.verdict_summary_rewrite, guard, { summary: true })
@@ -1064,8 +1084,15 @@ export interface ComposeArgs {
    tests can pin it. Every load-bearing self-description is a code
    template; every model sentence passes the synthesis guard. */
 export function composeReport(args: ComposeArgs): Report {
+  return composeReportDetailed(args).report;
+}
+
+/* composeReport plus the provenance the review needs: which row notes and
+   whether the summary came from the model (and so may be reworded). */
+export function composeReportDetailed(args: ComposeArgs): { report: Report; editable: ReviewEditable } {
   const { skeleton, decision, narrative, guard, checks, citations, adv, sector } = args;
   const generatedAt = args.generatedAt;
+  const modelNoteIds = new Set<string>();
   const ledger = skeleton.ledger.map((r) => {
     /* The identity miss-row explains the tool's own registry coverage, and
        model phrasing has inverted that fact live ("these six states do not
@@ -1104,6 +1131,7 @@ export function composeReport(args: ComposeArgs): Report {
     if (r.note !== "") return r;
     const modelNote = narrative?.row_notes.find((n) => n.id === r.id)?.note;
     const guarded = modelNote ? guardProse(tidyProse(modelNote, 700), guard) : null;
+    modelNoteIds.add(r.id);
     return {
       ...r,
       note: guarded ?? fallbackNote(r.result, r.what_checked, r.sources[0]?.title ?? null),
@@ -1120,9 +1148,8 @@ export function composeReport(args: ComposeArgs): Report {
     srcs.filter((s) => allowedUrls.has(s.url));
 
   const summaryDraft = narrative ? tidyProse(narrative.verdict_summary, 600) : "";
-  const summary =
-    (summaryDraft ? guardProse(summaryDraft, guard, { summary: true }) : null) ??
-    defaultSummary(decision.tier);
+  const guardedSummary = summaryDraft ? guardProse(summaryDraft, guard, { summary: true }) : null;
+  const summary = guardedSummary ?? defaultSummary(decision.tier);
   const stepsDraft = (narrative?.next_steps ?? [])
     .map((s) => tidyProse(s, 500))
     .flatMap((s) => {
@@ -1138,7 +1165,7 @@ export function composeReport(args: ComposeArgs): Report {
     ? [...skeleton.honesty, nameCollisionItem(args.namesakeRecords ?? 0)]
     : skeleton.honesty;
 
-  return {
+  const report: Report = {
     verdict: {
       tier: decision.tier,
       label: decision.label,
@@ -1174,6 +1201,7 @@ export function composeReport(args: ComposeArgs): Report {
       ...(typeof args.namesakeRecords === "number" ? { namesake_records: args.namesakeRecords } : {}),
     },
   };
+  return { report, editable: { rowIds: modelNoteIds, summary: guardedSummary !== null } };
 }
 
 export async function finishInsufficient(

@@ -238,6 +238,28 @@ describe("identity VERIFIED row: code-templated note from the credited record (m
     expect(flag!.fact).not.toContain("HOLDINGS");
   });
 
+  it("an attributed EDGAR company-lane record anchors identity when no state record is credited", () => {
+    const edgarCompany = check({
+      check_id: "edgar_company",
+      source: "SEC EDGAR company search",
+      confidence: "exact",
+      data: { filing_entities: [{ name: "ConductorAI Corp", cik: "9", inc_state: "DE", confidence: "exact" }] },
+    });
+    edgarCompany.attribution = "attributed";
+    const out = assemble(
+      input({
+        extract: baseExtract({ vendor_name_candidates: ["Conduit"] }),
+        checks: [edgarCompany],
+        identity: { identity_resolved: true, identifiers_found: ["SEC EDGAR filing", "Domain registration record (RDAP)"] },
+      }),
+    );
+    const row = out.ledger.find((r) => r.id === "identity");
+    expect(row!.note).toContain("lists ConductorAI Corp");
+    expect(row!.attribution).toBe("attributed");
+    const flag = out.greenFlagFacts.find((f) => /registered legal entity/i.test(f.fact));
+    expect(flag!.fact).toContain("under the legal name ConductorAI Corp");
+  });
+
   it("with no attributed anchor, the note names identifier labels only", () => {
     const out = assemble(
       input({

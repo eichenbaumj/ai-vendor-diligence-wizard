@@ -234,6 +234,12 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
   const sosChecks = checks.filter((c) => c.check_id.startsWith("sos_"));
   const sosHits = sosChecks.filter((c) => c.status === "hit");
   const edgar = find(checks, "edgar_fts");
+  /* The company-name EDGAR lane is an identity leg like the full-text
+     lane (resolveIdentity reads both); the anchor chain reads it too, so a
+     vendor whose only credited record is its EDGAR company entry gets its
+     legal name on the identity sentence and the green flag (ConductorAI
+     Corp probe, 2026-09-01). */
+  const edgarCompany = find(checks, "edgar_company");
   const sam = find(checks, "sam_entity");
 
   if (identity.identity_resolved) {
@@ -254,6 +260,9 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
       attributedSos[0] ??
       (edgar?.status === "hit" && edgar.attribution === "attributed"
         ? edgar
+        : null) ??
+      (edgarCompany?.status === "hit" && edgarCompany.attribution === "attributed"
+        ? edgarCompany
         : null) ??
       (sam?.status === "hit" && sam.attribution === "attributed" ? sam : null);
     const sourceCheck =

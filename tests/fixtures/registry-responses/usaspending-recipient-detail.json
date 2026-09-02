@@ -1,0 +1,30 @@
+{
+  "name": "GOVASSIST AI INC",
+  "alternate_names": [],
+  "duns": "000000001",
+  "uei": "GOVASSIST0001",
+  "recipient_id": "9f9f9f9f-1111-2222-3333-444444444444-P",
+  "recipient_level": "P",
+  "parent_id": null,
+  "parent_name": null,
+  "business_types": [
+    "category_business"
+  ],
+  "location": {
+    "address_line1": "100 MAIN ST",
+    "address_line2": null,
+    "address_line3": null,
+    "foreign_province": null,
+    "city_name": "AUSTIN",
+    "county_name": null,
+    "state_code": "TX",
+    "zip": "78701",
+    "zip4": null,
+    "foreign_postal_code": null,
+    "country_name": "UNITED STATES",
+    "country_code": "USA",
+    "congressional_code": "10"
+  },
+  "total_transaction_amount": 1600000.5,
+  "total_transactions": 2
+}

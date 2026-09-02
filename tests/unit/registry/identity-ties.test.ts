@@ -33,6 +33,7 @@ import {
   stateCodeOf,
   streetFragment,
   tieFactsForCheck,
+  tieFactsForMatch,
   type RecordTieFacts,
   type VendorTieCorpus,
 } from "../../../supabase/functions/_shared/identity-ties.ts";
@@ -687,6 +688,92 @@ describe("the live exact-name census and the four round-2 shapes (adjudicateChec
     expect(again[0].attribution).toBe("attributed");
   });
 
+  it("1.8 anchor: the record an officer ties is anchored even when listed behind an untied exact namesake", () => {
+    const checks = [
+      sos("sos_co", "Colorado", [
+        { name: "FORERUNNER CORPORATION", confidence: "exact", status: "Good Standing", date: "1996-06-06", city: "SAN FRANCISCO", addr_state: "CA", jurisdiction: "CO", dissolved: null },
+        { name: "FORERUNNER INDUSTRIES, INC.", confidence: "name_similarity", containment: "query_in_record", status: "Good Standing", date: "2019-03-03", officers: ["JANE ROE"], dissolved: null },
+      ]),
+      sos("sos_tx", "Texas Comptroller", [{ name: "FORERUNNER CORPORATION", confidence: "exact", status: "ACTIVE", date: "2001-10-12", dissolved: null }]),
+    ];
+    adjudicateChecks(
+      checks,
+      corpusWith({ extract: { vendor_name_candidates: ["Forerunner"], people: [{ name: "Jane Roe", title: "Chief Executive" }] }, domainYear: 2019 }),
+    );
+    const c = byId(checks);
+    expect(c.sos_co.attribution).toBe("attributed");
+    expect(c.sos_co.tie!.strong).toBe(true);
+    expect((c.sos_co.data as { anchor_index?: number }).anchor_index).toBe(1);
+    expect(tieFactsForCheck(c.sos_co)!.legal_name).toBe("FORERUNNER INDUSTRIES, INC.");
+    /* The untied 1996 namesake in the same lane is not what the lane says now. */
+    expect(c.sos_tx.attribution).toBe("candidate");
+    const trace = attributionTrace(checks);
+    expect(trace.find((t) => t.check_id === "sos_co")).toMatchObject({ records_considered: 2, anchor_index: 1, legal_name: "FORERUNNER INDUSTRIES, INC." });
+    expect(trace.find((t) => t.check_id === "sos_tx")).toMatchObject({ records_considered: 1, anchor_index: 0 });
+  });
+
+  it("1.8 anchor: between attributed records, a strong tie beats an exact name, and an exact name beats a weakly tied contained name", () => {
+    const strongWins = [
+      sos("sos_tx", "Texas Comptroller", [
+        { name: "ACME AI, INC.", confidence: "exact", status: "ACTIVE", date: "2019-01-01", dissolved: null },
+        { name: "ACME AI HOLDINGS LLC", confidence: "name_similarity", containment: "query_in_record", status: "ACTIVE", date: "2019-01-01", officers: ["JANE ROE"], dissolved: null },
+      ]),
+    ];
+    adjudicateChecks(strongWins, corpusWith({ extract: { vendor_name_candidates: ["Acme AI"], people: [{ name: "Jane Roe", title: "CEO" }] } }));
+    expect((strongWins[0].data as { anchor_index?: number }).anchor_index).toBe(1);
+    const exactWins = [
+      sos("sos_tx", "Texas Comptroller", [
+        { name: "ACME AI HOLDINGS LLC", confidence: "name_similarity", containment: "query_in_record", status: "ACTIVE", date: "2019-01-01", addr_state: "TX", dissolved: null },
+        { name: "ACME AI, INC.", confidence: "exact", status: "ACTIVE", date: "2019-01-01", dissolved: null },
+      ]),
+    ];
+    adjudicateChecks(exactWins, corpusWith({ extract: { vendor_name_candidates: ["Acme AI"], state_mentioned: "TX" } }));
+    expect((exactWins[0].data as { anchor_index?: number }).anchor_index).toBe(1);
+    expect(exactWins[0].attribution).toBe("attributed");
+  });
+
+  it("1.8 designation: a namesake's ended registration beside the vendor's tied live record never attaches to the lane", () => {
+    const make = (perMatch: boolean) => [
+      sos(
+        "sos_ny",
+        "New York",
+        [
+          {
+            name: "ACME AI INC.",
+            confidence: "exact",
+            status: "Inactive",
+            date: "2004-01-01",
+            ...(perMatch
+              ? { dissolved: { legal_name: "ACME AI INC.", status: "Inactive", reason: "Dissolution by Proclamation", effective_date: "2011-01-26", record_id: "1", domestic: true } }
+              : {}),
+          },
+          { name: "ACME AI LLC", confidence: "exact", status: "Active", date: "2019-05-05", officers: ["JANE ROE"], ...(perMatch ? { dissolved: null } : {}) },
+        ],
+        { dissolved: { legal_name: "ACME AI INC.", status: "Inactive", reason: "Dissolution by Proclamation", effective_date: "2011-01-26", record_id: "1", domestic: true } },
+      ),
+    ];
+    const corpus = corpusWith({ extract: { vendor_name_candidates: ["Acme AI"], people: [{ name: "Jane Roe", title: "CEO" }] } });
+    for (const perMatch of [true, false]) {
+      const checks = make(perMatch);
+      adjudicateChecks(checks, corpus);
+      const data = checks[0].data as { anchor_index?: number; dissolved?: unknown };
+      expect(data.anchor_index, `perMatch=${perMatch}`).toBe(1);
+      expect(data.dissolved, `perMatch=${perMatch}`).toBeUndefined();
+      expect(checks[0].attribution).toBe("attributed");
+      expect(tieFactsForCheck(checks[0])!.dissolved).toBeUndefined();
+    }
+    /* With nothing tying the live LLC and another live exact name elsewhere,
+       nothing attributes: the lane keeps its pre-1.8 default record and its
+       designation (the Polco shape). */
+    const untied = make(true);
+    untied.push(sos("sos_tx", "Texas Comptroller", [{ name: "ACME AI, INC.", confidence: "exact", status: "ACTIVE", date: "2018-01-01", dissolved: null }]));
+    adjudicateChecks(untied, corpusWith({ extract: { vendor_name_candidates: ["Acme AI"] } }));
+    const d = untied[0].data as { anchor_index?: number; dissolved?: { legal_name: string } };
+    expect(d.anchor_index).toBe(0);
+    expect(d.dissolved?.legal_name).toBe("ACME AI INC.");
+    expect(untied[0].attribution).toBe("candidate");
+  });
+
   it("ConductorAI shape: a record the root cannot cover never competes, so the real SEC record attributes", () => {
     const checks = [
       sos("sos_tx", "Texas Comptroller", [{ name: "CONDUIT, LLC", confidence: "exact", status: "ACTIVE", date: "2020-12-23" }]),
@@ -851,6 +938,27 @@ describe("tieFactsForCheck and adjudicateChecks", () => {
       officers: ["SASCHA HASELMAYER"],
       city: "NEW YORK",
     });
+  });
+
+  it("honors a stored anchor_index and falls back to exact-first when it is out of range", () => {
+    const check: RegistryCheck = {
+      ...baseCheck,
+      check_id: "sos_tx",
+      status: "hit",
+      confidence: "exact",
+      data: {
+        matches: [
+          { name: "FIRST EXACT INC.", confidence: "exact" },
+          { name: "SECOND EXACT LLC", confidence: "exact", city: "AUSTIN" },
+        ],
+        anchor_index: 1,
+      },
+    };
+    expect(tieFactsForCheck(check)!.legal_name).toBe("SECOND EXACT LLC");
+    expect(tieFactsForMatch(check, 0)!.legal_name).toBe("FIRST EXACT INC.");
+    expect(tieFactsForMatch(check, 5)).toBeNull();
+    (check.data as { anchor_index: number }).anchor_index = 7;
+    expect(tieFactsForCheck(check)!.legal_name).toBe("FIRST EXACT INC.");
   });
 
   it("extracts facts from a SAM entity hit", () => {

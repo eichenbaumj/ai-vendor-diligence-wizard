@@ -658,42 +658,105 @@ function yearOf(raw: string | null): number | null {
   return m ? Number(m[1]) : null;
 }
 
-/* Record-side facts for the check's BEST match — the record the downstream
-   identity anchor and dissolution surface consume. Returns null for check
-   families that carry no adjudicable record. */
+/* The lane's records, as a list, for the families that return several
+   (state registries: data.matches; EDGAR: data.filing_entities). Other
+   families carry one record and return null here. */
+function laneRecords(check: RegistryCheck): Record<string, unknown>[] | null {
+  const data = (check.data ?? {}) as Record<string, unknown>;
+  if (check.check_id.startsWith("sos_")) {
+    return Array.isArray(data["matches"]) ? (data["matches"] as Record<string, unknown>[]) : [];
+  }
+  if (check.check_id === "edgar_fts" || check.check_id === "edgar_company") {
+    return Array.isArray(data["filing_entities"])
+      ? (data["filing_entities"] as Record<string, unknown>[])
+      : [];
+  }
+  return null;
+}
+
+/* The lane's default record before adjudication: exact-first, else the
+   first listed. Methodology 1.7 judged this one record per lane. */
+function defaultAnchorIndex(records: Record<string, unknown>[]): number | null {
+  if (records.length === 0) return null;
+  const i = records.findIndex((r) => str(r["confidence"]) === "exact");
+  return i >= 0 ? i : 0;
+}
+
+/* The record a lane's verdict is about: data.anchor_index once
+   selectAnchor has run (methodology 1.8), else the pre-1.8 default. */
+export function anchorIndexOf(check: RegistryCheck): number | null {
+  const records = laneRecords(check);
+  if (records === null) return null;
+  const data = (check.data ?? {}) as Record<string, unknown>;
+  const stored = data["anchor_index"];
+  if (typeof stored === "number" && Number.isInteger(stored) && stored >= 0 && stored < records.length) {
+    return stored;
+  }
+  return defaultAnchorIndex(records);
+}
+
+/* Record-side facts for ONE listed record of a multi-record lane. The
+   dissolved flag is the record's own designation (matches[i].dissolved,
+   recorded per match by the lanes since 1.8) or, for data written before
+   1.8, the check-level designation when it names this record. */
+export function tieFactsForMatch(check: RegistryCheck, index: number): RecordTieFacts | null {
+  if (check.status !== "hit") return null;
+  const records = laneRecords(check);
+  if (records === null || index < 0 || index >= records.length) return null;
+  const rec = records[index];
+  const name = str(rec["name"]);
+  if (!name) return null;
+  const confidence = str(rec["confidence"]);
+  const containment = str(rec["containment"]);
+  const shared = {
+    legal_name: name,
+    ...(confidence === "exact" || confidence === "name_similarity"
+      ? { match_confidence: confidence as "exact" | "name_similarity" }
+      : {}),
+    ...(containment === "query_in_record" || containment === "record_in_query"
+      ? { containment: containment as "query_in_record" | "record_in_query" }
+      : {}),
+  };
+  if (check.check_id.startsWith("sos_")) {
+    const m = rec as SosLaneMatch;
+    const data = (check.data ?? {}) as Record<string, unknown>;
+    const ownDesignation = rec["dissolved"];
+    const checkLevel = data["dissolved"] as { legal_name?: unknown } | undefined;
+    const dissolved =
+      ownDesignation !== undefined
+        ? Boolean(ownDesignation)
+        : Boolean(checkLevel && (str(checkLevel.legal_name) === null || str(checkLevel.legal_name) === name));
+    return {
+      ...shared,
+      street: str(m.street),
+      city: str(m.city),
+      addr_state: str(m.addr_state),
+      officers: strArray(m.officers),
+      agent: str(m.agent),
+      registration_state: SOS_LANE_STATE[check.check_id] ?? null,
+      jurisdiction: str(m.jurisdiction),
+      formation_year: yearOf(str(m.date)),
+      ...(dissolved ? { dissolved: true } : {}),
+    };
+  }
+  /* EDGAR filing entity. */
+  return {
+    ...shared,
+    jurisdiction: str(rec["inc_state"]),
+  };
+}
+
+/* Record-side facts for the check's anchored record — the record the
+   downstream identity anchor and dissolution surface consume. Returns
+   null for check families that carry no adjudicable record. */
 export function tieFactsForCheck(check: RegistryCheck): RecordTieFacts | null {
   if (check.status !== "hit") return null;
   const data = (check.data ?? {}) as Record<string, unknown>;
 
-  if (check.check_id.startsWith("sos_")) {
-    const matches = Array.isArray(data["matches"])
-      ? (data["matches"] as SosLaneMatch[])
-      : [];
-    if (matches.length === 0) return null;
-    const best =
-      matches.find((m) => str(m.confidence) === "exact") ?? matches[0];
-    const name = str(best.name);
-    if (!name) return null;
-    const confidence = str(best.confidence);
-    const containment = str((best as { containment?: unknown }).containment);
-    return {
-      legal_name: name,
-      street: str(best.street),
-      city: str(best.city),
-      addr_state: str(best.addr_state),
-      officers: strArray(best.officers),
-      agent: str(best.agent),
-      registration_state: SOS_LANE_STATE[check.check_id] ?? null,
-      jurisdiction: str(best.jurisdiction),
-      formation_year: yearOf(str(best.date)),
-      ...(confidence === "exact" || confidence === "name_similarity"
-        ? { match_confidence: confidence }
-        : {}),
-      ...(containment === "query_in_record" || containment === "record_in_query"
-        ? { containment }
-        : {}),
-      ...(data["dissolved"] ? { dissolved: true } : {}),
-    };
+  const records = laneRecords(check);
+  if (records !== null) {
+    const idx = anchorIndexOf(check);
+    return idx === null ? null : tieFactsForMatch(check, idx);
   }
 
   if (check.check_id === "sam_entity") {
@@ -725,28 +788,6 @@ export function tieFactsForCheck(check: RegistryCheck): RecordTieFacts | null {
       legal_name: name,
       product: str(best!["product"]),
       ...(check.confidence ? { match_confidence: check.confidence } : {}),
-    };
-  }
-
-  if (check.check_id === "edgar_fts" || check.check_id === "edgar_company") {
-    const entities = Array.isArray(data["filing_entities"])
-      ? (data["filing_entities"] as Record<string, unknown>[])
-      : [];
-    const best =
-      entities.find((e) => str(e["confidence"]) === "exact") ?? entities[0];
-    const name = best ? str(best["name"]) : null;
-    if (!name) return null;
-    const confidence = str(best!["confidence"]);
-    const containment = str(best!["containment"]);
-    return {
-      legal_name: name,
-      jurisdiction: str(best!["inc_state"]),
-      ...(confidence === "exact" || confidence === "name_similarity"
-        ? { match_confidence: confidence }
-        : {}),
-      ...(containment === "query_in_record" || containment === "record_in_query"
-        ? { containment }
-        : {}),
     };
   }
 
@@ -995,16 +1036,83 @@ export function guardFor(
   return { symmetric, rootCovered, bridged, anchor };
 }
 
+/* Methodology 1.8: pick the record a multi-record lane is judged on.
+   Before 1.8 each lane was judged on its exact-first record only, so a
+   vendor whose true record was listed behind an untied exact namesake
+   (or behind a record the age rule vetoed) landed at tier 0 with the
+   tying record never adjudicated. Every listed record is adjudicated
+   here, and the anchor is the first by this order: attributed with a
+   strong tie; attributed as an exact match (untied exact records credit
+   only through the census, as before); attributed through a tie on a
+   contained name; then, when nothing attributes, the pre-1.8 default
+   (exact-first, else first listed) so candidate rows name the record
+   they always named. Ties inside a rank break by list order, so every
+   single-record lane is unchanged. Returns the index; null for families
+   that carry one record. */
+export function selectAnchor(
+  check: RegistryCheck,
+  corpus: VendorTieCorpus,
+  census: Map<string, Set<string>>,
+): number | null {
+  const records = laneRecords(check);
+  if (records === null || records.length === 0) return null;
+  let best: { index: number; rank: number } | null = null;
+  for (let i = 0; i < records.length; i++) {
+    const facts = tieFactsForMatch(check, i);
+    if (!facts) continue;
+    const tie = computeTies(facts, corpus);
+    const verdict = attributionFor(facts, tie, guardFor(check, facts, corpus, census));
+    /* Lower is better. */
+    const rank =
+      verdict === "attributed" && tie.strong
+        ? 0
+        : verdict === "attributed" && facts.match_confidence === "exact"
+          ? 1
+          : verdict === "attributed"
+            ? 2
+            : 9;
+    if (best === null || rank < best.rank) best = { index: i, rank };
+  }
+  if (best === null || best.rank === 9) return defaultAnchorIndex(records);
+  return best.index;
+}
+
 /* Write tie evidence and the attribution verdict onto every adjudicable
    hit. Mutates the checks in place (they are pipeline-local values, not
    shared state). Checks whose family carries no record facts are left
-   untouched — consumers treat a missing attribution as candidate. */
+   untouched — consumers treat a missing attribution as candidate.
+   Multi-record lanes first get their anchor (data.anchor_index), and
+   data.dissolved is re-pointed at the anchored record's own designation
+   so the dissolution surface always describes the record that was
+   judged (the lanes record a designation per match since 1.8). */
 export function adjudicateChecks(
   checks: RegistryCheck[],
   corpus: VendorTieCorpus,
 ): void {
   const census = exactLiveKeys(checks, corpus);
   for (const check of checks) {
+    const idx = selectAnchor(check, corpus, census);
+    if (idx !== null && check.data) {
+      const data = check.data as Record<string, unknown>;
+      data["anchor_index"] = idx;
+      if (check.check_id.startsWith("sos_")) {
+        const records = laneRecords(check) ?? [];
+        const own = records[idx]?.["dissolved"];
+        if (own !== undefined) {
+          if (own) data["dissolved"] = own;
+          else delete data["dissolved"];
+        }
+        /* Pre-1.8 data (no per-match designation): a check-level
+           designation naming another record is not the anchor's. */
+        else if (data["dissolved"]) {
+          const d = data["dissolved"] as { legal_name?: unknown };
+          const anchoredName = str(records[idx]?.["name"]);
+          if (str(d.legal_name) && anchoredName && str(d.legal_name) !== anchoredName) {
+            delete data["dissolved"];
+          }
+        }
+      }
+    }
     const facts = tieFactsForCheck(check);
     if (!facts) continue;
     check.tie = computeTies(facts, corpus);
@@ -1022,6 +1130,10 @@ export function attributionTrace(checks: RegistryCheck[]): {
   attribution: "attributed" | "candidate" | null;
   legal_name: string | null;
   formation_year: number | null;
+  /* Methodology 1.8: how many listed records the lane adjudicated and
+     which one it anchored on (null for single-record lanes). */
+  records_considered: number | null;
+  anchor_index: number | null;
   tie: {
     tied: boolean;
     strong: boolean;
@@ -1034,12 +1146,15 @@ export function attributionTrace(checks: RegistryCheck[]): {
     if (check.status !== "hit") continue;
     const facts = tieFactsForCheck(check);
     if (!facts) continue;
+    const records = laneRecords(check);
     out.push({
       check_id: check.check_id,
       confidence: check.confidence ?? null,
       attribution: check.attribution ?? null,
       legal_name: facts.legal_name.slice(0, 160),
       formation_year: facts.formation_year ?? null,
+      records_considered: records === null ? null : records.length,
+      anchor_index: records === null ? null : anchorIndexOf(check),
       tie: check.tie
         ? {
             tied: check.tie.tied,

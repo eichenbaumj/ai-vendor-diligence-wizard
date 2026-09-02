@@ -25,8 +25,13 @@ import type {
   SectorContext,
 } from "./schemas.ts";
 import { lintText } from "./lint.ts";
-import { domainRootCoversName, isDegenerateBrandName, tieFactsForCheck } from "./identity-ties.ts";
-import { normalizeCompanyName } from "./registry/sam.ts";
+import {
+  anchorIndexOf,
+  domainRootCoversName,
+  isDegenerateBrandName,
+  tieFactsForCheck,
+} from "./identity-ties.ts";
+import { normalizeCompanyName, normalizeUnstripped } from "./registry/sam.ts";
 import { computeImplication } from "./plausibility.ts";
 import { PROGRAMS } from "./claim-status.ts";
 import { computeTier } from "./tier.ts";
@@ -109,6 +114,24 @@ function find(checks: RegistryCheck[], id: string): RegistryCheck | undefined {
 
 function dateOf(c: RegistryCheck): string {
   return c.retrieved_at.slice(0, 10);
+}
+
+/* Methodology 1.8: the candidate-record note, a code template over the
+   record the lane was judged on. Candidate framing throughout: the record
+   is shown for review, earns nothing, and drives no warning. */
+export function candidateRecordNote(args: {
+  source: string;
+  legalName: string;
+  exact: boolean;
+  status: string | null;
+  registered: string | null;
+}): string {
+  let s = `${args.source} lists an entry under a ${args.exact ? "matching" : "similar"} name: ${args.legalName}`;
+  if (args.registered) s += `, registered ${args.registered}`;
+  if (args.status) s += `, status listed as "${args.status}"`;
+  s +=
+    ". No detail connecting that record to this vendor was found, so it is shown as a candidate record only: it earns no credit and drives no warning. Ask the vendor whether this record is theirs.";
+  return s;
 }
 
 /* The identity VERIFIED row's sentence, written by code from the credited
@@ -427,6 +450,49 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
     });
   }
 
+  /* A candidate dissolved-record row plus the MEDIUM finding that mints
+     its question (MEDIUM findings never move the tier); the row carries no
+     severity. Shared by the anchored-record candidate branch below and by
+     the namesake pass after it. One row per legal name. */
+  type DissolvedRecord = {
+    legal_name: string;
+    status: string;
+    reason: string | null;
+    effective_date: string | null;
+    domestic: boolean | null;
+    designation_class?: "dissolution" | "withdrawal";
+  };
+  const dissolvedNamesRendered = new Set<string>();
+  const pushDissolvedCandidate = (check: RegistryCheck, dissolved: DissolvedRecord) => {
+    const key = normalizeUnstripped(dissolved.legal_name);
+    if (dissolvedNamesRendered.has(key)) return;
+    dissolvedNamesRendered.add(key);
+    const reasonPart =
+      dissolved.reason && dissolved.reason !== dissolved.status ? `: ${dissolved.reason}` : "";
+    const whenPart = dissolved.effective_date ? `, effective ${dissolved.effective_date}` : "";
+    ledger.push({
+      id: uniqueRowId(`dissolved-${slugPart(dissolved.legal_name)}`),
+      dimension: "D1",
+      claim_quote: null,
+      what_checked: `The current registration status of ${dissolved.legal_name} in ${check.source}`.slice(0, 300),
+      result: "OFFICIAL_RECORD_FOUND",
+      evidence_tier: "T1",
+      severity: null,
+      sources: src(check),
+      note: `${check.source} lists ${dissolved.legal_name} with status "${dissolved.status}"${reasonPart}${whenPart}, under a name matching this vendor's. No detail connecting that record to this vendor was found, so it is shown as a candidate record only: it earns no credit and drives no warning. Ask the vendor whether this record is theirs.`.slice(0, 700),
+      methodology_ref: "d1-1",
+      ...(check.confidence ? { match_confidence: check.confidence } : {}),
+      attribution: "candidate",
+    });
+    findings.push({
+      id: `dissolved-candidate-${slugPart(dissolved.legal_name)}`,
+      dimension: "D1",
+      severity: "MEDIUM",
+      resolved: false,
+      detail: `${check.source} lists an ended registration under a matching name (${dissolved.legal_name}) that no detail ties to this vendor.`,
+    });
+  };
+
   /* Affirmative end-of-registration designations on registry records (the
      lanes set data.dissolved only for affirmative designations like
      "Voluntarily Dissolved" — a bare "Inactive" or a late annual report
@@ -518,44 +584,64 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
         detail: `${check.source} shows the registration for ${dissolved.legal_name} ended (${dissolved.status}${reasonPart}${whenPart}).`,
       });
     } else {
-      /* Candidate record: visible, labeled, tier-neutral. The MEDIUM
-         finding exists to mint the candidate-record question (MEDIUM
-         findings never move the tier); the row itself carries no
-         severity. */
-      const rowId = uniqueRowId(`dissolved-${slugPart(dissolved.legal_name)}`);
-      ledger.push({
-        id: rowId,
-        dimension: "D1",
-        claim_quote: null,
-        what_checked: `The current registration status of ${dissolved.legal_name} in ${check.source}`.slice(0, 300),
-        result: "OFFICIAL_RECORD_FOUND",
-        evidence_tier: "T1",
-        severity: null,
-        sources: src(check),
-        note: `${check.source} lists ${dissolved.legal_name} with status "${dissolved.status}"${reasonPart}${whenPart}, under a name matching this vendor's. No detail connecting that record to this vendor was found, so it is shown as a candidate record only: it earns no credit and drives no warning. Ask the vendor whether this record is theirs.`.slice(0, 700),
-        methodology_ref: "d1-1",
-        ...(check.confidence ? { match_confidence: check.confidence } : {}),
-        attribution: "candidate",
-      });
-      findings.push({
-        id: `dissolved-candidate-${slugPart(dissolved.legal_name)}`,
-        dimension: "D1",
-        severity: "MEDIUM",
-        resolved: false,
-        detail: `${check.source} lists an ended registration under a matching name (${dissolved.legal_name}) that no detail ties to this vendor.`,
-      });
+      pushDissolvedCandidate(check, dissolved);
+    }
+  }
+
+  /* Methodology 1.8: a lane is judged on its anchored record, so an ended
+     registration on a DIFFERENT exact-name record in the same lane (a
+     namesake listed beside the vendor's live record, or beside another
+     candidate) is no longer the lane's data.dissolved. It still renders
+     as a candidate record with its question, as the methodology promises
+     for every untied ended registration, capped at two across the report
+     and never twice for one legal name. */
+  let namesakeDissolvedRows = 0;
+  for (const check of sosChecks) {
+    if (namesakeDissolvedRows >= 2) break;
+    if (check.status !== "hit") continue;
+    const anchorIdx = anchorIndexOf(check);
+    const matches = ((check.data ?? {}) as {
+      matches?: { name?: string; confidence?: string; dissolved?: DissolvedRecord | null }[];
+    }).matches ?? [];
+    for (let i = 0; i < matches.length; i++) {
+      if (namesakeDissolvedRows >= 2) break;
+      if (i === anchorIdx) continue;
+      const m = matches[i];
+      if (m.confidence !== "exact" || !m.dissolved || !m.name) continue;
+      const key = normalizeUnstripped(m.dissolved.legal_name);
+      if (dissolvedNamesRendered.has(key)) continue;
+      pushDissolvedCandidate(check, m.dissolved);
+      namesakeDissolvedRows += 1;
     }
   }
 
   /* Untied live registry hits render as labeled candidate records too (cap
-     2; dissolved candidates already rendered above). The check summaries
-     are candidate-framed by the lanes, so they serve as the notes. */
+     2; dissolved candidates already rendered above). Methodology 1.8: the
+     note is a code template over the ANCHORED record (the lane summary
+     describes the lane's first exact match, which the identity step may
+     not have anchored on); the summary stays the fallback for data with
+     no listed records. */
   let candidateRows = 0;
   for (const check of sosChecks) {
     if (candidateRows >= 2) break;
     if (check.status !== "hit") continue;
     if (check.attribution === "attributed") continue;
     if (((check.data ?? {}) as { dissolved?: unknown }).dissolved) continue;
+    const anchoredFacts = tieFactsForCheck(check);
+    const anchoredIdx = anchorIndexOf(check);
+    const anchoredMatch =
+      anchoredIdx === null
+        ? null
+        : (((check.data ?? {}) as { matches?: { status?: string | null; date?: string | null }[] }).matches ?? [])[anchoredIdx] ?? null;
+    const candidateNote = anchoredFacts
+      ? candidateRecordNote({
+          source: check.source,
+          legalName: anchoredFacts.legal_name,
+          exact: anchoredFacts.match_confidence === "exact",
+          status: anchoredMatch?.status ?? null,
+          registered: anchoredMatch?.date ?? null,
+        })
+      : check.summary;
     ledger.push({
       id: uniqueRowId(`candidate-${check.check_id.replace(/^sos_/, "")}`),
       dimension: "D1",
@@ -565,7 +651,7 @@ export function assemble(input: AssembleInput): AssembledSkeleton {
       evidence_tier: "T4",
       severity: null,
       sources: src(check),
-      note: check.summary.slice(0, 700),
+      note: candidateNote.slice(0, 700),
       methodology_ref: "d1-1",
       ...(check.confidence ? { match_confidence: check.confidence } : {}),
       attribution: "candidate",

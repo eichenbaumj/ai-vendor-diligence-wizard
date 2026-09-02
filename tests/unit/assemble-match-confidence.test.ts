@@ -421,6 +421,95 @@ describe("dissolution designations (the Citymart class)", () => {
     expect(out.questions.some((q) => q.id === "gap-dissolved")).toBe(false);
   });
 
+  it("1.8: the candidate row's note is written from the anchored record, not the lane's first match", () => {
+    const candidate = check({
+      check_id: "sos_tx",
+      source: "Texas Comptroller",
+      confidence: "exact",
+      summary: "Texas business records include an entry under a matching name: FIRST LISTED INC. The identity check weighs whether this record belongs to this vendor.",
+      tie: { tied: false, strong: false, checkable: true, signals: [] },
+      attribution: "candidate" as const,
+      data: {
+        matches: [
+          { name: "FIRST LISTED INC.", confidence: "exact", status: "ACTIVE", date: "2001-01-01", dissolved: null },
+          { name: "SEVENTEEN A LLC", confidence: "exact", status: "IN EXISTENCE", date: "2021-06-01", dissolved: null },
+        ],
+        anchor_index: 1,
+      },
+    });
+    const out = assemble(input({ checks: [candidate] }));
+    const row = out.ledger.find((r) => r.id.startsWith("candidate-"));
+    expect(row).toBeDefined();
+    expect(row!.note).toContain("matching name: SEVENTEEN A LLC");
+    expect(row!.note).toContain("registered 2021-06-01");
+    expect(row!.note).toContain('status listed as "IN EXISTENCE"');
+    expect(row!.note).toContain("candidate record only");
+    expect(row!.note).not.toContain("FIRST LISTED");
+    expect(row!.attribution).toBe("candidate");
+    expect(lintText(row!.note).filter((v) => v.kind === "banned")).toHaveLength(0);
+  });
+
+  it("1.8: a dissolved namesake beside the anchored live record renders as a candidate dissolved row while identity names the live record", () => {
+    const strongTieLocal = {
+      tied: true,
+      strong: true,
+      checkable: true,
+      signals: [{ kind: "officer" as const, value: "JANE ROE", strength: "strong" as const, vendor_source: "pitch" as const }],
+    };
+    const ny = check({
+      check_id: "sos_ny",
+      source: "New York Department of State (public inquiry service)",
+      confidence: "exact",
+      tie: strongTieLocal,
+      attribution: "attributed" as const,
+      data: {
+        matches: [
+          {
+            name: "17A INC.",
+            confidence: "exact",
+            status: "Inactive",
+            date: "2004-01-01",
+            dissolved: { legal_name: "17A INC.", status: "Inactive", reason: "Dissolution by Proclamation", effective_date: "2011-01-26", record_id: "1", domestic: true },
+          },
+          { name: "17A LLC", confidence: "exact", status: "Active", date: "2019-05-05", officers: ["JANE ROE"], dissolved: null },
+        ],
+        anchor_index: 1,
+      },
+    });
+    const out = assemble(
+      input({
+        extract: baseExtract({ vendor_name_candidates: ["17A"], people: [{ name: "Jane Roe", title: "CEO" }] }),
+        checks: [ny],
+        identity: { identity_resolved: true, identifiers_found: ["ny_dos", "rdap_domain_age"] },
+      }),
+    );
+    const identity = out.ledger.find((r) => r.id === "identity");
+    expect(identity).toBeDefined();
+    expect(identity!.note).toContain("17A LLC");
+    expect(identity!.note).not.toContain("17A INC.");
+    const dissolvedRows = out.ledger.filter((r) => r.id.startsWith("dissolved-"));
+    expect(dissolvedRows).toHaveLength(1);
+    expect(dissolvedRows[0].attribution).toBe("candidate");
+    expect(dissolvedRows[0].severity).toBeNull();
+    expect(dissolvedRows[0].note).toContain("17A INC.");
+    expect(dissolvedRows[0].note).toContain("candidate record only");
+    /* The namesake's designation never arms: no HIGH or CRITICAL dissolved finding. */
+    expect(
+      out.tierInputs.findings.some((f) => f.id.startsWith("dissolved-") && (f.severity === "HIGH" || f.severity === "CRITICAL")),
+    ).toBe(false);
+    expect(out.questions.some((q) => q.id === "gap-dissolved-candidate")).toBe(true);
+    /* The same namesake listed in two lanes renders once. */
+    const co = { ...ny, check_id: "sos_co", source: "Colorado Secretary of State" };
+    const out2 = assemble(
+      input({
+        extract: baseExtract({ vendor_name_candidates: ["17A"], people: [{ name: "Jane Roe", title: "CEO" }] }),
+        checks: [ny, co],
+        identity: { identity_resolved: true, identifiers_found: ["ny_dos", "co_sos"] },
+      }),
+    );
+    expect(out2.ledger.filter((r) => r.id.startsWith("dissolved-"))).toHaveLength(1);
+  });
+
   it("an attributed TERMINATED foreign registration is record-only information (the CivicPlus rule)", () => {
     const terminated = {
       ...dissolvedNy,

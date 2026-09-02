@@ -1,0 +1,32 @@
+{
+  "page_metadata": {
+    "page": 1,
+    "hasNext": false
+  },
+  "results": [
+    {
+      "id": "9f9f9f9f-1111-2222-3333-444444444444-C",
+      "duns": "000000001",
+      "uei": "GOVASSIST0001",
+      "name": "GOVASSIST AI INC",
+      "recipient_level": "C",
+      "amount": 350000.5
+    },
+    {
+      "id": "9f9f9f9f-1111-2222-3333-444444444444-P",
+      "duns": "000000001",
+      "uei": "GOVASSIST0001",
+      "name": "GOVASSIST AI INC",
+      "recipient_level": "P",
+      "amount": 1250000
+    },
+    {
+      "id": "0a0a0a0a-5555-6666-7777-888888888888-R",
+      "duns": "000000002",
+      "uei": "OTHERCO000002",
+      "name": "GOVASSIST AI SOLUTIONS LLC",
+      "recipient_level": "R",
+      "amount": 90000
+    }
+  ]
+}

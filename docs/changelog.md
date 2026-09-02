@@ -26,6 +26,26 @@ pitch, never becomes a finding, and never touches the verdict. Expected
 effect on verdicts: none by rule. Readers now see retrieved dispute coverage
 that the old order could hide.
 
+**Every record a registry search returns is judged, and the lane is
+credited on the one that passes.** Version 1.7 set the rules for crediting a
+record, but each state registry lane applied them to one record only: its
+first exact-name match. A vendor whose own record sat behind a namesake in
+the same registry was never judged there, and a namesake's ended
+registration could attach to the lane even when the vendor's live record
+was listed beside it. Now every listed record is judged. The lane is
+credited on the record a stronger detail ties to the vendor, then on an
+exact-name record, then on a contained name that a detail ties. When no
+record passes, the lane shows its first exact-name record as a candidate,
+as before. An ended registration is judged on the record that carries it,
+and a namesake's ended registration still appears as a candidate record
+with its question. New York's detail record, which carries the tying
+details, is read for up to three exact-name records per check instead of
+one. Every candidate-record note is now written by code from the judged
+record. Expected effect on verdicts: a vendor whose tying record was hidden
+behind a namesake can now resolve identity and move up from "not enough to
+evaluate". Vendors with one record per registry are unchanged, and a bare
+name shared by several live companies still resolves nothing.
+
 ## Version 1.7 (September 2026)
 
 **What changed in this version, in short.** The verdict tiers and their rules

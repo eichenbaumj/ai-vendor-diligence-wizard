@@ -153,6 +153,13 @@ describe("checkSosSweep: the Polimorphic case", () => {
     expect(ct.domestic_flag).toBe("Foreign");
   });
 
+  it("records a null designation on live matches (methodology 1.8)", async () => {
+    const checks = byId(await runPolimorphicSweep());
+    const co = (checks.sos_co.data as { matches: Array<Record<string, unknown>> }).matches[0];
+    expect(co).toHaveProperty("dissolved", null);
+    expect((checks.sos_co.data as { dissolved?: unknown }).dissolved).toBeUndefined();
+  });
+
   it("returns one schema-valid check per state", async () => {
     const checks = await runPolimorphicSweep();
     expect(checks).toHaveLength(6);
@@ -734,6 +741,26 @@ describe("checkSosSweep: NY DOS lane surfaces dissolved entities (the Citymart c
     expect(best.city).toBe("NEW YORK");
     expect(best.addr_state).toBe("NY");
     expect(best.jurisdiction).toBe("New York, United States");
+  });
+
+  it("records the end-of-registration designation on each match (methodology 1.8)", async () => {
+    const checks = byId(
+      await checkSosSweep(
+        { companyNames: ["Citymart US Inc."] },
+        { fetchFn: makeFetch(routes), now: NOW },
+      ),
+    );
+    const data = checks.sos_ny.data as {
+      matches: Array<{ name: string; dissolved?: { legal_name: string; reason: string | null } | null }>;
+      dissolved?: { legal_name: string };
+    };
+    for (const m of data.matches) expect(m).toHaveProperty("dissolved");
+    const best = data.matches[0];
+    expect(best.dissolved).toBeTruthy();
+    expect(best.dissolved!.legal_name).toBe(best.name);
+    expect(best.dissolved!.reason).toBe("Voluntarily Dissolved");
+    /* The check-level designation is the default record's own. */
+    expect(data.dissolved!.legal_name).toBe(best.name);
   });
 
   it("a similarity match never carries the dissolved designation", async () => {

@@ -12,7 +12,7 @@
   Pure module: no Deno APIs, no module state.
 */
 import type { RegistryCheck } from "../schemas.ts";
-import {
+import { normalizeUnstripped,
   asArray,
   asRecord,
   dedupeNames,
@@ -27,6 +27,17 @@ import type { RegistryCtx } from "./sam.ts";
 const RECIPIENT_URL =
   "https://api.usaspending.gov/api/v2/autocomplete/recipient/";
 const AWARDS_URL = "https://api.usaspending.gov/api/v2/search/spending_by_award/";
+/* Methodology 1.8: the recipient listing and profile. The autocomplete
+   endpoint above answers with names only (no recipient id, no UEI, no
+   location; verified live 2026-09-02), so the profile link fell back to
+   the search page and the lane carried no recipient-side fact. The listing
+   returns the recipient hash id and UEI for a name; the profile returns
+   its business address. Both steps are additive: a failure keeps the hit
+   with null fields. Awards stay keyed by name: a UEI search also returns
+   affiliated recipients under other names (verified live 2026-09-02),
+   which would change what the award count means. */
+const RECIPIENT_LISTING_URL = "https://api.usaspending.gov/api/v2/recipient/";
+const RECIPIENT_PROFILE_URL = "https://api.usaspending.gov/api/v2/recipient/";
 const HUMAN_SEARCH = "https://www.usaspending.gov/search";
 
 async function postJson(
@@ -137,6 +148,60 @@ export async function checkFederalAwards(
       };
     }
 
+    /* Step 1b (1.8): the recipient's id, UEI, and level from the listing,
+       under the same exact-name rule; parent-level records first. */
+    const profile: { id: string | null; uei: string | null; level: string | null; state: string | null } = {
+      id: matched.id,
+      uei: null,
+      level: null,
+      state: null,
+    };
+    try {
+      const listing = await postJson(
+        RECIPIENT_LISTING_URL,
+        { keyword: matched.name, limit: 10, page: 1, sort: "amount", order: "desc" },
+        ctx,
+      );
+      const rows = asArray((asRecord(listing) ?? {})["results"])
+        .map((e) => asRecord(e) ?? {})
+        .filter((rec) => {
+          const n = firstString(rec, ["name", "recipient_name"]);
+          return n !== null && normalizeUnstripped(n) === normalizeUnstripped(matched!.name);
+        });
+      const levelRank = (rec: Record<string, unknown>) => {
+        const lvl = firstString(rec, ["recipient_level"]) ?? "";
+        return lvl === "P" ? 0 : lvl === "R" ? 1 : lvl === "C" ? 2 : 3;
+      };
+      rows.sort((a, b) => levelRank(a) - levelRank(b));
+      const top = rows[0];
+      if (top) {
+        profile.id = firstString(top, ["id", "recipient_id"]) ?? profile.id;
+        profile.uei = firstString(top, ["uei"]);
+        profile.level = firstString(top, ["recipient_level"]);
+      }
+    } catch {
+      /* additive */
+    }
+    /* Step 1c (1.8): the recipient's business address state. */
+    if (profile.id) {
+      try {
+        const fetchFn = ctx.fetchFn ?? globalThis.fetch;
+        const res = await fetchFn(`${RECIPIENT_PROFILE_URL}${encodeURIComponent(profile.id)}/`, {
+          headers: { accept: "application/json" },
+          signal: ctx.signal,
+        });
+        if (res.ok) {
+          const detail = asRecord(await res.json()) ?? {};
+          const location = asRecord(detail["location"]) ?? {};
+          profile.state = firstString(location, ["state_code"]);
+          profile.uei = profile.uei ?? firstString(detail, ["uei"]);
+        }
+      } catch {
+        /* additive */
+      }
+    }
+    matched = { ...matched, id: profile.id };
+
     /* Step 2: recent contract awards for the matched recipient. */
     const now = ctx.now?.() ?? new Date();
     const start = new Date(now.getTime());
@@ -188,6 +253,12 @@ export async function checkFederalAwards(
       recipient_found: true,
       recipient_name: matched.name,
       recipient_id: matched.id,
+      /* 1.8: recipient-side facts for the profile link and, later, a
+         state consistency check. Null when the listing or profile did
+         not answer. */
+      recipient_uei: profile.uei,
+      recipient_level: profile.level,
+      recipient_state: profile.state,
       award_count: awardCount,
       total_amount: totalAmount,
       latest_award_year: latestYear,

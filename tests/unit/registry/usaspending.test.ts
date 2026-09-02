@@ -8,6 +8,8 @@ import recipientEmpty from "../../fixtures/registry-responses/usaspending-recipi
 import recipientSpv from "../../fixtures/registry-responses/usaspending-recipient-spv.json";
 import awards from "../../fixtures/registry-responses/usaspending-awards.json";
 import awardsEmpty from "../../fixtures/registry-responses/usaspending-awards-empty.json";
+import recipientListing from "../../fixtures/registry-responses/usaspending-recipient-listing.json";
+import recipientDetail from "../../fixtures/registry-responses/usaspending-recipient-detail.json";
 
 interface Route {
   match: string;
@@ -121,6 +123,68 @@ describe("checkFederalAwards", () => {
     expect(check.data?.rejected_investment_vehicles).toContain(
       "GOVASSIST AI FUND LLC",
     );
+  });
+
+  it("1.8: reads the recipient's id, UEI, level, and state from the listing and profile; awards stay keyed by name", async () => {
+    const requests: Recorded[] = [];
+    const check = await checkFederalAwards(
+      { companyNames: ["GovAssist AI Inc"] },
+      ctxWith(
+        makeFetch(
+          [
+            { match: "autocomplete/recipient", body: recipientHit },
+            { match: "/api/v2/recipient/9f9f9f9f-1111-2222-3333-444444444444-P/", body: recipientDetail },
+            { match: "/api/v2/recipient/", body: recipientListing },
+            { match: "spending_by_award", body: awards },
+          ],
+          requests,
+        ),
+      ),
+    );
+    RegistryCheck.parse(check);
+    expect(check.status).toBe("hit");
+    expect(check.data).toMatchObject({
+      recipient_found: true,
+      recipient_id: "9f9f9f9f-1111-2222-3333-444444444444-P",
+      recipient_uei: "GOVASSIST0001",
+      recipient_level: "P",
+      recipient_state: "TX",
+      award_count: 2,
+    });
+    /* The parent-level record wins over the child with the same name; the
+       similar-named LLC never matches. */
+    expect(check.evidence_url).toBe(
+      "https://www.usaspending.gov/recipient/9f9f9f9f-1111-2222-3333-444444444444-P/latest",
+    );
+    const listingRequest = requests.find((r) => r.url === "https://api.usaspending.gov/api/v2/recipient/");
+    expect(listingRequest?.body).toContain('"keyword":"GOVASSIST AI INC"');
+    const awardsRequest = requests.find((r) => r.url.includes("spending_by_award"));
+    expect(awardsRequest?.body).toContain('"recipient_search_text":["GOVASSIST AI INC"]');
+    expect(awardsRequest?.body).not.toContain("GOVASSIST0001");
+  });
+
+  it("1.8: a listing or profile failure keeps the hit with null recipient facts", async () => {
+    const check = await checkFederalAwards(
+      { companyNames: ["GovAssist AI Inc"] },
+      ctxWith(
+        makeFetch([
+          { match: "autocomplete/recipient", body: recipientHit },
+          { match: "/api/v2/recipient/", body: { detail: "Service unavailable" }, status: 503 },
+          { match: "spending_by_award", body: awards },
+        ]),
+      ),
+    );
+    RegistryCheck.parse(check);
+    expect(check.status).toBe("hit");
+    expect(check.data).toMatchObject({
+      recipient_found: true,
+      recipient_uei: null,
+      recipient_level: null,
+      recipient_state: null,
+      award_count: 2,
+    });
+    /* The autocomplete's own id still drives the profile link. */
+    expect(check.evidence_url).toBe("https://www.usaspending.gov/recipient/abc123-def456-R/latest");
   });
 
   it("returns status error on network failure", async () => {

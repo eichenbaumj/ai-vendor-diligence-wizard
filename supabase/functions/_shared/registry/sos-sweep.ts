@@ -310,6 +310,32 @@ interface LaneMatch {
   domestic_flag?: string | null; // e.g. Connecticut's "Domestic"/"Foreign"
   agent?: string | null;
   officers?: string[];
+  /* Methodology 1.8: the record's own end-of-registration designation
+     (null when live). Recorded per match so the identity step can anchor
+     on any listed record and the dissolution surface describes that
+     record, not the lane's first exact match. */
+  dissolved?: DissolvedDesignation | null;
+}
+
+/* Whether a record is the entity's home-state registration, from what the
+   datasets say: Connecticut's citizenship flag, Colorado's "Foreign
+   Corporation" entity type, or the formation jurisdiction compared with
+   the lane's own state. Null when the lane cannot tell. */
+function domesticOf(m: LaneMatch, laneState: string): boolean | null {
+  const jurisdictionCode = stateCodeOf(m.jurisdiction ?? null);
+  return m.domestic_flag
+    ? /domestic/i.test(m.domestic_flag)
+      ? true
+      : /foreign/i.test(m.domestic_flag)
+        ? false
+        : null
+    : m.entity_type && /foreign/i.test(m.entity_type)
+      ? false
+      : m.entity_type && /domestic/i.test(m.entity_type)
+        ? true
+        : jurisdictionCode
+          ? jurisdictionCode === laneState
+          : null;
 }
 
 async function runSocrataLane(
@@ -388,34 +414,23 @@ async function runSocrataLane(
         summary +=
           " A status note like this often reflects a late annual report filing, which is common at young companies. Treat it as informational.";
       }
-      /* An affirmative end-of-registration status on the best match is
-         recorded at any confidence; attribution decides downstream whether
-         it arms a finding or renders as a candidate record. The datasets
-         already say whether the record is the entity's home-state
-         registration: Connecticut's citizenship flag, Colorado's
-         "Foreign Corporation" entity type, and the formation-jurisdiction
-         columns compared against the lane's own state. */
+      /* An affirmative end-of-registration status is recorded on EVERY
+         match at any confidence (methodology 1.8; before, on the best
+         match only); attribution decides downstream which record the lane
+         is judged on and whether its designation arms a finding or renders
+         as a candidate record. data.dissolved starts as the default
+         record's designation and the identity step re-points it at the
+         anchored record. */
       const laneState = lane.checkId.slice(4).toUpperCase();
-      const jurisdictionCode = stateCodeOf(best.jurisdiction ?? null);
-      const domestic = best.domestic_flag
-        ? /domestic/i.test(best.domestic_flag)
-          ? true
-          : /foreign/i.test(best.domestic_flag)
-            ? false
-            : null
-        : best.entity_type && /foreign/i.test(best.entity_type)
-          ? false
-          : best.entity_type && /domestic/i.test(best.entity_type)
-            ? true
-            : jurisdictionCode
-              ? jurisdictionCode === laneState
-              : null;
-      const dissolved = detectDissolvedDesignation({
-        legalName: best.name,
-        status: best.status,
-        recordId: best.record_id,
-        domestic,
-      });
+      for (const m of matches) {
+        m.dissolved = detectDissolvedDesignation({
+          legalName: m.name,
+          status: m.status,
+          recordId: m.record_id,
+          domestic: domesticOf(m, laneState),
+        });
+      }
+      const dissolved = best.dissolved ?? null;
       return {
         check_id: lane.checkId,
         source: lane.source,
@@ -572,58 +587,33 @@ async function runNyDosLane(
     const best = matches.find((m) => m.confidence === "exact") ?? matches[0];
     /* The detail record carries the status reason ("Voluntarily Dissolved")
        and the effective date; it is additive, so its failure never sinks
-       the search hit. */
-    let reason: string | null = null;
-    let inactiveDate: string | null = null;
-    let entityType: string | null = null;
-    if (best.record_id) {
-      try {
-        const payload = await postNyDos(
-          NY_DOS_DETAIL_URL,
-          { SearchID: best.record_id, EntityName: best.name, AssumedNameFlag: "false" },
-          ctx,
-        );
-        const root = asRecord(payload) ?? {};
-        const info = asRecord(root["entityGeneralInfo"]) ?? {};
-        reason = firstString(info, ["reasonForStatus"]);
-        inactiveDate = trimDate(firstString(info, ["inactiveDate"]));
-        entityType = firstString(info, ["entityType"]);
-        const detailStatus = firstString(info, ["entityStatus"]);
-        if (detailStatus) best.status = detailStatus;
-        /* Tying-signal facts from the detail record (field names verified
-           live 2026-08-31 on the Citymart record): the CEO and registered
-           agent names, the service-of-process address, and the formation
-           jurisdiction. Capture-only; identity-ties.ts consumes them. */
-        best.jurisdiction = firstString(info, ["jurisdiction"]);
-        const ceoName = firstString(asRecord(root["ceo"]) ?? {}, ["name"]);
-        if (ceoName) best.officers = [ceoName];
-        best.agent = firstString(asRecord(root["registeredAgent"]) ?? {}, ["name"]);
-        const sop =
-          asRecord(asRecord(root["sopAddress"])?.["address"]) ?? {};
-        /* Both address lines join: the digit-bearing street line is often
-           line 2 behind a "C/O ..." line 1. */
-        const sopStreet = [
-          firstString(sop, ["streetAddress1", "streetAddress"]),
-          firstString(sop, ["addressLine2", "streetAddress2"]),
-        ]
-          .filter((part): part is string => Boolean(part))
-          .join(" ");
-        best.street = sopStreet || null;
-        best.city = firstString(sop, ["city"]);
-        best.addr_state = firstString(sop, ["state"]);
-      } catch {
-        /* keep the search-level fields */
-      }
+       the search hit. Methodology 1.8: the detail is fetched for the
+       default record and for up to two more exact matches (three in all),
+       so the identity step can anchor on whichever record ties and the
+       dissolution designation is each record's own. */
+    const detailed = new Map<LaneMatch, NyDetail>();
+    const detailTargets = [best, ...matches.filter((m) => m !== best && m.confidence === "exact")].slice(
+      0,
+      NY_DETAIL_FETCH_CAP,
+    );
+    for (const m of detailTargets) {
+      detailed.set(m, await fetchNyDetail(m, ctx));
     }
-
-    const dissolved = detectDissolvedDesignation({
-      legalName: best.name,
-      status: best.status,
-      reason,
-      effectiveDate: inactiveDate,
-      recordId: best.record_id,
-      domestic: entityType ? /domestic/i.test(entityType) : null,
-    });
+    const bestDetail = detailed.get(best) ?? { reason: null, inactiveDate: null, entityType: null };
+    const reason = bestDetail.reason;
+    const inactiveDate = bestDetail.inactiveDate;
+    for (const m of matches) {
+      const d = detailed.get(m);
+      m.dissolved = detectDissolvedDesignation({
+        legalName: m.name,
+        status: m.status,
+        reason: d?.reason ?? null,
+        effectiveDate: d?.inactiveDate ?? null,
+        recordId: m.record_id,
+        domestic: d?.entityType ? /domestic/i.test(d.entityType) : null,
+      });
+    }
+    const dissolved = best.dissolved ?? null;
 
     let summary = `New York business records include an entry under a ${
       best.confidence === "exact" ? "matching" : "similar"
@@ -659,6 +649,60 @@ async function runNyDosLane(
     /* DOS API unavailable: the active-corps open-data lane still answers
        for active entities. */
     return runSocrataLane(lane, names, productTokens, ctx);
+  }
+}
+
+/* How many exact matches get the NY detail fetch (one request each). */
+const NY_DETAIL_FETCH_CAP = 3;
+
+interface NyDetail {
+  reason: string | null;
+  inactiveDate: string | null;
+  entityType: string | null;
+}
+
+/* Fetch the NY DOS detail record for one match and copy its tying-signal
+   facts onto the match (field names verified live 2026-08-31 on the
+   Citymart record): status, the CEO and registered agent names, the
+   service-of-process address, and the formation jurisdiction. Capture-only;
+   identity-ties.ts consumes them. A failed fetch keeps the search-level
+   fields and returns empty detail. */
+async function fetchNyDetail(m: LaneMatch, ctx: RegistryCtx): Promise<NyDetail> {
+  const empty: NyDetail = { reason: null, inactiveDate: null, entityType: null };
+  if (!m.record_id) return empty;
+  try {
+    const payload = await postNyDos(
+      NY_DOS_DETAIL_URL,
+      { SearchID: m.record_id, EntityName: m.name, AssumedNameFlag: "false" },
+      ctx,
+    );
+    const root = asRecord(payload) ?? {};
+    const info = asRecord(root["entityGeneralInfo"]) ?? {};
+    const detailStatus = firstString(info, ["entityStatus"]);
+    if (detailStatus) m.status = detailStatus;
+    m.jurisdiction = firstString(info, ["jurisdiction"]);
+    const ceoName = firstString(asRecord(root["ceo"]) ?? {}, ["name"]);
+    if (ceoName) m.officers = [ceoName];
+    m.agent = firstString(asRecord(root["registeredAgent"]) ?? {}, ["name"]);
+    const sop = asRecord(asRecord(root["sopAddress"])?.["address"]) ?? {};
+    /* Both address lines join: the digit-bearing street line is often
+       line 2 behind a "C/O ..." line 1. */
+    const sopStreet = [
+      firstString(sop, ["streetAddress1", "streetAddress"]),
+      firstString(sop, ["addressLine2", "streetAddress2"]),
+    ]
+      .filter((part): part is string => Boolean(part))
+      .join(" ");
+    m.street = sopStreet || null;
+    m.city = firstString(sop, ["city"]);
+    m.addr_state = firstString(sop, ["state"]);
+    return {
+      reason: firstString(info, ["reasonForStatus"]),
+      inactiveDate: trimDate(firstString(info, ["inactiveDate"])),
+      entityType: firstString(info, ["entityType"]),
+    };
+  } catch {
+    return empty;
   }
 }
 

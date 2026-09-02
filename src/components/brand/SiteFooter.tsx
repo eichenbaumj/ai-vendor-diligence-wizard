@@ -29,11 +29,6 @@ export function SiteFooter() {
               </Link>
             </li>
             <li>
-              <Link to="/methodology" className={FOOTER_LINK}>
-                Methodology
-              </Link>
-            </li>
-            <li>
               <Link to="/how-it-works" className={FOOTER_LINK}>
                 How it works
               </Link>
@@ -41,6 +36,11 @@ export function SiteFooter() {
             <li>
               <Link to="/your-data" className={FOOTER_LINK}>
                 Your data
+              </Link>
+            </li>
+            <li>
+              <Link to="/methodology" className={FOOTER_LINK}>
+                Methodology
               </Link>
             </li>
             <li>

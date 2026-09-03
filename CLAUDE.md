@@ -25,6 +25,11 @@ world-readable.
   record. Keep the typed stage boundaries in schemas.ts.
 - Small-vendor fairness: absence of any single credential (SAM, FedRAMP,
   GitHub, press) is never adverse on its own.
+- Leads are follow-ups, never evidence. Their order and the
+  `adverse_headline` flag are code-only (`adverse-lexicon.ts` over the
+  retrieved headline, never the pitch); the flag is a keyword with fixed
+  frontend copy, never a finding, never tier-bearing. Third parties never
+  hold a lever over a verdict (ADV-04 precedent in `tier.ts`).
 
 ## Architecture
 - Frontend: Vite/React/TS/Tailwind 4 → Cloudflare Pages (manual wrangler

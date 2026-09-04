@@ -17,5 +17,5 @@ interface ImportMetaEnv {
   readonly VITE_TURNSTILE_SITE_KEY?: string;
   readonly VITE_MOCK?: string;
   readonly VITE_GOV_VERIFY?: string;
-  readonly VITE_BETA?: string;
+  readonly VITE_WIP?: string;
 }

@@ -14,10 +14,10 @@ Built by [17A](https://group17a.com) with partners. The full evaluation
 methodology is public: see [docs/methodology.md](docs/methodology.md), which
 also renders inside the app.
 
-**Status: beta.** The tool is in beta testing with a small group of public
-servants and partners. Pages and reports will change, and every report
-should be read as a work in progress. The app shows this notice on every
-page until general release.
+**Status: field test.** The tool is in field testing with a small group of
+public servants and partners. Pages and reports will change, and every
+report should be read as a work in progress. The app says so on every page
+until general release.
 
 ## How it works
 

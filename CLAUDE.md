@@ -40,12 +40,14 @@ world-readable.
   path). Progress = event replay + Realtime Broadcast + polling fallback.
   The gov-* pair (verified .gov/.mil email -> 20 checks/month) ships dark
   behind the GOV_VERIFY_ENABLED secret and the VITE_GOV_VERIFY=1 build flag.
-- The beta notice (phase banner under the header, verdict-row pill, clause
-  in the report's date band, footer stamp, About status block, gate intro,
-  "(beta)" page title) ships behind `BETA_NOTICE` in `src/lib/config.ts`;
-  `VITE_BETA=0` turns every surface off. All of its words live in
-  `src/lib/beta-notice.ts`, linted and tested like report copy
-  (`tests/unit/beta-notice*.test.ts*`). No beta wording anywhere else.
+- The work-in-progress notice (corner ribbon in the header from md up and a
+  band under it below md, verdict-row pill, clause in the report's date
+  band, footer stamp, About status block, gate title and intro, "(field
+  test)" page title) ships behind `WIP_NOTICE` in `src/lib/config.ts`;
+  `VITE_WIP=0` turns every surface off. All of its words live in
+  `src/lib/wip-notice.ts`, linted and tested like report copy
+  (`tests/unit/wip-notice*.test.ts*`). The vocabulary is "field test" and
+  "work in progress", never "beta". No status wording anywhere else.
 - `_shared/` is pure platform-agnostic TS (no Deno APIs) — tested by vitest,
   imported by frontend via `@shared/*`. Imports carry explicit `.ts` extensions.
 - Packs: `packs/*.yaml` → `npm run packs:build` → `packs.gen.ts` + `src/generated/packs.json`.
@@ -57,9 +59,10 @@ world-readable.
 - `npm run packs:validate` gates pack edits (URLs, staleness, language lint).
 - User-facing copy: plain language, 9th-grade level, no em dashes, no AI-tell
   vocabulary. Verify on rendered output.
-- General release: build with `VITE_BETA=0`, confirm no surface says beta,
-  then delete `beta-notice.ts`, `BetaBanner.tsx`, and the reads in the
-  surfaces above. The flag flip is a release step, not a methodology change.
+- General release: build with `VITE_WIP=0`, confirm no surface says field
+  test or work in progress, then delete `wip-notice.ts`, `WipNotice.tsx`,
+  the `.wip-ribbon` styles in `brand.css`, and the reads in the surfaces
+  above. The flag flip is a release step, not a methodology change.
 - Model IDs are pinned in `_shared/anthropic.ts` MODELS — single migration point.
 - Deploy: frontend via `npx wrangler pages deploy dist --project-name
   ai-vendor-diligence-wizard --branch main` after `vite build` (verify the

@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { Route, Routes, useLocation } from "react-router-dom";
-import { SiteHeader, SiteFooter, BetaBanner, Section, PillButton } from "@/components/brand";
+import { SiteHeader, SiteFooter, WipBand, Section, PillButton } from "@/components/brand";
 import Landing from "@/pages/Landing";
 import CheckPage from "@/pages/Check";
 import EvaluationPage from "@/pages/Evaluation";
@@ -51,7 +51,7 @@ export default function App() {
       </a>
       <ScrollToTop />
       <SiteHeader />
-      <BetaBanner />
+      <WipBand />
       <main id="main" className="flex-1">
         <Routes>
           <Route path="/" element={<Landing />} />

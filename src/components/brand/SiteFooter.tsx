@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { METHODOLOGY_VERSION } from "@shared/version.ts";
-import { BETA_NOTICE_ENABLED, betaFooterLine } from "@/lib/beta-notice";
+import { WIP_NOTICE_ENABLED, wipFooterLine } from "@/lib/wip-notice";
 
 const FOOTER_LINK =
   "font-sans text-base text-brand-vellum no-underline transition-colors hover:text-white hover:underline";
@@ -89,9 +89,9 @@ export function SiteFooter() {
             Open methodology. Open source. Never a purchase recommendation.
           </p>
           <div className="flex flex-wrap items-center gap-x-5 gap-y-1">
-            {BETA_NOTICE_ENABLED && (
+            {WIP_NOTICE_ENABLED && (
               <p className="font-sans text-sm text-brand-steel">
-                {betaFooterLine(METHODOLOGY_VERSION)}
+                {wipFooterLine(METHODOLOGY_VERSION)}
               </p>
             )}
             <p className="font-sans text-sm text-brand-steel">

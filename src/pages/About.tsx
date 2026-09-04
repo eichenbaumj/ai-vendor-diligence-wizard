@@ -1,12 +1,12 @@
 /*
   Who made this and why. Report readers arrive by deep link and may never
   see the landing page, so provenance needs a stable destination the header
-  can point at from anywhere. While the beta notice is on, the status block
-  comes first: the phase banner links here.
+  can point at from anywhere. While the work-in-progress notice is on, the
+  status block comes first: the corner ribbon and the band link here.
 */
 import { Link } from "react-router-dom";
 import { Section } from "@/components/brand";
-import { BETA_ABOUT, BETA_NOTICE_ENABLED } from "@/lib/beta-notice";
+import { WIP_ABOUT, WIP_NOTICE_ENABLED } from "@/lib/wip-notice";
 
 const BLOCK_HEADING = "font-serif text-2xl font-bold leading-tight";
 const BLOCK_BODY = "mt-3 max-w-2xl font-sans text-[15px] leading-relaxed";
@@ -34,20 +34,20 @@ export default function About() {
 
       <Section tone="white" className="py-14! md:py-20!">
         <div className="mx-auto max-w-3xl space-y-12">
-          {BETA_NOTICE_ENABLED && (
-            <div id={BETA_ABOUT.id} className="scroll-mt-24">
-              <h2 className={BLOCK_HEADING}>{BETA_ABOUT.heading}</h2>
-              {BETA_ABOUT.paragraphs.map((text) => (
+          {WIP_NOTICE_ENABLED && (
+            <div id={WIP_ABOUT.id} className="scroll-mt-24">
+              <h2 className={BLOCK_HEADING}>{WIP_ABOUT.heading}</h2>
+              {WIP_ABOUT.paragraphs.map((text) => (
                 <p key={text} className={BLOCK_BODY}>
                   {text}
                 </p>
               ))}
               <p className={BLOCK_BODY}>
-                {BETA_ABOUT.feedback.lead} {BETA_ABOUT.feedback.vendorsBefore}{" "}
+                {WIP_ABOUT.feedback.lead} {WIP_ABOUT.feedback.vendorsBefore}{" "}
                 <Link to="/disputes" className={INLINE_LINK}>
-                  {BETA_ABOUT.feedback.vendorsLink}
+                  {WIP_ABOUT.feedback.vendorsLink}
                 </Link>
-                {BETA_ABOUT.feedback.vendorsAfter}
+                {WIP_ABOUT.feedback.vendorsAfter}
               </p>
             </div>
           )}

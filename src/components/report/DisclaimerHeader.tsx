@@ -3,12 +3,13 @@
   contextual disclaimer, not TOS boilerplate (methodology section 5, rule 8).
   Also carries the one-line provenance link: report readers arrive by deep
   link, so who-made-this must be visible without scrolling to the footer.
-  While the beta notice is on, the band opens with the beta clause from
-  src/lib/beta-notice.ts; this band prints, the site chrome does not.
+  While the work-in-progress notice is on, the band opens with its clause
+  from src/lib/wip-notice.ts (this band prints, the site chrome does not)
+  and keeps its first lines clear of the corner ribbon's tail below 1264px.
 */
 import { Link } from "react-router-dom";
 import type { Report } from "@/lib/types";
-import { BETA_NOTICE_ENABLED, BETA_REPORT } from "@/lib/beta-notice";
+import { WIP_NOTICE_ENABLED, WIP_REPORT } from "@/lib/wip-notice";
 
 function formatDate(iso: string): string {
   try {
@@ -25,18 +26,22 @@ function formatDate(iso: string): string {
 export function DisclaimerHeader({ report }: { report: Report }) {
   return (
     <div className="bg-brand-vellum border-b border-brand-silver">
-      <div className="mx-auto max-w-5xl px-5 py-3 text-[13px] leading-relaxed text-brand-charcoal-soft sm:px-8">
+      <div
+        className={`mx-auto max-w-5xl px-5 py-3 text-[13px] leading-relaxed text-brand-charcoal-soft sm:px-8${
+          WIP_NOTICE_ENABLED ? " md:max-[1263px]:pr-14" : ""
+        }`}
+      >
         <p>
           <span className="font-mono text-xs font-medium tracking-tight text-brand-charcoal">
             Generated {formatDate(report.meta.generated_at)} · expires{" "}
             {formatDate(report.meta.expires_at)}.
           </span>{" "}
-          {BETA_NOTICE_ENABLED && (
+          {WIP_NOTICE_ENABLED && (
             <>
               <span className="font-bold text-brand-charcoal">
-                {BETA_REPORT.lead}
+                {WIP_REPORT.lead}
               </span>{" "}
-              {BETA_REPORT.text}{" "}
+              {WIP_REPORT.text}{" "}
             </>
           )}
           This is a point-in-time triage of public evidence about a vendor

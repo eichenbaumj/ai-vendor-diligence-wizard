@@ -3,13 +3,13 @@
   (the pattern used by the firm's other gated apps). Built for deletion —
   removing the gate at launch is flipping GATE_ENABLED in config.ts and
   deleting this component plus the server-side check in evaluate. The
-  title and intro come from src/lib/beta-notice.ts with the rest of the
-  beta wording.
+  title and intro come from src/lib/wip-notice.ts with the rest of the
+  work-in-progress wording.
 */
 import { useEffect, useState } from "react";
 import { PillButton } from "@/components/brand";
 import { supabase } from "@/lib/supabase";
-import { BETA_GATE } from "@/lib/beta-notice";
+import { WIP_GATE } from "@/lib/wip-notice";
 
 /* Fixed identifier for the single shared-access account. NOT a secret — an
    email is just an identifier; only the password (typed by the user and
@@ -70,10 +70,10 @@ export function PasswordGate() {
           AI Vendor Diligence Wizard
         </p>
         <h1 className="mt-3 font-serif text-3xl font-bold">
-          {BETA_GATE.title}
+          {WIP_GATE.title}
         </h1>
         <p className="mt-3 text-[15px] leading-relaxed text-brand-charcoal-soft">
-          {BETA_GATE.intro}
+          {WIP_GATE.intro}
         </p>
         <input
           type="password"

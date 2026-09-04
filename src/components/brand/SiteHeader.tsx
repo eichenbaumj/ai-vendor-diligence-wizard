@@ -1,9 +1,17 @@
 import { Link } from "react-router-dom";
 import { PillButton } from "./PillButton";
+import { WipRibbon } from "./WipNotice";
 import { IS_MOCK } from "@/lib/config";
+import { WIP_NOTICE_ENABLED } from "@/lib/wip-notice";
 
 const NAV_LINK =
   "font-sans text-base font-medium text-brand-charcoal no-underline transition-colors hover:text-brand-cobalt";
+
+/* The ribbon room and the later join point for the two wide-screen links
+   exist only while the work-in-progress ribbon is on (see the nav comment).
+   With the notice off, the nav returns to its measured 2026-09-02 layout. */
+const NAV_RIBBON_ROOM = WIP_NOTICE_ENABLED ? "md:max-[1296px]:mr-[4.75rem] " : "";
+const WIDE_LINK = WIP_NOTICE_ENABLED ? "hidden min-[1100px]:block" : "hidden lg:block";
 
 export function SiteHeader() {
   return (
@@ -44,25 +52,40 @@ export function SiteHeader() {
             </span>
           )}
         </span>
-        <nav aria-label="Main" className="flex shrink-0 items-center gap-3 md:gap-5 lg:gap-7">
+        <nav
+          aria-label="Main"
+          className={`flex shrink-0 items-center gap-3 ${NAV_RIBBON_ROOM}md:gap-5 lg:gap-7`}
+        >
           {/* Order: purpose first, then the walk-through, then data handling,
               then the full methodology. Purpose and attribution stay reachable
               without scrolling from sm up. Below sm the row is logo, title and
               the one button, so nothing wraps at 375px; /about stays one tap
-              away in the footer. Your data and Methodology join at lg: with
-              the full name, three links overlapped the name by 76px at 768px
-              wide, and four links fit at 1024px with 30px to spare (measured
-              2026-09-02). Every link stays in the footer at every width. */}
+              away in the footer. Every link stays in the footer at every width.
+
+              While the work-in-progress ribbon is on (WipRibbon, md and up),
+              the nav keeps 76px clear of it from md to 1295px: the ribbon's
+              inner edge slants across the button's row, so the pill's rounded
+              right end stays clear only when it ends at least 97px from the
+              viewport's right edge, and 108px leaves a visible gap (hit-tested
+              2026-09-04; a 52px margin left the pill's upper corner under the
+              band). From 1296px the centered row already ends further in than
+              that. The ribbon starts at md, not sm, because at 640px
+              the short name and two links leave only 36px, and that room
+              pushed the name 16px into the nav (measured 2026-09-04). Your data and Methodology join at 1100px rather than
+              lg so the full name, four links, the button, and the ribbon room
+              all fit (measured 2026-09-04; before the ribbon, four links fit at
+              1024px with 30px to spare). Both adjustments switch off with the
+              notice (NAV_RIBBON_ROOM, WIDE_LINK above). */}
           <Link to="/about" className={`hidden sm:block ${NAV_LINK}`}>
             Why we made this
           </Link>
           <Link to="/how-it-works" className={`hidden sm:block ${NAV_LINK}`}>
             How it works
           </Link>
-          <Link to="/your-data" className={`hidden lg:block ${NAV_LINK}`}>
+          <Link to="/your-data" className={`${WIDE_LINK} ${NAV_LINK}`}>
             Your data
           </Link>
-          <Link to="/methodology" className={`hidden lg:block ${NAV_LINK}`}>
+          <Link to="/methodology" className={`${WIDE_LINK} ${NAV_LINK}`}>
             Methodology
           </Link>
           <PillButton
@@ -74,6 +97,7 @@ export function SiteHeader() {
           </PillButton>
         </nav>
       </div>
+      <WipRibbon />
     </header>
   );
 }

@@ -4,25 +4,25 @@ import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import { fileURLToPath } from "node:url";
 
-/* The page title carries "(beta)" while the beta notice is on. The notice
-   itself is BETA_NOTICE in src/lib/config.ts (VITE_BETA !== "0"); the same
+/* The page title carries "(field test)" while the work-in-progress notice
+   is on. The notice itself is WIP_NOTICE in src/lib/config.ts (VITE_WIP !== "0"); the same
    variable is read here because index.html is static, and the title is what
    tabs, bookmarks, and link previews show. Leaves with the notice at
    general release. (Kept as a plugin so this file still exports a plain
    object: vitest.config.ts merges it with mergeConfig, which refuses the
    callback form.) */
-function betaTitle(): Plugin {
+function wipTitle(): Plugin {
   let enabled = true;
   return {
-    name: "beta-title",
+    name: "wip-title",
     configResolved(config) {
-      enabled = config.env.VITE_BETA !== "0";
+      enabled = config.env.VITE_WIP !== "0";
     },
     transformIndexHtml(html) {
       return enabled
         ? html.replace(
             "<title>AI Vendor Diligence Wizard</title>",
-            "<title>AI Vendor Diligence Wizard (beta)</title>",
+            "<title>AI Vendor Diligence Wizard (field test)</title>",
           )
         : html;
     },
@@ -30,7 +30,7 @@ function betaTitle(): Plugin {
 }
 
 export default defineConfig({
-  plugins: [react(), tailwindcss(), betaTitle()],
+  plugins: [react(), tailwindcss(), wipTitle()],
   resolve: {
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url)),

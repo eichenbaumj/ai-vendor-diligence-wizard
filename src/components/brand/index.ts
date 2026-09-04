@@ -6,7 +6,7 @@
 */
 export { SiteHeader } from "./SiteHeader";
 export { SiteFooter } from "./SiteFooter";
-export { BetaBanner } from "./BetaBanner";
+export { WipRibbon, WipBand } from "./WipNotice";
 export { Section } from "./Section";
 export type { SectionProps, SectionTone } from "./Section";
 export { PillButton } from "./PillButton";

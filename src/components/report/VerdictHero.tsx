@@ -6,7 +6,7 @@
 import { TierBadge } from "@/components/brand";
 import type { Report } from "@/lib/types";
 import { TIER_TOKENS } from "@/components/report/tier-tokens";
-import { BETA_HERO_PILL, BETA_NOTICE_ENABLED } from "@/lib/beta-notice";
+import { WIP_HERO_PILL, WIP_NOTICE_ENABLED } from "@/lib/wip-notice";
 
 export function VerdictHero({
   report,
@@ -27,9 +27,9 @@ export function VerdictHero({
               Disputed by vendor · under review
             </span>
           )}
-          {BETA_NOTICE_ENABLED && (
+          {WIP_NOTICE_ENABLED && (
             <span className="rounded-pill border border-brand-charcoal-soft px-3 py-1 text-xs font-bold uppercase tracking-wide text-brand-charcoal">
-              {BETA_HERO_PILL}
+              {WIP_HERO_PILL}
             </span>
           )}
         </div>

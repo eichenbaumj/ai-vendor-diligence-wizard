@@ -70,7 +70,7 @@ npm run packs:validate      # schema-check the pack files
 npm run readability         # grade-level check on user-facing copy
 ```
 
-- Frontend env (`.env.local` at the repo root): `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_TURNSTILE_SITE_KEY`; set `VITE_MOCK=1` to run the UI against fixture data with no backend. `VITE_GOV_VERIFY=1` shows the verified-government-email card (the server must also enable it). `VITE_BETA=0` turns the beta notice off (default on).
+- Frontend env (`.env.local` at the repo root): `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_TURNSTILE_SITE_KEY`; set `VITE_MOCK=1` to run the UI against fixture data with no backend. `VITE_GOV_VERIFY=1` shows the verified-government-email card (the server must also enable it). `VITE_WIP=0` turns the work-in-progress notice off (default on).
 - Function env (`supabase/.env.local`): `ANTHROPIC_API_KEY` plus keys for the registry APIs that need them (SAM.gov). Never commit these; the repo is public.
 - Path aliases: `@/*` maps to `src/`, `@shared/*` to `supabase/functions/_shared/`. Keep `_shared` modules pure (no Deno APIs, no I/O) and keep `.ts` extensions on relative imports there, or the dual Deno/Vite resolution breaks.
 - TypeScript is strict; `npx tsc --noEmit` must pass before a PR.

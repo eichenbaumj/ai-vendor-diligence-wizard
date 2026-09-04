@@ -18,6 +18,8 @@
     #FBF2E2 it is 4.3:1 — FAILS AA. Text set on the soft tint uses
     status-warn-text #8A5504: 5.6:1 on the soft, 6.2:1 on white
   - verdict tiers are never color alone: always color + icon + label
+  - caution #F5C400 (construction yellow, work-in-progress notice only):
+    ink #1A1A1A on it 10.6:1
 
   Element rules live in @layer base so a per-element utility (text-brand-cobalt
   on an h2, text-white on an h1) wins over the heading default, as intended.
@@ -101,6 +103,9 @@
   --color-status-warn-text: #8a5504; /* warn text on the soft tint, AA 5.6:1 */
   --color-status-bad: #b32d2d;
   --color-status-bad-soft: #fae6e6;
+
+  /* Construction yellow for the work-in-progress notice (WipNotice.tsx). Ink text only. Leaves with the notice. */
+  --color-caution: #f5c400;
 
   --font-serif: "Source Serif 4", Georgia, "Times New Roman", serif;
   --font-sans: "Source Sans 3", -apple-system, BlinkMacSystemFont, "Segoe UI",
@@ -235,4 +240,53 @@
   details > * {
     display: block !important;
   }
+}
+
+/*
+  Work-in-progress corner ribbon (WipNotice.tsx), on while the tool is in
+  field testing. Lives inside the sticky header's top-right corner, clipped to
+  a 150px square. The band is 212px long, rotated 45deg, and centered 100px
+  along each edge from the corner, so its inner edge crosses the header's
+  bottom (73px) about 50px from the right edge, and a pill button in the
+  header row stays clear of it only when its right end is at least 97px from
+  the viewport's right edge; SiteHeader reserves that room below 1296px. Construction-tape
+  stripes on the top and bottom edges, an ink outline, and a soft shadow give
+  it the sticker look on purpose. Delete with the notice.
+*/
+.wip-ribbon {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 150px;
+  height: 150px;
+  overflow: hidden;
+  pointer-events: none;
+}
+.wip-ribbon__band {
+  position: absolute;
+  left: -6px;
+  top: 32px;
+  box-sizing: border-box;
+  width: 212px;
+  padding: 12px 0;
+  transform: rotate(45deg);
+  background:
+    linear-gradient(var(--color-caution), var(--color-caution)) center / 100% calc(100% - 10px) no-repeat,
+    repeating-linear-gradient(45deg, var(--color-brand-ink) 0 5px, var(--color-caution) 5px 10px);
+  color: var(--color-brand-ink);
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.14em;
+  text-align: center;
+  text-decoration: none;
+  text-transform: uppercase;
+  box-shadow:
+    0 0 0 1.5px var(--color-brand-ink),
+    0 3px 8px rgb(0 0 0 / 0.28);
+  pointer-events: auto;
+}
+.wip-ribbon__band:hover {
+  filter: brightness(1.04);
 }

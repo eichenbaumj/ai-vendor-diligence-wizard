@@ -1,4 +1,6 @@
 import { Link } from "react-router-dom";
+import { METHODOLOGY_VERSION } from "@shared/version.ts";
+import { BETA_NOTICE_ENABLED, betaFooterLine } from "@/lib/beta-notice";
 
 const FOOTER_LINK =
   "font-sans text-base text-brand-vellum no-underline transition-colors hover:text-white hover:underline";
@@ -86,9 +88,16 @@ export function SiteFooter() {
           <p className="font-sans text-sm text-brand-silver">
             Open methodology. Open source. Never a purchase recommendation.
           </p>
-          <p className="font-sans text-sm text-brand-steel">
-            Code licensed Apache-2.0.
-          </p>
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-1">
+            {BETA_NOTICE_ENABLED && (
+              <p className="font-sans text-sm text-brand-steel">
+                {betaFooterLine(METHODOLOGY_VERSION)}
+              </p>
+            )}
+            <p className="font-sans text-sm text-brand-steel">
+              Code licensed Apache-2.0.
+            </p>
+          </div>
         </div>
       </div>
     </footer>

@@ -2,11 +2,14 @@
   Temporary pre-launch access gate: one shared password via Supabase Auth
   (the pattern used by the firm's other gated apps). Built for deletion —
   removing the gate at launch is flipping GATE_ENABLED in config.ts and
-  deleting this component plus the server-side check in evaluate.
+  deleting this component plus the server-side check in evaluate. The
+  title and intro come from src/lib/beta-notice.ts with the rest of the
+  beta wording.
 */
 import { useEffect, useState } from "react";
 import { PillButton } from "@/components/brand";
 import { supabase } from "@/lib/supabase";
+import { BETA_GATE } from "@/lib/beta-notice";
 
 /* Fixed identifier for the single shared-access account. NOT a secret — an
    email is just an identifier; only the password (typed by the user and
@@ -67,10 +70,10 @@ export function PasswordGate() {
           AI Vendor Diligence Wizard
         </p>
         <h1 className="mt-3 font-serif text-3xl font-bold">
-          Private preview
+          {BETA_GATE.title}
         </h1>
         <p className="mt-3 text-[15px] leading-relaxed text-brand-charcoal-soft">
-          This tool is in testing. Enter the preview password to continue.
+          {BETA_GATE.intro}
         </p>
         <input
           type="password"

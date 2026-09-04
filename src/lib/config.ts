@@ -40,4 +40,13 @@ export const DEEP_MODE_UI: boolean = !IS_MOCK;
    secret is set, so showing this is never enough by itself. */
 export const GOV_VERIFY_UI: boolean = import.meta.env.VITE_GOV_VERIFY === "1";
 
+/* Beta notice: the phase banner under the header, the pill in the verdict
+   row, the clause in the report's date band, the footer stamp, the About
+   status block, and the gate intro (the "(beta)" page title reads the same
+   variable in vite.config.ts). Default on, so a forgotten env var can never
+   hide it during beta. At general release build with VITE_BETA=0, then
+   delete src/lib/beta-notice.ts, BetaBanner.tsx, and the reads in those
+   surfaces. */
+export const BETA_NOTICE: boolean = import.meta.env.VITE_BETA !== "0";
+
 export const FUNCTIONS_BASE = `${SUPABASE_URL}/functions/v1`;

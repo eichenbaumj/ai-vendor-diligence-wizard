@@ -3,9 +3,12 @@
   contextual disclaimer, not TOS boilerplate (methodology section 5, rule 8).
   Also carries the one-line provenance link: report readers arrive by deep
   link, so who-made-this must be visible without scrolling to the footer.
+  While the beta notice is on, the band opens with the beta clause from
+  src/lib/beta-notice.ts; this band prints, the site chrome does not.
 */
 import { Link } from "react-router-dom";
 import type { Report } from "@/lib/types";
+import { BETA_NOTICE_ENABLED, BETA_REPORT } from "@/lib/beta-notice";
 
 function formatDate(iso: string): string {
   try {
@@ -28,6 +31,14 @@ export function DisclaimerHeader({ report }: { report: Report }) {
             Generated {formatDate(report.meta.generated_at)} · expires{" "}
             {formatDate(report.meta.expires_at)}.
           </span>{" "}
+          {BETA_NOTICE_ENABLED && (
+            <>
+              <span className="font-bold text-brand-charcoal">
+                {BETA_REPORT.lead}
+              </span>{" "}
+              {BETA_REPORT.text}{" "}
+            </>
+          )}
           This is a point-in-time triage of public evidence about a vendor
           pitch. It is not a purchase recommendation, and it is not a finding
           of wrongdoing. Records change: re-run this check before relying on
